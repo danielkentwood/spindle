@@ -28,6 +28,12 @@ type_map = {
     "types.Ontology": types.Ontology,
     "stream_types.Ontology": stream_types.Ontology,
 
+    "types.OntologyExtension": types.OntologyExtension,
+    "stream_types.OntologyExtension": stream_types.OntologyExtension,
+
+    "types.OntologyRecommendation": types.OntologyRecommendation,
+    "stream_types.OntologyRecommendation": stream_types.OntologyRecommendation,
+
     "types.RelationType": types.RelationType,
     "stream_types.RelationType": stream_types.RelationType,
 

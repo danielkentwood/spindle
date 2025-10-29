@@ -24,6 +24,12 @@ class LlmResponseParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    def AnalyzeOntologyExtension(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.OntologyExtension:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="request")
+        return typing.cast(types.OntologyExtension, result)
+
     def ExtractResume(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.Resume:
@@ -36,6 +42,12 @@ class LlmResponseParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTriples", llm_response=llm_response, mode="request")
         return typing.cast(types.ExtractionResult, result)
 
+    def RecommendOntology(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.OntologyRecommendation:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="RecommendOntology", llm_response=llm_response, mode="request")
+        return typing.cast(types.OntologyRecommendation, result)
+
     
 
 class LlmStreamParser:
@@ -43,6 +55,12 @@ class LlmStreamParser:
 
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
+
+    def AnalyzeOntologyExtension(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.OntologyExtension:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.OntologyExtension, result)
 
     def ExtractResume(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -55,5 +73,11 @@ class LlmStreamParser:
     ) -> stream_types.ExtractionResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTriples", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.ExtractionResult, result)
+
+    def RecommendOntology(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.OntologyRecommendation:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="RecommendOntology", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.OntologyRecommendation, result)
 
     

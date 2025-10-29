@@ -41,7 +41,7 @@ def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
 # #########################################################################
 
 # #########################################################################
-# Generated classes (8)
+# Generated classes (10)
 # #########################################################################
 
 class CharacterSpan(BaseModel):
@@ -60,6 +60,18 @@ class ExtractionResult(BaseModel):
 class Ontology(BaseModel):
     entity_types: typing.List["EntityType"]
     relation_types: typing.List["RelationType"]
+
+class OntologyExtension(BaseModel):
+    needs_extension: bool
+    new_entity_types: typing.List["EntityType"]
+    new_relation_types: typing.List["RelationType"]
+    critical_information_at_risk: str
+    reasoning: str
+
+class OntologyRecommendation(BaseModel):
+    ontology: "Ontology"
+    text_purpose: str
+    reasoning: str
 
 class RelationType(BaseModel):
     name: str

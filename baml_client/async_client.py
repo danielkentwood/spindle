@@ -79,6 +79,21 @@ class BamlAsyncClient:
     def parse_stream(self):
       return self.__llm_stream_parser
     
+    async def AnalyzeOntologyExtension(self, text: str,current_ontology: types.Ontology,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.OntologyExtension:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            # Use streaming internally when on_tick is provided
+            stream = self.stream.AnalyzeOntologyExtension(text=text,current_ontology=current_ontology,scope=scope,
+                baml_options=baml_options)
+            return await stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = await self.__options.merge_options(baml_options).call_function_async(function_name="AnalyzeOntologyExtension", args={
+                "text": text,"current_ontology": current_ontology,"scope": scope,
+            })
+            return typing.cast(types.OntologyExtension, result.cast_to(types, types, stream_types, False, __runtime__))
     async def ExtractResume(self, resume: str,
         baml_options: BamlCallOptions = {},
     ) -> types.Resume:
@@ -109,6 +124,21 @@ class BamlAsyncClient:
                 "text": text,"ontology": ontology,"source_metadata": source_metadata,"existing_triples": existing_triples,
             })
             return typing.cast(types.ExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    async def RecommendOntology(self, text: str,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.OntologyRecommendation:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            # Use streaming internally when on_tick is provided
+            stream = self.stream.RecommendOntology(text=text,scope=scope,
+                baml_options=baml_options)
+            return await stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = await self.__options.merge_options(baml_options).call_function_async(function_name="RecommendOntology", args={
+                "text": text,"scope": scope,
+            })
+            return typing.cast(types.OntologyRecommendation, result.cast_to(types, types, stream_types, False, __runtime__))
     
 
 
@@ -118,6 +148,18 @@ class BamlStreamClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    def AnalyzeOntologyExtension(self, text: str,current_ontology: types.Ontology,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlStream[stream_types.OntologyExtension, types.OntologyExtension]:
+        ctx, result = self.__options.merge_options(baml_options).create_async_stream(function_name="AnalyzeOntologyExtension", args={
+            "text": text,"current_ontology": current_ontology,"scope": scope,
+        })
+        return baml_py.BamlStream[stream_types.OntologyExtension, types.OntologyExtension](
+          result,
+          lambda x: typing.cast(stream_types.OntologyExtension, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.OntologyExtension, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
     def ExtractResume(self, resume: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlStream[stream_types.Resume, types.Resume]:
@@ -142,6 +184,18 @@ class BamlStreamClient:
           lambda x: typing.cast(types.ExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
           ctx,
         )
+    def RecommendOntology(self, text: str,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlStream[stream_types.OntologyRecommendation, types.OntologyRecommendation]:
+        ctx, result = self.__options.merge_options(baml_options).create_async_stream(function_name="RecommendOntology", args={
+            "text": text,"scope": scope,
+        })
+        return baml_py.BamlStream[stream_types.OntologyRecommendation, types.OntologyRecommendation](
+          result,
+          lambda x: typing.cast(stream_types.OntologyRecommendation, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.OntologyRecommendation, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
     
 
 class BamlHttpRequestClient:
@@ -150,6 +204,13 @@ class BamlHttpRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    async def AnalyzeOntologyExtension(self, text: str,current_ontology: types.Ontology,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AnalyzeOntologyExtension", args={
+            "text": text,"current_ontology": current_ontology,"scope": scope,
+        }, mode="request")
+        return result
     async def ExtractResume(self, resume: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -164,6 +225,13 @@ class BamlHttpRequestClient:
             "text": text,"ontology": ontology,"source_metadata": source_metadata,"existing_triples": existing_triples,
         }, mode="request")
         return result
+    async def RecommendOntology(self, text: str,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = await self.__options.merge_options(baml_options).create_http_request_async(function_name="RecommendOntology", args={
+            "text": text,"scope": scope,
+        }, mode="request")
+        return result
     
 
 class BamlHttpStreamRequestClient:
@@ -172,6 +240,13 @@ class BamlHttpStreamRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    async def AnalyzeOntologyExtension(self, text: str,current_ontology: types.Ontology,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AnalyzeOntologyExtension", args={
+            "text": text,"current_ontology": current_ontology,"scope": scope,
+        }, mode="stream")
+        return result
     async def ExtractResume(self, resume: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -184,6 +259,13 @@ class BamlHttpStreamRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         result = await self.__options.merge_options(baml_options).create_http_request_async(function_name="ExtractTriples", args={
             "text": text,"ontology": ontology,"source_metadata": source_metadata,"existing_triples": existing_triples,
+        }, mode="stream")
+        return result
+    async def RecommendOntology(self, text: str,scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = await self.__options.merge_options(baml_options).create_http_request_async(function_name="RecommendOntology", args={
+            "text": text,"scope": scope,
         }, mode="stream")
         return result
     

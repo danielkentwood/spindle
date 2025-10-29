@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (8)
+# Generated classes (10)
 # #########################################################################
 
 class CharacterSpan(BaseModel):
@@ -42,6 +42,18 @@ class ExtractionResult(BaseModel):
 class Ontology(BaseModel):
     entity_types: typing.List["EntityType"]
     relation_types: typing.List["RelationType"]
+
+class OntologyExtension(BaseModel):
+    needs_extension: typing.Optional[bool] = None
+    new_entity_types: typing.List["EntityType"]
+    new_relation_types: typing.List["RelationType"]
+    critical_information_at_risk: typing.Optional[str] = None
+    reasoning: typing.Optional[str] = None
+
+class OntologyRecommendation(BaseModel):
+    ontology: typing.Optional["Ontology"] = None
+    text_purpose: typing.Optional[str] = None
+    reasoning: typing.Optional[str] = None
 
 class RelationType(BaseModel):
     name: typing.Optional[str] = None

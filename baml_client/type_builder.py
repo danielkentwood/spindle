@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["CharacterSpan","EntityType","ExtractionResult","Ontology","RelationType","Resume","SourceMetadata","Triple",]
+          ["CharacterSpan","EntityType","ExtractionResult","Ontology","OntologyExtension","OntologyRecommendation","RelationType","Resume","SourceMetadata","Triple",]
         ), enums=set(
           []
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -31,7 +31,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 8
+    # Generated classes 10
     # #########################################################################
 
     @property
@@ -49,6 +49,14 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def Ontology(self) -> "OntologyViewer":
         return OntologyViewer(self)
+
+    @property
+    def OntologyExtension(self) -> "OntologyExtensionViewer":
+        return OntologyExtensionViewer(self)
+
+    @property
+    def OntologyRecommendation(self) -> "OntologyRecommendationViewer":
+        return OntologyRecommendationViewer(self)
 
     @property
     def RelationType(self) -> "RelationTypeViewer":
@@ -74,7 +82,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
 # #########################################################################
-# Generated classes 8
+# Generated classes 10
 # #########################################################################
 
 class CharacterSpanAst:
@@ -249,6 +257,108 @@ class OntologyProperties:
     @property
     def relation_types(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("relation_types"))
+    
+    
+
+
+class OntologyExtensionAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("OntologyExtension")
+        self._properties: typing.Set[str] = set([  "needs_extension",  "new_entity_types",  "new_relation_types",  "critical_information_at_risk",  "reasoning",  ])
+        self._props = OntologyExtensionProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "OntologyExtensionProperties":
+        return self._props
+
+
+class OntologyExtensionViewer(OntologyExtensionAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class OntologyExtensionProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def needs_extension(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("needs_extension"))
+    
+    @property
+    def new_entity_types(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("new_entity_types"))
+    
+    @property
+    def new_relation_types(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("new_relation_types"))
+    
+    @property
+    def critical_information_at_risk(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("critical_information_at_risk"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
+class OntologyRecommendationAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("OntologyRecommendation")
+        self._properties: typing.Set[str] = set([  "ontology",  "text_purpose",  "reasoning",  ])
+        self._props = OntologyRecommendationProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "OntologyRecommendationProperties":
+        return self._props
+
+
+class OntologyRecommendationViewer(OntologyRecommendationAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class OntologyRecommendationProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def ontology(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("ontology"))
+    
+    @property
+    def text_purpose(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("text_purpose"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
     
     
 

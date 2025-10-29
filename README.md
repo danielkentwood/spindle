@@ -10,6 +10,8 @@ Spindle extracts structured knowledge graph triples (subject-predicate-object re
 
 The current MVP provides:
 
+- **Automatic ontology recommendation**: Analyze text to automatically suggest appropriate entity and relation types
+- **Conservative ontology extension**: Automatically analyze and extend existing ontologies when processing new sources, only adding types when critical information would be lost
 - **Ontology-driven extraction**: Define entity and relation types to guide extraction
 - **Source metadata tracking**: Each triple includes source name and optional URL
 - **Supporting evidence**: Character spans with text and indices computed in post-processing (whitespace-normalized matching)
@@ -57,7 +59,129 @@ echo "ANTHROPIC_API_KEY=your_key_here" > .env
 
 ## Usage
 
-### Basic Example
+### Automatic Ontology Recommendation (New!)
+
+#### Option 1: Automatic Recommendation in SpindleExtractor (Simplest!)
+
+The easiest way - just create a `SpindleExtractor` without an ontology and it will automatically recommend one based on your text:
+
+```python
+from spindle import SpindleExtractor
+
+# Create extractor WITHOUT an ontology
+extractor = SpindleExtractor()
+
+# Extract - ontology will be automatically recommended from the text
+text = """
+Dr. Sarah Chen led a clinical trial at Massachusetts General Hospital 
+to evaluate Medication A for treating chronic migraines...
+"""
+
+result = extractor.extract(
+    text=text,
+    source_name="Research Paper",
+    ontology_scope="balanced"  # "minimal", "balanced" (default), or "comprehensive"
+)
+
+# The ontology is now available and will be reused for future extractions
+print(extractor.ontology.entity_types)  # Auto-recommended entity types
+```
+
+**Scope Levels:**
+- `"minimal"`: Essential concepts only (3-8 entity types, 4-10 relations) - for quick exploration
+- `"balanced"`: Standard analysis (6-12 entity types, 8-15 relations) - recommended default
+- `"comprehensive"`: Detailed ontology (10-20 entity types, 12-25 relations) - for research/expertise
+
+#### Option 2: Explicit Recommendation with OntologyRecommender
+
+For more control, use the `OntologyRecommender` directly:
+
+```python
+from spindle import OntologyRecommender, SpindleExtractor
+
+# Create recommender
+recommender = OntologyRecommender()
+
+# Analyze text and get ontology recommendation
+text = """
+Dr. Sarah Chen led a clinical trial at Massachusetts General Hospital 
+to evaluate Medication A for treating chronic migraines...
+"""
+
+recommendation = recommender.recommend(text, scope="balanced")
+
+# View the analysis
+print(f"Text Purpose: {recommendation.text_purpose}")
+print(f"Entity Types: {[et.name for et in recommendation.ontology.entity_types]}")
+print(f"Relation Types: {[rt.name for rt in recommendation.ontology.relation_types]}")
+
+# Use the recommended ontology for extraction
+extractor = SpindleExtractor(recommendation.ontology)
+result = extractor.extract(text, source_name="Research Paper")
+```
+
+### One-Step Recommendation + Extraction
+
+For maximum convenience, recommend and extract in one call:
+
+```python
+from spindle import OntologyRecommender
+
+recommender = OntologyRecommender()
+recommendation, extraction = recommender.recommend_and_extract(
+    text=your_text,
+    source_name="Document Name",
+    scope="balanced"  # Or "minimal" / "comprehensive"
+)
+
+print(f"Auto-detected purpose: {recommendation.text_purpose}")
+print(f"Extracted {len(extraction.triples)} triples")
+```
+
+### Conservative Ontology Extension (New!)
+
+When processing multiple sources, conservatively extend your ontology only when necessary:
+
+```python
+from spindle import OntologyRecommender, SpindleExtractor, create_ontology
+
+# Start with an existing ontology (e.g., for business domain)
+ontology = create_ontology(business_entities, business_relations)
+
+# Process first document
+extractor = SpindleExtractor(ontology)
+result1 = extractor.extract(business_text, "Business News")
+
+# New document from different domain - analyze if extension needed
+recommender = OntologyRecommender()
+new_text = "Dr. Chen prescribed Medication A for treating hypertension..."
+
+extension, extended_ontology = recommender.analyze_and_extend(
+    text=new_text,
+    current_ontology=ontology,
+    scope="balanced",
+    auto_apply=True  # Automatically apply if needed
+)
+
+if extended_ontology:
+    print(f"Extension needed: {extension.critical_information_at_risk}")
+    print(f"Added types: {[et.name for et in extension.new_entity_types]}")
+    # Use extended ontology for extraction
+    extractor = SpindleExtractor(extended_ontology)
+else:
+    print("No extension needed - using original ontology")
+    # Continue with original ontology
+
+result2 = extractor.extract(new_text, "Medical Research")
+```
+
+**Key Principles:**
+- Extensions are **conservative** - only when critical information would be lost
+- Existing types are preferred over creating new ones
+- Extensions are backward-compatible additions
+- Original ontology is never modified - new ontology is created
+
+### Basic Example with Manual Ontology
 
 ```python
 from spindle import SpindleExtractor, create_ontology
@@ -125,10 +249,11 @@ from spindle import filter_triples_by_source
 blog_triples = filter_triples_by_source(result2.triples, "Company Blog")
 ```
 
-### Running the Example
+### Running the Examples
 
-A complete example is provided in `example.py`:
+Two complete examples are provided:
 
+**Manual Ontology (`example.py`):**
 ```bash
 python example.py
 ```
@@ -141,6 +266,53 @@ This demonstrates:
 - Handling duplicate triples from different sources
 - Filtering triples by source
 - Serialization of triples with metadata
+
+**Automatic Ontology Recommendation (`example_ontology_recommender.py`):**
+```bash
+python example_ontology_recommender.py
+```
+
+This demonstrates:
+- Automatic ontology recommendation from text analysis
+- Text purpose/goal inference
+- Domain-appropriate entity and relation type generation
+- Using recommended ontologies for extraction
+- One-step recommendation + extraction workflow
+- JSON serialization of recommendations
+
+**Auto-Ontology in SpindleExtractor (`example_auto_ontology.py`):**
+```bash
+python example_auto_ontology.py
+```
+
+This demonstrates:
+- SpindleExtractor without providing an ontology
+- Automatic ontology recommendation on first extract() call
+- Reusing the same ontology for subsequent extractions
+- Entity consistency across multiple texts with auto-recommended ontology
+
+**Scope Comparison (`example_scope_comparison.py`):**
+```bash
+python example_scope_comparison.py
+```
+
+This demonstrates:
+- Comparing minimal, balanced, and comprehensive scopes
+- How the same text produces different ontologies at different granularities
+- Guidance on when to use each scope level
+- Extraction comparison across scopes
+
+**Conservative Ontology Extension (`example_ontology_extension.py`):**
+```bash
+python example_ontology_extension.py
+```
+
+This demonstrates:
+- Starting with an existing ontology
+- Analyzing new text to determine if extension is needed
+- Conservative extension principles (only when critical information at risk)
+- Applying extensions and extracting with evolved ontology
+- When extensions are/aren't needed
 
 ## Defining Custom Ontologies
 
@@ -178,28 +350,54 @@ relation_types = [
 
 ```
 spindle/
-├── baml_src/              # BAML schema definitions
-│   ├── clients.baml       # LLM client configurations
-│   ├── generators.baml    # Code generation config
-│   ├── resume.baml        # Example BAML function
-│   └── spindle.baml       # Knowledge graph extraction schema
-├── baml_client/           # Auto-generated BAML Python client
-├── spindle.py             # Main Python interface
-├── example.py             # Usage example
-├── requirements.txt       # Python dependencies
-├── overview.md            # Project overview
-└── README.md              # This file
+├── baml_src/                        # BAML schema definitions
+│   ├── clients.baml                 # LLM client configurations
+│   ├── generators.baml              # Code generation config
+│   ├── resume.baml                  # Example BAML function
+│   └── spindle.baml                 # Knowledge graph extraction and ontology recommendation
+├── baml_client/                     # Auto-generated BAML Python client
+├── spindle.py                       # Main Python interface
+├── example.py                       # Manual ontology usage example
+├── example_ontology_recommender.py  # Explicit ontology recommendation example
+├── example_auto_ontology.py         # Auto-ontology in SpindleExtractor example
+├── example_scope_comparison.py      # Comparing scope levels (minimal/balanced/comprehensive)
+├── example_ontology_extension.py    # Conservative ontology extension for new sources
+├── requirements.txt                 # Python dependencies
+└── README.md                        # This file
 ```
 
 ## API Reference
 
-### `SpindleExtractor`
+### `OntologyRecommender`
 
-Main interface for triple extraction.
+Service for automatically recommending ontologies based on text analysis using principled design guidelines.
 
 **Methods:**
-- `__init__(ontology: Ontology)`: Initialize with an ontology
-- `extract(text: str, source_name: str, source_url: Optional[str] = None, existing_triples: List[Triple] = None) -> ExtractionResult`: Extract triples from text with source metadata
+- `recommend(text: str, scope: str = "balanced") -> OntologyRecommendation`: Analyze text and recommend an appropriate ontology. Scope must be one of "minimal", "balanced", or "comprehensive".
+- `recommend_and_extract(text: str, source_name: str, source_url: Optional[str] = None, scope: str = "balanced", existing_triples: List[Triple] = None) -> Tuple[OntologyRecommendation, ExtractionResult]`: Recommend ontology and extract triples in one step.
+- `analyze_extension(text: str, current_ontology: Ontology, scope: str = "balanced") -> OntologyExtension`: Conservatively analyze if an existing ontology needs extension for new text.
+- `extend_ontology(current_ontology: Ontology, extension: OntologyExtension) -> Ontology`: Apply an extension to create an extended ontology.
+- `analyze_and_extend(text: str, current_ontology: Ontology, scope: str = "balanced", auto_apply: bool = True) -> Tuple[OntologyExtension, Optional[Ontology]]`: Analyze and optionally apply extensions in one step.
+
+**Scope Levels:**
+- `"minimal"`: Essential concepts only (typically 3-8 entity types, 4-10 relation types). Use for quick exploration, simple queries, and broad pattern identification.
+- `"balanced"`: Standard analysis (typically 6-12 entity types, 8-15 relation types). Recommended default for general-purpose extraction.
+- `"comprehensive"`: Detailed ontology (typically 10-20 entity types, 12-25 relation types). Use for detailed analysis, domain expertise, and research.
+
+Note: These are guidelines, not hard limits. The LLM determines the actual number of types based on principled ontology design.
+
+**Returns (OntologyRecommendation):**
+- `ontology`: The recommended Ontology object (ready for use with SpindleExtractor)
+- `text_purpose`: Analysis of the text's overarching purpose/goal
+- `reasoning`: Explanation of why these entity and relation types were recommended
+
+### `SpindleExtractor`
+
+Main interface for triple extraction with a predefined or auto-recommended ontology.
+
+**Methods:**
+- `__init__(ontology: Optional[Ontology] = None, ontology_scope: str = "balanced")`: Initialize with an ontology. If None, an ontology will be automatically recommended from the text when extract() is first called, using the specified scope.
+- `extract(text: str, source_name: str, source_url: Optional[str] = None, existing_triples: List[Triple] = None, ontology_scope: Optional[str] = None) -> ExtractionResult`: Extract triples from text with source metadata. If no ontology was provided at init, one will be automatically recommended. The `ontology_scope` parameter can override the default scope for this specific extraction.
 
 ### `create_ontology()`
 
@@ -277,6 +475,33 @@ Filter triples by extraction date range.
 - `end_date`: Optional end datetime (inclusive)
 
 **Returns:** List of triples extracted within the date range
+
+### `ontology_to_dict()`
+
+Convert an Ontology object to a dictionary for serialization.
+
+**Parameters:**
+- `ontology`: An Ontology object
+
+**Returns:** Dictionary with 'entity_types' and 'relation_types' keys
+
+### `recommendation_to_dict()`
+
+Convert an OntologyRecommendation to a dictionary for serialization.
+
+**Parameters:**
+- `recommendation`: An OntologyRecommendation object
+
+**Returns:** Dictionary with ontology, text_purpose, and reasoning
+
+### `extension_to_dict()`
+
+Convert an OntologyExtension to a dictionary for serialization.
+
+**Parameters:**
+- `extension`: An OntologyExtension object
+
+**Returns:** Dictionary with needs_extension, new_entity_types, new_relation_types, critical_information_at_risk, and reasoning
 
 ## Architecture
 
