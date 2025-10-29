@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="assets/spindle_logo.png" alt="Spindle Logo" width="400">
+</p>
+
+
 # Spindle
 
 A tool for real-time extraction of knowledge graphs from multimodal data using BAML and LLMs.
