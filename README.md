@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/spindle_logo.png" alt="Spindle Logo" width="400">
+  <img src="assets/spindle_logo.svg" alt="Spindle Logo" width="400">
 </p>
 
 
@@ -546,6 +546,36 @@ The MVP is a foundation for the full Spindle system. Future enhancements:
 
 - `baml-py==0.211.2`: BAML framework for Python
 - `python-dotenv==1.0.0`: Environment variable management
+
+## Testing
+
+Spindle includes a comprehensive test suite with 84+ unit tests and integration tests.
+
+### Running Tests
+
+```bash
+# Run all unit tests (fast, no API calls)
+pytest tests/ -m "not integration"
+
+# Run with coverage report
+pytest tests/ -m "not integration" --cov=spindle --cov-report=term-missing
+
+# Run integration tests (requires API key)
+pytest tests/ -m integration
+```
+
+### Test Coverage
+
+Current test coverage: **91%**
+
+Tests cover:
+- Helper functions (character span matching, filtering, datetime parsing)
+- Serialization (triples, ontologies, recommendations)
+- SpindleExtractor (with mocked LLM calls)
+- OntologyRecommender (with mocked LLM calls)
+- Integration tests (real LLM calls)
+
+For detailed testing documentation, see [`docs/TESTING.md`](docs/TESTING.md).
 
 ## License
 
