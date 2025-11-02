@@ -26,6 +26,8 @@ The current MVP provides:
 - **Entity consistency**: Recognizes when entities in new text match existing entities
 - **Source filtering**: Query triples by their source
 - **Date-based filtering**: Query triples by extraction date range
+- **Graph database persistence**: Store and query knowledge graphs using embedded Kùzu database
+- **Pattern-based querying**: Flexible graph exploration with wildcard pattern matching
 - **BAML-powered**: Uses the BAML framework for type-safe LLM interactions
 - **Claude Sonnet 4**: Leverages Anthropic's Claude for high-quality extraction
 
@@ -33,8 +35,8 @@ The current MVP provides:
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Anaconda/Miniconda (recommended)
+- Python 3.8 or higher (3.11 recommended)
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
 - Anthropic API key
 
 ### Setup
@@ -45,15 +47,28 @@ git clone <repository-url>
 cd spindle
 ```
 
-2. Create and activate the conda environment (or use existing kgx environment):
+2. Install uv (recommended for fast, reliable package management):
 ```bash
-conda create -n spindle python=3.11
-conda activate spindle
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with pip
+pip install uv
+
+# Or with Homebrew
+brew install uv
 ```
 
-3. Install dependencies:
+3. Create virtual environment and install dependencies:
 ```bash
-pip install -r requirements.txt
+# With uv (recommended)
+uv venv
+uv pip install -e ".[dev]"
+
+# Or with traditional pip/venv
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
 ```
 
 4. Set up your API key:
@@ -61,6 +76,8 @@ pip install -r requirements.txt
 # Create a .env file with your Anthropic API key
 echo "ANTHROPIC_API_KEY=your_key_here" > .env
 ```
+
+> **Note**: This project uses `uv` for fast Python package management. See [docs/UV_SETUP.md](docs/UV_SETUP.md) for detailed uv usage and troubleshooting.
 
 ## Usage
 
@@ -351,22 +368,155 @@ relation_types = [
 ]
 ```
 
+## Graph Database Persistence
+
+Spindle includes **GraphStore**, a persistent graph database powered by Kùzu for storing and querying knowledge graphs.
+
+### Quick Start
+
+```python
+from spindle import SpindleExtractor, create_ontology, GraphStore
+
+# Extract triples
+ontology = create_ontology(entity_types, relation_types)
+extractor = SpindleExtractor(ontology)
+result = extractor.extract(text, source_name="My Source")
+
+# Store in graph database
+with GraphStore() as store:
+    # Add triples
+    store.add_triples(result.triples)
+    
+    # Query by pattern
+    employees = store.query_by_pattern(predicate="works_at")
+    
+    # Filter by source
+    my_source_data = store.query_by_source("My Source")
+    
+    # Get statistics
+    stats = store.get_statistics()
+    print(f"Stored {stats['edge_count']} relationships")
+```
+
+### Key Features
+
+- **Embedded Database**: No separate server needed - Kùzu runs in-process
+- **Full CRUD Operations**: Create, read, update, delete nodes and edges
+- **Pattern Matching**: Query with wildcards for flexible exploration
+- **Source Tracking**: Filter triples by source document
+- **Temporal Queries**: Filter by extraction date ranges
+- **Cypher Support**: Execute direct Cypher queries for advanced use cases
+- **Triple Fidelity**: Full roundtrip support (Triple → Store → Triple)
+
+### Configuration
+
+GraphStore automatically organizes all graphs in a `/graphs` directory at the project root:
+
+```bash
+# In .env file - just specify the graph name
+KUZU_DB_PATH=my_knowledge_graph
+```
+
+```python
+# Or specify directly - creates /graphs/custom_graph/
+store = GraphStore(db_path="custom_graph")
+
+# .db extension is automatically removed
+store = GraphStore(db_path="custom_graph.db")  # Still creates /graphs/custom_graph/
+```
+
+All graph databases are stored in: `/graphs/<graph_name>/`
+
+### Example: Multi-Source Knowledge Graph
+
+```python
+with GraphStore() as store:
+    # Add triples from multiple sources
+    result1 = extractor.extract(text1, "Wikipedia")
+    store.add_triples(result1.triples)
+    
+    result2 = extractor.extract(text2, "Company Website")
+    store.add_triples(result2.triples)
+    
+    # Query all "works_at" relationships
+    employees = store.query_by_pattern(predicate="works_at")
+    
+    # Find facts confirmed by multiple sources
+    all_edges = store.query_by_pattern()
+    fact_to_sources = {}
+    for edge in all_edges:
+        fact = (edge['subject'], edge['predicate'], edge['object'])
+        if fact not in fact_to_sources:
+            fact_to_sources[fact] = []
+        fact_to_sources[fact].append(edge['source'])
+    
+    # Multi-source facts are more trustworthy
+    confirmed = {f: s for f, s in fact_to_sources.items() if len(s) > 1}
+```
+
+### Installation
+
+GraphStore requires the Kùzu package:
+
+```bash
+pip install kuzu>=0.7.0
+```
+
+This is automatically included when you install Spindle dependencies with `pip install -r requirements.txt`.
+
+### Documentation
+
+For comprehensive documentation, see [`docs/GRAPH_STORE.md`](docs/GRAPH_STORE.md), which covers:
+- Detailed API reference
+- Advanced usage patterns
+- Query optimization
+- Best practices
+- Migration strategies
+- Troubleshooting
+
+### Running the Example
+
+```bash
+# With uv
+uv run python demos/example_graph_store.py
+
+# Or if using activated venv
+python demos/example_graph_store.py
+```
+
 ## Project Structure
 
 ```
 spindle/
+├── spindle/                         # Main package
+│   ├── __init__.py                  # Package exports
+│   ├── extractor.py                 # Core extraction functionality
+│   └── graph_store.py               # Graph database persistence
 ├── baml_src/                        # BAML schema definitions
 │   ├── clients.baml                 # LLM client configurations
 │   ├── generators.baml              # Code generation config
 │   ├── resume.baml                  # Example BAML function
 │   └── spindle.baml                 # Knowledge graph extraction and ontology recommendation
 ├── baml_client/                     # Auto-generated BAML Python client
-├── spindle.py                       # Main Python interface
-├── example.py                       # Manual ontology usage example
-├── example_ontology_recommender.py  # Explicit ontology recommendation example
-├── example_auto_ontology.py         # Auto-ontology in SpindleExtractor example
-├── example_scope_comparison.py      # Comparing scope levels (minimal/balanced/comprehensive)
-├── example_ontology_extension.py    # Conservative ontology extension for new sources
+├── demos/                           # Example scripts
+│   ├── example.py                   # Manual ontology usage example
+│   ├── example_graph_store.py       # GraphStore demonstration
+│   ├── example_ontology_recommender.py  # Explicit ontology recommendation
+│   ├── example_auto_ontology.py     # Auto-ontology in SpindleExtractor
+│   ├── example_scope_comparison.py  # Comparing scope levels
+│   └── example_ontology_extension.py  # Conservative ontology extension
+├── tests/                           # Test suite
+│   ├── test_extractor.py            # Extractor tests
+│   ├── test_graph_store.py          # GraphStore tests
+│   ├── test_helpers.py              # Helper function tests
+│   ├── test_integration.py          # Integration tests
+│   ├── test_recommender.py          # OntologyRecommender tests
+│   └── test_serialization.py        # Serialization tests
+├── docs/                            # Documentation
+│   ├── GRAPH_STORE.md               # GraphStore usage guide
+│   ├── TESTING.md                   # Testing documentation
+│   └── ...                          # Other docs
+├── setup.py                         # Package installation config
 ├── requirements.txt                 # Python dependencies
 └── README.md                        # This file
 ```
@@ -508,6 +658,50 @@ Convert an OntologyExtension to a dictionary for serialization.
 
 **Returns:** Dictionary with needs_extension, new_entity_types, new_relation_types, critical_information_at_risk, and reasoning
 
+### `GraphStore`
+
+Persistent graph database for storing and querying knowledge graphs using Kùzu.
+
+**Initialization:**
+- `__init__(db_path: Optional[str] = None)`: Initialize with optional graph name. Uses `KUZU_DB_PATH` environment variable if not provided, defaults to `/graphs/spindle_graph/`. All graphs are automatically stored in `/graphs/<name>/` directory.
+
+**Graph Management:**
+- `create_graph(db_path: Optional[str] = None)`: Initialize new graph database
+- `delete_graph()`: Delete entire database (irreversible)
+- `close()`: Close database connection
+- Context manager support (`with GraphStore() as store:`)
+
+**Node Operations:**
+- `add_node(name: str, entity_type: str, metadata: Dict = None) -> bool`: Add single node
+- `add_nodes(nodes: List[Dict]) -> int`: Bulk add nodes
+- `get_node(name: str) -> Optional[Dict]`: Retrieve node by name
+- `update_node(name: str, updates: Dict) -> bool`: Update node properties
+- `delete_node(name: str) -> bool`: Delete node and its edges
+
+**Edge Operations:**
+- `add_edge(subject: str, predicate: str, obj: str, metadata: Dict = None) -> Dict[str, Any]`: Add single edge with intelligent evidence merging (returns success/message dict)
+- `add_edges(edges: List[Dict]) -> int`: Bulk add edges
+- `get_edge(subject: str, predicate: str, obj: str) -> Optional[List[Dict]]`: Get edge with consolidated evidence from all sources
+- `update_edge(subject: str, predicate: str, obj: str, updates: Dict) -> bool`: Update edge properties
+- `delete_edge(subject: str, predicate: str, obj: str) -> bool`: Delete edge matching pattern
+
+**Triple Integration:**
+- `add_triples(triples: List[Triple]) -> int`: Bulk import from Spindle extraction
+- `get_triples() -> List[Triple]`: Export all edges as Triple objects
+- `add_edge_from_triple(triple: Triple) -> bool`: Create edge from Triple object
+- `add_nodes_from_triple(triple: Triple) -> Tuple[bool, bool]`: Extract and add nodes from triple
+
+**Query Operations:**
+- `query_by_pattern(subject: Optional[str] = None, predicate: Optional[str] = None, obj: Optional[str] = None) -> List[Dict]`: Pattern matching (None = wildcard)
+- `query_by_source(source_name: str) -> List[Dict]`: Filter by source document (searches within nested evidence)
+- `query_by_date_range(start: Optional[datetime] = None, end: Optional[datetime] = None) -> List[Dict]`: Filter by extraction date (span-level timestamps)
+- `query_cypher(cypher_query: str) -> List[Dict]`: Execute raw Cypher query
+
+**Utility:**
+- `get_statistics() -> Dict`: Return graph statistics (node count, edge count, sources, etc.)
+
+See [`docs/GRAPH_STORE.md`](docs/GRAPH_STORE.md) for comprehensive documentation.
+
 ## Architecture
 
 Spindle uses the BAML (Basically, A Made-up Language) framework to define type-safe LLM interactions:
@@ -538,14 +732,15 @@ The MVP is a foundation for the full Spindle system. Future enhancements:
 - Multimodal support (images, PDFs, audio)
 - Web API/microservice interface
 - Multiple LLM providers (OpenAI, local models)
-- Graph storage and querying
-- Visualization tools
+- Visualization tools (graph visualization UI)
 - Real-time streaming extraction
+- Advanced graph analytics and reasoning
 
 ## Requirements
 
 - `baml-py==0.211.2`: BAML framework for Python
 - `python-dotenv==1.0.0`: Environment variable management
+- `kuzu>=0.7.0`: Embedded graph database for GraphStore (optional)
 
 ## Testing
 
@@ -554,14 +749,18 @@ Spindle includes a comprehensive test suite with 84+ unit tests and integration 
 ### Running Tests
 
 ```bash
+# With uv (recommended)
 # Run all unit tests (fast, no API calls)
-pytest tests/ -m "not integration"
+uv run pytest tests/ -m "not integration"
 
 # Run with coverage report
-pytest tests/ -m "not integration" --cov=spindle --cov-report=term-missing
+uv run pytest tests/ -m "not integration" --cov=spindle --cov-report=term-missing
 
 # Run integration tests (requires API key)
-pytest tests/ -m integration
+uv run pytest tests/ -m integration
+
+# Or if using activated venv
+pytest tests/ -m "not integration"
 ```
 
 ### Test Coverage

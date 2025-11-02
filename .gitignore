@@ -25,6 +25,7 @@ wheels/
 
 # Virtual environments
 venv/
+.venv/
 env/
 ENV/
 
@@ -45,3 +46,16 @@ Thumbs.db
 # BAML (keep source, ignore some generated artifacts if needed)
 # baml_client/ - keeping this as it's needed for the code to run
 
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# uv
+.python-version.bak
+uv.lock
+
+# Graph databases
+graphs/
+*.db
+*.wal

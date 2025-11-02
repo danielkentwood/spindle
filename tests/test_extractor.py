@@ -37,7 +37,7 @@ class TestSpindleExtractorInit:
 class TestSpindleExtractorExtract:
     """Tests for SpindleExtractor.extract method."""
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     @freeze_time("2024-01-15 10:30:00")
     def test_extract_basic(self, mock_baml_extract, simple_ontology):
         """Test basic extraction with mocked BAML call."""
@@ -81,7 +81,7 @@ class TestSpindleExtractorExtract:
         assert call_args[1]["ontology"] == simple_ontology
         assert call_args[1]["source_metadata"].source_name == "Test Document"
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_with_existing_triples(self, mock_baml_extract, simple_ontology, sample_triples):
         """Test extraction with existing triples for entity consistency."""
         mock_result = ExtractionResult(
@@ -101,7 +101,7 @@ class TestSpindleExtractorExtract:
         call_args = mock_baml_extract.call_args
         assert call_args[1]["existing_triples"] == sample_triples
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_computes_span_indices(self, mock_baml_extract, simple_ontology):
         """Test that extraction computes character span indices."""
         # Mock BAML to return triple with None indices
@@ -135,7 +135,7 @@ class TestSpindleExtractorExtract:
         assert span.start >= 0
         assert span.end > span.start
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_handles_unfound_spans(self, mock_baml_extract, simple_ontology):
         """Test that extraction handles spans that can't be found."""
         # Mock BAML to return triple with span not in text
@@ -168,7 +168,7 @@ class TestSpindleExtractorExtract:
         assert span.end == -1
     
     @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_auto_recommends_ontology(self, mock_baml_extract, mock_recommend, mock_ontology_recommendation):
         """Test that extraction auto-recommends ontology when not provided."""
         # Setup mocks
@@ -190,7 +190,7 @@ class TestSpindleExtractorExtract:
         assert extractor.ontology == mock_ontology_recommendation.ontology
     
     @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_uses_custom_scope_for_auto_ontology(self, mock_baml_extract, mock_recommend, mock_ontology_recommendation):
         """Test that custom scope is used for auto-recommendation."""
         mock_recommend.return_value = mock_ontology_recommendation
@@ -207,7 +207,7 @@ class TestSpindleExtractorExtract:
         mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="comprehensive")
     
     @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_ontology_scope_override(self, mock_baml_extract, mock_recommend, mock_ontology_recommendation):
         """Test that ontology_scope parameter overrides default."""
         mock_recommend.return_value = mock_ontology_recommendation
@@ -224,7 +224,7 @@ class TestSpindleExtractorExtract:
         # Verify that recommend was called with overridden scope
         mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="minimal")
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_preserves_existing_indices(self, mock_baml_extract, simple_ontology):
         """Test that extraction preserves already-set span indices."""
         # Mock BAML to return triple with indices already set
@@ -256,7 +256,7 @@ class TestSpindleExtractorExtract:
         assert span.start == 0
         assert span.end == 23
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     @freeze_time("2024-01-15 10:30:00")
     def test_extract_sets_datetime_for_all_triples(self, mock_baml_extract, simple_ontology):
         """Test that extraction sets datetime for all returned triples."""
@@ -293,7 +293,7 @@ class TestSpindleExtractorExtract:
         # Check that all triples have datetime set
         assert all(t.extraction_datetime == "2024-01-15T10:30:00Z" for t in result.triples)
     
-    @patch('spindle.b.ExtractTriples')
+    @patch('spindle.extractor.b.ExtractTriples')
     def test_extract_with_no_source_url(self, mock_baml_extract, simple_ontology):
         """Test extraction without providing source URL."""
         mock_result = ExtractionResult(triples=[], reasoning="Test")

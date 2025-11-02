@@ -1,11 +1,7 @@
 """
-Spindle: Knowledge Graph Triple Extraction Tool
+Spindle Extractor Module
 
-This module provides a simple interface for extracting knowledge graph triples
-from text using BAML and LLMs. It supports ontology-based extraction with
-entity consistency across multiple extraction runs. Each triple includes
-source metadata, supporting text spans for provenance and evidence tracking,
-and an extraction datetime for temporal tracking.
+This module provides the core triple extraction functionality for Spindle.
 
 Key Components:
 - SpindleExtractor: Extract triples from text using a predefined ontology

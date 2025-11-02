@@ -11,7 +11,7 @@ from tests.fixtures.sample_texts import SIMPLE_TEXT, MEDICAL_TEXT
 class TestOntologyRecommenderRecommend:
     """Tests for OntologyRecommender.recommend method."""
     
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_basic(self, mock_baml_recommend, mock_ontology_recommendation):
         """Test basic ontology recommendation."""
         mock_baml_recommend.return_value = mock_ontology_recommendation
@@ -31,7 +31,7 @@ class TestOntologyRecommenderRecommend:
             scope="balanced"
         )
     
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_with_minimal_scope(self, mock_baml_recommend, mock_ontology_recommendation):
         """Test recommendation with minimal scope."""
         mock_baml_recommend.return_value = mock_ontology_recommendation
@@ -45,7 +45,7 @@ class TestOntologyRecommenderRecommend:
             scope="minimal"
         )
     
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_with_comprehensive_scope(self, mock_baml_recommend, mock_ontology_recommendation):
         """Test recommendation with comprehensive scope."""
         mock_baml_recommend.return_value = mock_ontology_recommendation
@@ -64,7 +64,7 @@ class TestOntologyRecommenderRecommendAndExtract:
     """Tests for OntologyRecommender.recommend_and_extract method."""
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_and_extract_basic(self, mock_baml_recommend, mock_extract, 
                                          mock_ontology_recommendation, mock_extraction_result):
         """Test combined recommendation and extraction."""
@@ -86,7 +86,7 @@ class TestOntologyRecommenderRecommendAndExtract:
         mock_extract.assert_called_once()
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_and_extract_with_url(self, mock_baml_recommend, mock_extract,
                                             mock_ontology_recommendation, mock_extraction_result):
         """Test recommend and extract with source URL."""
@@ -105,7 +105,7 @@ class TestOntologyRecommenderRecommendAndExtract:
         assert call_args[1]["source_url"] == "https://example.com/test"
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_and_extract_with_existing_triples(self, mock_baml_recommend, mock_extract,
                                                           mock_ontology_recommendation, 
                                                           mock_extraction_result, sample_triples):
@@ -125,7 +125,7 @@ class TestOntologyRecommenderRecommendAndExtract:
         assert call_args[1]["existing_triples"] == sample_triples
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.b.RecommendOntology')
+    @patch('spindle.extractor.b.RecommendOntology')
     def test_recommend_and_extract_uses_recommended_ontology(self, mock_baml_recommend, mock_extract,
                                                               mock_ontology_recommendation, 
                                                               mock_extraction_result):
@@ -147,7 +147,7 @@ class TestOntologyRecommenderRecommendAndExtract:
 class TestOntologyRecommenderAnalyzeExtension:
     """Tests for OntologyRecommender.analyze_extension method."""
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_extension_needed(self, mock_baml_analyze, mock_ontology_extension_needed, simple_ontology):
         """Test analyzing when extension is needed."""
         mock_baml_analyze.return_value = mock_ontology_extension_needed
@@ -171,7 +171,7 @@ class TestOntologyRecommenderAnalyzeExtension:
             scope="balanced"
         )
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_extension_not_needed(self, mock_baml_analyze, mock_ontology_extension_not_needed, simple_ontology):
         """Test analyzing when extension is not needed."""
         mock_baml_analyze.return_value = mock_ontology_extension_not_needed
@@ -187,7 +187,7 @@ class TestOntologyRecommenderAnalyzeExtension:
         assert len(result.new_entity_types) == 0
         assert len(result.new_relation_types) == 0
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_extension_with_scope(self, mock_baml_analyze, mock_ontology_extension_needed, simple_ontology):
         """Test analyzing with custom scope."""
         mock_baml_analyze.return_value = mock_ontology_extension_needed
@@ -258,7 +258,7 @@ class TestOntologyRecommenderExtendOntology:
 class TestOntologyRecommenderAnalyzeAndExtend:
     """Tests for OntologyRecommender.analyze_and_extend method."""
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_with_auto_apply(self, mock_baml_analyze, 
                                                  mock_ontology_extension_needed, simple_ontology):
         """Test analyze and extend with auto_apply=True."""
@@ -276,7 +276,7 @@ class TestOntologyRecommenderAnalyzeAndExtend:
         assert extended_ontology is not None
         assert len(extended_ontology.entity_types) > len(simple_ontology.entity_types)
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_without_auto_apply(self, mock_baml_analyze,
                                                     mock_ontology_extension_needed, simple_ontology):
         """Test analyze and extend with auto_apply=False."""
@@ -293,7 +293,7 @@ class TestOntologyRecommenderAnalyzeAndExtend:
         assert extension.needs_extension is True
         assert extended_ontology is None  # Not applied
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_no_extension_needed(self, mock_baml_analyze,
                                                      mock_ontology_extension_not_needed, simple_ontology):
         """Test analyze and extend when no extension is needed."""
@@ -310,7 +310,7 @@ class TestOntologyRecommenderAnalyzeAndExtend:
         assert extension.needs_extension is False
         assert extended_ontology is None  # No extension applied
     
-    @patch('spindle.b.AnalyzeOntologyExtension')
+    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_with_scope(self, mock_baml_analyze,
                                            mock_ontology_extension_needed, simple_ontology):
         """Test analyze and extend with custom scope."""

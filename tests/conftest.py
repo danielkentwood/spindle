@@ -2,6 +2,8 @@
 
 import os
 import pytest
+import tempfile
+import shutil
 from datetime import datetime
 from baml_client.types import (
     Triple,
@@ -18,6 +20,14 @@ from tests.fixtures.sample_ontologies import (
     create_simple_ontology,
     create_complex_ontology
 )
+
+# Try to import GraphStore (may not be available if kuzu not installed)
+try:
+    from spindle import GraphStore
+    GRAPH_STORE_AVAILABLE = True
+except ImportError:
+    GraphStore = None
+    GRAPH_STORE_AVAILABLE = False
 
 
 # Pytest configuration
@@ -190,4 +200,120 @@ def skip_if_no_api_key(api_key_available):
     """Skip test if no API key is available."""
     if not api_key_available:
         pytest.skip("ANTHROPIC_API_KEY not set - skipping integration test")
+
+
+# ========== GraphStore Fixtures ==========
+
+@pytest.fixture
+def skip_if_no_graph_store():
+    """Skip test if GraphStore is not available (kuzu not installed)."""
+    if not GRAPH_STORE_AVAILABLE:
+        pytest.skip("GraphStore not available - kuzu not installed")
+
+
+@pytest.fixture
+def temp_db_path():
+    """Provide a temporary database path and clean it up after test."""
+    temp_dir = tempfile.mkdtemp(prefix="spindle_test_")
+    yield temp_dir
+    # Cleanup
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+
+
+@pytest.fixture
+def temp_graph_store(temp_db_path, skip_if_no_graph_store):
+    """Provide a temporary GraphStore for isolated tests."""
+    store = GraphStore(db_path=temp_db_path)
+    yield store
+    store.close()
+
+
+@pytest.fixture
+def populated_graph_store(temp_graph_store, sample_triples):
+    """Provide a GraphStore pre-populated with sample triples."""
+    temp_graph_store.add_triples(sample_triples)
+    return temp_graph_store
+
+
+@pytest.fixture
+def diverse_triples():
+    """Provide a diverse set of triples for query testing."""
+    source1 = SourceMetadata(
+        source_name="Source A",
+        source_url="https://example.com/a"
+    )
+    source2 = SourceMetadata(
+        source_name="Source B",
+        source_url="https://example.com/b"
+    )
+    
+    return [
+        # Employment relationships
+        Triple(
+            subject="Alice Johnson",
+            predicate="works_at",
+            object="TechCorp",
+            source=source1,
+            supporting_spans=[CharacterSpan(text="Alice Johnson works at TechCorp", start=0, end=32)],
+            extraction_datetime="2024-01-15T10:00:00Z"
+        ),
+        Triple(
+            subject="Bob Smith",
+            predicate="works_at",
+            object="TechCorp",
+            source=source1,
+            supporting_spans=[CharacterSpan(text="Bob Smith works at TechCorp", start=34, end=62)],
+            extraction_datetime="2024-01-15T10:30:00Z"
+        ),
+        Triple(
+            subject="Carol Davis",
+            predicate="works_at",
+            object="DataCorp",
+            source=source2,
+            supporting_spans=[CharacterSpan(text="Carol Davis works at DataCorp", start=0, end=29)],
+            extraction_datetime="2024-01-15T11:00:00Z"
+        ),
+        # Location relationships
+        Triple(
+            subject="TechCorp",
+            predicate="located_in",
+            object="San Francisco",
+            source=source1,
+            supporting_spans=[CharacterSpan(text="TechCorp is in San Francisco", start=64, end=92)],
+            extraction_datetime="2024-01-15T10:00:00Z"
+        ),
+        Triple(
+            subject="DataCorp",
+            predicate="located_in",
+            object="New York",
+            source=source2,
+            supporting_spans=[CharacterSpan(text="DataCorp is in New York", start=31, end=54)],
+            extraction_datetime="2024-01-15T11:00:00Z"
+        ),
+        # Technology usage
+        Triple(
+            subject="Alice Johnson",
+            predicate="uses",
+            object="Python",
+            source=source1,
+            supporting_spans=[CharacterSpan(text="Alice uses Python", start=94, end=111)],
+            extraction_datetime="2024-01-15T10:00:00Z"
+        ),
+        Triple(
+            subject="Bob Smith",
+            predicate="uses",
+            object="TypeScript",
+            source=source1,
+            supporting_spans=[CharacterSpan(text="Bob uses TypeScript", start=113, end=132)],
+            extraction_datetime="2024-01-15T10:30:00Z"
+        ),
+    ]
+
+
+@pytest.fixture
+def graph_store_with_diverse_data(temp_graph_store, diverse_triples):
+    """Provide a GraphStore populated with diverse triples for complex queries."""
+    temp_graph_store.add_triples(diverse_triples)
+    return temp_graph_store
 
