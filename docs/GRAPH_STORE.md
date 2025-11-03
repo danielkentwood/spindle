@@ -175,26 +175,15 @@ All graphs are stored in the following structure:
       └── data
 ```
 
-### Environment Variable
-
-Set `KUZU_DB_PATH` in your `.env` file with just the graph name:
-
-```bash
-KUZU_DB_PATH=my_knowledge_graph
-```
-
-Then create GraphStore without parameters:
-
-```python
-store = GraphStore()  # Creates /graphs/my_knowledge_graph/
-```
-
 ### Constructor Parameter
 
 Provide a graph name (not a full path):
 
 ```python
-# Create graph at /graphs/custom_graph/
+# Use default - creates /graphs/spindle_graph/
+store = GraphStore()
+
+# Specify custom name - creates /graphs/custom_graph/
 store = GraphStore(db_path="custom_graph")
 
 # .db extension is automatically removed

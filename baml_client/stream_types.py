@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (10)
+# Generated classes (9)
 # #########################################################################
 
 class CharacterSpan(BaseModel):
@@ -60,12 +60,6 @@ class RelationType(BaseModel):
     description: typing.Optional[str] = None
     domain: typing.Optional[str] = None
     range: typing.Optional[str] = None
-
-class Resume(BaseModel):
-    name: typing.Optional[str] = None
-    email: typing.Optional[str] = None
-    experience: typing.List[str]
-    skills: typing.List[str]
 
 class SourceMetadata(BaseModel):
     source_name: typing.Optional[str] = None

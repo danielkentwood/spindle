@@ -43,7 +43,7 @@ class GraphStore:
         >>> from spindle import GraphStore
         >>> 
         >>> # Create or connect to database (stored in /graphs/spindle_graph/)
-        >>> store = GraphStore()  # Uses KUZU_DB_PATH env var or default
+        >>> store = GraphStore()  # Uses default "spindle_graph"
         >>> 
         >>> # Or specify graph name (stored in /graphs/my_graph/)
         >>> store = GraphStore(db_path="my_graph")
@@ -62,20 +62,15 @@ class GraphStore:
         ...     store.add_triples(triples)
     """
     
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str = "spindle_graph"):
         """
         Initialize GraphStore with Kùzu database.
         
         Args:
-            db_path: Optional graph name or path. If just a name (e.g., "my_graph"),
-                    creates /graphs/my_graph/ directory. If not provided,
-                    uses KUZU_DB_PATH environment variable or defaults to
-                    '/graphs/spindle_graph/'
+            db_path: Graph name or path. If just a name (e.g., "my_graph"),
+                    creates /graphs/my_graph/ directory. If an absolute path,
+                    uses that path directly. Defaults to "spindle_graph".
         """
-        # Determine database path
-        if db_path is None:
-            db_path = os.getenv("KUZU_DB_PATH", "spindle_graph")
-        
         # Convert to absolute path in /graphs directory structure
         self.db_path = self._resolve_graph_path(db_path)
         self.db = None
@@ -86,14 +81,29 @@ class GraphStore:
     
     def _resolve_graph_path(self, db_path: str) -> str:
         """
-        Resolve database path to /graphs/<name>/data directory structure.
+        Resolve database path for Kùzu.
+        
+        Kùzu expects a path to a database file (not a directory). For absolute 
+        paths to existing directories (e.g., from test fixtures), append a 
+        database file name. For relative names, create in workspace /graphs/<name>/ 
+        directory.
         
         Args:
             db_path: Graph name or path
         
         Returns:
-            Absolute path to graph database file in /graphs/<name>/data
+            Absolute path for Kùzu database file
         """
+        path_obj = Path(db_path)
+        
+        # If it's an absolute path
+        if path_obj.is_absolute():
+            # If it's an existing directory, append a database file name
+            if os.path.isdir(db_path):
+                return str(path_obj / "graph.db")
+            # Otherwise, use it as-is (might be a file path or non-existent path)
+            return str(path_obj)
+        
         # Get workspace root (project root)
         workspace_root = Path(__file__).parent.parent.absolute()
         
@@ -103,9 +113,6 @@ class GraphStore:
         # Extract graph name from path
         # If it's just a name (no slashes), use it directly
         # If it's a path, extract the base name
-        path_obj = Path(db_path)
-        
-        # Remove common database extensions if present
         graph_name = path_obj.name
         if graph_name.endswith('.db'):
             graph_name = graph_name[:-3]
@@ -114,11 +121,8 @@ class GraphStore:
         graph_dir = graphs_dir / graph_name
         graph_dir.mkdir(parents=True, exist_ok=True)
         
-        # Database files will be in /graphs/<graph_name>/data
-        # Kùzu will create its own subdirectory and files from this path
-        db_file_path = graph_dir / "data"
-        
-        return str(db_file_path)
+        # Return path to database file within the directory
+        return str(graph_dir / "graph.db")
     
     def _initialize_database(self):
         """Initialize Kùzu database and create schema if needed."""
@@ -187,7 +191,7 @@ class GraphStore:
         """
         Delete the entire graph database.
         
-        This drops all tables and removes the database directory.
+        This removes the database file and its parent directory (if empty).
         WARNING: This operation is irreversible!
         """
         # Close connection
@@ -196,9 +200,21 @@ class GraphStore:
         if self.db:
             self.db = None
         
-        # Remove database directory
+        # Remove database file
         if os.path.exists(self.db_path):
-            shutil.rmtree(self.db_path)
+            if os.path.isfile(self.db_path):
+                os.remove(self.db_path)
+            elif os.path.isdir(self.db_path):
+                shutil.rmtree(self.db_path)
+            
+            # Try to remove parent directory if it's empty
+            parent_dir = os.path.dirname(self.db_path)
+            try:
+                if os.path.exists(parent_dir) and not os.listdir(parent_dir):
+                    os.rmdir(parent_dir)
+            except OSError:
+                # Directory not empty or other error, that's fine
+                pass
     
     # ========== Node Operations ==========
     
@@ -222,17 +238,20 @@ class GraphStore:
         if metadata is None:
             metadata = {}
         
+        # Check if node already exists
+        if self.get_node(name) is not None:
+            return False
+        
         metadata_json = json.dumps(metadata)
         
         try:
             self.conn.execute(
-                "MERGE (e:Entity {name: $name}) "
-                "ON CREATE SET e.type = $type, e.metadata = $metadata",
+                "CREATE (e:Entity {name: $name, type: $type, metadata: $metadata})",
                 parameters={"name": name, "type": entity_type, "metadata": metadata_json}
             )
             return True
         except Exception as e:
-            # Node might already exist - this is OK
+            # Failed to create node
             return False
     
     def add_nodes(self, nodes: List[Dict[str, Any]]) -> int:
@@ -376,9 +395,16 @@ class GraphStore:
             return False
         
         try:
-            # Delete all edges connected to this node
+            # In Kùzu, we need to delete edges first, then the node
+            # Delete outgoing edges
             self.conn.execute(
-                "MATCH (e:Entity {name: $name})-[r:Relationship]-() DELETE r",
+                "MATCH (e:Entity {name: $name})-[r:Relationship]->() DELETE r",
+                parameters={"name": name}
+            )
+            
+            # Delete incoming edges
+            self.conn.execute(
+                "MATCH ()-[r:Relationship]->(e:Entity {name: $name}) DELETE r",
                 parameters={"name": name}
             )
             

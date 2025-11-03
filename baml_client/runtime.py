@@ -30,7 +30,6 @@ class BamlCallOptions(typing.TypedDict, total=False):
     ]
     abort_controller: typing_extensions.NotRequired[baml_py.baml_py.AbortController]
     on_tick: typing_extensions.NotRequired[typing.Callable[[str, baml_py.baml_py.FunctionLog], None]]
-    watchers: typing_extensions.NotRequired[typing.Any]  # EventCollector type, will be overridden in generated clients
 
 
 class _ResolvedBamlOptions:
@@ -41,7 +40,6 @@ class _ResolvedBamlOptions:
     tags: typing.Dict[str, str]
     abort_controller: typing.Optional[baml_py.baml_py.AbortController]
     on_tick: typing.Optional[typing.Callable[[], None]]
-    watchers: typing.Optional[typing.Any]
 
     def __init__(
         self,
@@ -52,7 +50,6 @@ class _ResolvedBamlOptions:
         tags: typing.Dict[str, str],
         abort_controller: typing.Optional[baml_py.baml_py.AbortController],
         on_tick: typing.Optional[typing.Callable[[], None]],
-        watchers: typing.Optional[typing.Any],
     ):
         self.tb = tb
         self.client_registry = client_registry
@@ -61,7 +58,6 @@ class _ResolvedBamlOptions:
         self.tags = tags
         self.abort_controller = abort_controller
         self.on_tick = on_tick
-        self.watchers = watchers
 
 
 
@@ -113,8 +109,6 @@ class DoNotUseDirectlyCallManager:
         else:
             on_tick_wrapper = None
 
-        watchers = self.__baml_options.get("watchers")
-
         return _ResolvedBamlOptions(
             baml_tb,
             client_registry,
@@ -123,7 +117,6 @@ class DoNotUseDirectlyCallManager:
             tags,
             abort_controller,
             on_tick_wrapper,
-            watchers,
         )
 
     def merge_options(self, options: BamlCallOptions) -> "DoNotUseDirectlyCallManager":
@@ -155,8 +148,6 @@ class DoNotUseDirectlyCallManager:
             resolved_options.tags,
             # abort_controller
             resolved_options.abort_controller,
-            # watchers
-            resolved_options.watchers,
         )
 
     def call_function_sync(
@@ -186,8 +177,6 @@ class DoNotUseDirectlyCallManager:
             resolved_options.tags,
             # abort_controller
             resolved_options.abort_controller,
-            # watchers
-            resolved_options.watchers,
         )
 
     def create_async_stream(

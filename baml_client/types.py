@@ -41,7 +41,7 @@ def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
 # #########################################################################
 
 # #########################################################################
-# Generated classes (10)
+# Generated classes (9)
 # #########################################################################
 
 class CharacterSpan(BaseModel):
@@ -78,12 +78,6 @@ class RelationType(BaseModel):
     description: str
     domain: str
     range: str
-
-class Resume(BaseModel):
-    name: str
-    email: str
-    experience: typing.List[str]
-    skills: typing.List[str]
 
 class SourceMetadata(BaseModel):
     source_name: str

@@ -37,9 +37,6 @@ type_map = {
     "types.RelationType": types.RelationType,
     "stream_types.RelationType": stream_types.RelationType,
 
-    "types.Resume": types.Resume,
-    "stream_types.Resume": stream_types.Resume,
-
     "types.SourceMetadata": types.SourceMetadata,
     "stream_types.SourceMetadata": stream_types.SourceMetadata,
 

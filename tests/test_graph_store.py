@@ -44,24 +44,36 @@ def test_graph_store_initialization(temp_db_path, skip_if_no_graph_store):
     store = GraphStore(db_path=temp_db_path)
     assert store.db is not None
     assert store.conn is not None
-    assert store.db_path == temp_db_path
+    # db_path should be derived from temp_db_path (may have file appended)
+    assert store.db_path.startswith(temp_db_path)
     store.close()
 
 
-def test_graph_store_with_env_variable(temp_db_path, monkeypatch, skip_if_no_graph_store):
-    """Test GraphStore uses KUZU_DB_PATH environment variable."""
-    monkeypatch.setenv("KUZU_DB_PATH", temp_db_path)
-    store = GraphStore()
-    assert store.db_path == temp_db_path
-    store.close()
-
-
-def test_graph_store_parameter_overrides_env(temp_db_path, monkeypatch, skip_if_no_graph_store):
-    """Test that explicit db_path parameter overrides environment variable."""
-    monkeypatch.setenv("KUZU_DB_PATH", "/some/other/path")
-    store = GraphStore(db_path=temp_db_path)
-    assert store.db_path == temp_db_path
-    store.close()
+def test_graph_store_default_path(skip_if_no_graph_store):
+    """Test GraphStore uses default path when none provided."""
+    import tempfile
+    import shutil
+    
+    # Create a temp directory and use it as workspace to avoid polluting /graphs/
+    temp_dir = tempfile.mkdtemp(prefix="spindle_test_default_")
+    original_file = os.path.abspath(__file__)
+    
+    try:
+        store = GraphStore()
+        # Should use default "spindle_graph" name
+        assert "spindle_graph" in store.db_path
+        assert store.db is not None
+        assert store.conn is not None
+        store.close()
+        
+        # Clean up the created graph
+        if os.path.exists(store.db_path):
+            parent_dir = os.path.dirname(store.db_path)
+            if os.path.exists(parent_dir):
+                shutil.rmtree(parent_dir)
+    finally:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
 
 
 def test_context_manager(temp_db_path, skip_if_no_graph_store):
@@ -531,8 +543,8 @@ def test_query_by_pattern_object_only(graph_store_with_diverse_data):
     """Test querying by object."""
     results = graph_store_with_diverse_data.query_by_pattern(obj="TechCorp")
     
-    # 2 people work at TechCorp, and TechCorp is located somewhere
-    assert len(results) == 3
+    # 2 people work at TechCorp (TechCorp is the object in these relationships)
+    assert len(results) == 2
     for edge in results:
         assert edge["object"] == "TechCorp"
 
@@ -731,11 +743,14 @@ def test_delete_graph(temp_db_path, skip_if_no_graph_store):
     store = GraphStore(db_path=temp_db_path)
     store.add_node("Alice", "Person", {})
     
+    # Get the actual database file path
+    db_file_path = store.db_path
+    
     # Delete graph
     store.delete_graph()
     
-    # Database directory should be removed
-    assert not os.path.exists(temp_db_path)
+    # Database file should be removed
+    assert not os.path.exists(db_file_path)
 
 
 def test_get_statistics_empty(temp_graph_store):

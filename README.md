@@ -412,13 +412,11 @@ with GraphStore() as store:
 
 GraphStore automatically organizes all graphs in a `/graphs` directory at the project root:
 
-```bash
-# In .env file - just specify the graph name
-KUZU_DB_PATH=my_knowledge_graph
-```
-
 ```python
-# Or specify directly - creates /graphs/custom_graph/
+# Use default graph name - creates /graphs/spindle_graph/
+store = GraphStore()
+
+# Specify custom graph name - creates /graphs/custom_graph/
 store = GraphStore(db_path="custom_graph")
 
 # .db extension is automatically removed
@@ -663,7 +661,7 @@ Convert an OntologyExtension to a dictionary for serialization.
 Persistent graph database for storing and querying knowledge graphs using Kùzu.
 
 **Initialization:**
-- `__init__(db_path: Optional[str] = None)`: Initialize with optional graph name. Uses `KUZU_DB_PATH` environment variable if not provided, defaults to `/graphs/spindle_graph/`. All graphs are automatically stored in `/graphs/<name>/` directory.
+- `__init__(db_path: str = "spindle_graph")`: Initialize with graph name or path. Defaults to "spindle_graph". All graphs are automatically stored in `/graphs/<name>/` directory.
 
 **Graph Management:**
 - `create_graph(db_path: Optional[str] = None)`: Initialize new graph database
