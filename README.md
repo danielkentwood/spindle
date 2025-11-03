@@ -18,6 +18,7 @@ The current MVP provides:
 - **Automatic ontology recommendation**: Analyze text to automatically suggest appropriate entity and relation types
 - **Conservative ontology extension**: Automatically analyze and extend existing ontologies when processing new sources, only adding types when critical information would be lost
 - **Ontology-driven extraction**: Define entity and relation types to guide extraction
+- **Structured entities with custom attributes**: Extract rich entity metadata including names, types, descriptions, and domain-specific attributes
 - **Source metadata tracking**: Each triple includes source name and optional URL
 - **Supporting evidence**: Character spans with text and indices computed in post-processing (whitespace-normalized matching)
 - **Temporal tracking**: Extraction datetime automatically set for each triple in ISO 8601 format
@@ -26,7 +27,7 @@ The current MVP provides:
 - **Entity consistency**: Recognizes when entities in new text match existing entities
 - **Source filtering**: Query triples by their source
 - **Date-based filtering**: Query triples by extraction date range
-- **Graph database persistence**: Store and query knowledge graphs using embedded Kùzu database
+- **Graph database persistence**: Store and query knowledge graphs using embedded Kùzu database with full entity metadata
 - **Pattern-based querying**: Flexible graph exploration with wildcard pattern matching
 - **BAML-powered**: Uses the BAML framework for type-safe LLM interactions
 - **Claude Sonnet 4**: Leverages Anthropic's Claude for high-quality extraction
@@ -208,10 +209,24 @@ result2 = extractor.extract(new_text, "Medical Research")
 ```python
 from spindle import SpindleExtractor, create_ontology
 
-# Define your ontology
+# Define your ontology with optional custom attributes
 entity_types = [
-    {"name": "Person", "description": "A human being"},
-    {"name": "Organization", "description": "A company or institution"}
+    {
+        "name": "Person", 
+        "description": "A human being",
+        "attributes": [
+            {"name": "title", "type": "string", "description": "Job title"},
+            {"name": "start_date", "type": "date", "description": "Employment start date"}
+        ]
+    },
+    {
+        "name": "Organization", 
+        "description": "A company or institution",
+        "attributes": [
+            {"name": "founded_year", "type": "int", "description": "Year founded"},
+            {"name": "industry", "type": "string", "description": "Industry sector"}
+        ]
+    }
 ]
 
 relation_types = [
@@ -229,16 +244,22 @@ ontology = create_ontology(entity_types, relation_types)
 extractor = SpindleExtractor(ontology)
 
 # Extract triples with source metadata
-text = "Alice Johnson works at TechCorp."
+text = "Alice Johnson works at TechCorp as a Senior Engineer."
 result = extractor.extract(
     text=text,
     source_name="Company Directory 2024",
     source_url="https://example.com/directory"
 )
 
-# Access triples with metadata
+# Access triples with full entity metadata
 for triple in result.triples:
-    print(f"{triple.subject} -> {triple.predicate} -> {triple.object}")
+    print(f"{triple.subject.name} ({triple.subject.type}) -> {triple.predicate} -> {triple.object.name} ({triple.object.type})")
+    print(f"  Subject Description: {triple.subject.description}")
+    print(f"  Object Description: {triple.object.description}")
+    if triple.subject.custom_atts:
+        print(f"  Subject Attributes: {triple.subject.custom_atts}")
+    if triple.object.custom_atts:
+        print(f"  Object Attributes: {triple.object.custom_atts}")
     print(f"  Source: {triple.source.source_name}")
     print(f"  Extracted: {triple.extraction_datetime}")
     print(f"  Evidence: {triple.supporting_spans[0].text}")
@@ -489,13 +510,12 @@ spindle/
 ├── spindle/                         # Main package
 │   ├── __init__.py                  # Package exports
 │   ├── extractor.py                 # Core extraction functionality
-│   └── graph_store.py               # Graph database persistence
-├── baml_src/                        # BAML schema definitions
-│   ├── clients.baml                 # LLM client configurations
-│   ├── generators.baml              # Code generation config
-│   ├── resume.baml                  # Example BAML function
-│   └── spindle.baml                 # Knowledge graph extraction and ontology recommendation
-├── baml_client/                     # Auto-generated BAML Python client
+│   ├── graph_store.py               # Graph database persistence
+│   ├── baml_src/                    # BAML schema definitions
+│   │   ├── clients.baml             # LLM client configurations
+│   │   ├── generators.baml          # Code generation config
+│   │   └── spindle.baml             # Knowledge graph extraction and ontology recommendation
+│   └── baml_client/                 # Auto-generated BAML Python client
 ├── demos/                           # Example scripts
 │   ├── example.py                   # Manual ontology usage example
 │   ├── example_graph_store.py       # GraphStore demonstration
@@ -704,9 +724,9 @@ See [`docs/GRAPH_STORE.md`](docs/GRAPH_STORE.md) for comprehensive documentation
 
 Spindle uses the BAML (Basically, A Made-up Language) framework to define type-safe LLM interactions:
 
-1. **BAML Schema** (`baml_src/spindle.baml`): Defines data structures and the extraction function
-2. **Generated Client** (`baml_client/`): Auto-generated Python client for type-safe LLM calls
-3. **Python Wrapper** (`spindle.py`): High-level interface for easy use
+1. **BAML Schema** (`spindle/baml_src/spindle.baml`): Defines data structures and the extraction function
+2. **Generated Client** (`spindle/baml_client/`): Auto-generated Python client for type-safe LLM calls
+3. **Python Wrapper** (`spindle/extractor.py`): High-level interface for easy use
 
 The extraction process:
 1. User defines an ontology (entity and relation types)

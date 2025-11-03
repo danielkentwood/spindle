@@ -50,7 +50,7 @@ Homepage = "https://github.com/yourusername/spindle"
 Repository = "https://github.com/yourusername/spindle"
 
 [tool.setuptools]
-packages = ["spindle", "baml_client"]
+packages = ["spindle", "spindle.baml_client"]
 
 [tool.setuptools.package-data]
 spindle = ["py.typed"]

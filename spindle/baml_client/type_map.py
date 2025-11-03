@@ -16,8 +16,17 @@ from . import stream_types
 
 type_map = {
 
+    "types.AttributeDefinition": types.AttributeDefinition,
+    "stream_types.AttributeDefinition": stream_types.AttributeDefinition,
+
+    "types.AttributeValue": types.AttributeValue,
+    "stream_types.AttributeValue": stream_types.AttributeValue,
+
     "types.CharacterSpan": types.CharacterSpan,
     "stream_types.CharacterSpan": stream_types.CharacterSpan,
+
+    "types.Entity": types.Entity,
+    "stream_types.Entity": stream_types.Entity,
 
     "types.EntityType": types.EntityType,
     "stream_types.EntityType": stream_types.EntityType,

@@ -29,7 +29,7 @@ except ImportError:
         "Install it with: pip install kuzu>=0.7.0"
     )
 
-from baml_client.types import Triple, SourceMetadata, CharacterSpan
+from spindle.baml_client.types import Triple, Entity, SourceMetadata, CharacterSpan, AttributeValue
 
 
 class GraphStore:
@@ -135,13 +135,15 @@ class GraphStore:
     
     def _create_schema(self):
         """Create node and relationship tables with proper schema."""
-        # Create Entity node table
+        # Create Entity node table with description and custom_atts
         # Note: Kùzu requires checking if table exists before creating
         try:
             self.conn.execute(
                 "CREATE NODE TABLE IF NOT EXISTS Entity("
                 "name STRING, "
                 "type STRING, "
+                "description STRING, "
+                "custom_atts STRING, "
                 "metadata STRING, "
                 "PRIMARY KEY(name)"
                 ")"
@@ -222,32 +224,49 @@ class GraphStore:
         self,
         name: str,
         entity_type: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        description: str = "",
+        custom_atts: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         Add a single node to the graph.
         
         Args:
-            name: Entity name (must be unique)
+            name: Entity name (must be unique, will be converted to uppercase)
             entity_type: Type of entity (e.g., "Person", "Organization")
             metadata: Optional dictionary of additional metadata
+            description: Entity description
+            custom_atts: Optional dictionary of custom attributes with type metadata
         
         Returns:
             True if node was added, False if it already exists
         """
         if metadata is None:
             metadata = {}
+        if custom_atts is None:
+            custom_atts = {}
+        
+        # Convert name to uppercase
+        name = name.upper()
         
         # Check if node already exists
         if self.get_node(name) is not None:
             return False
         
         metadata_json = json.dumps(metadata)
+        custom_atts_json = json.dumps(custom_atts)
         
         try:
             self.conn.execute(
-                "CREATE (e:Entity {name: $name, type: $type, metadata: $metadata})",
-                parameters={"name": name, "type": entity_type, "metadata": metadata_json}
+                "CREATE (e:Entity {name: $name, type: $type, description: $description, "
+                "custom_atts: $custom_atts, metadata: $metadata})",
+                parameters={
+                    "name": name,
+                    "type": entity_type,
+                    "description": description,
+                    "custom_atts": custom_atts_json,
+                    "metadata": metadata_json
+                }
             )
             return True
         except Exception as e:
@@ -280,34 +299,48 @@ class GraphStore:
         Extract and add subject and object nodes from a triple.
         
         Args:
-            triple: Triple object containing subject and object entities
+            triple: Triple object containing subject and object Entity objects
         
         Returns:
             Tuple of (subject_added, object_added) booleans
         """
-        # Extract entity types from triple if available
-        # Note: BAML Triple doesn't have subject_type/object_type fields,
-        # so we infer from the triple's structure or use "Entity" as default
-        
+        # Extract subject entity information
         subject_metadata = {
             "sources": [triple.source.source_name],
             "first_seen": triple.extraction_datetime
         }
         
+        # Convert AttributeValue objects to serializable dicts
+        subject_custom_atts = {
+            attr_name: {"value": attr_val.value, "type": attr_val.type}
+            for attr_name, attr_val in triple.subject.custom_atts.items()
+        }
+        
+        subject_added = self.add_node(
+            name=triple.subject.name,
+            entity_type=triple.subject.type,
+            description=triple.subject.description,
+            custom_atts=subject_custom_atts,
+            metadata=subject_metadata
+        )
+        
+        # Extract object entity information
         object_metadata = {
             "sources": [triple.source.source_name],
             "first_seen": triple.extraction_datetime
         }
         
-        subject_added = self.add_node(
-            name=triple.subject,
-            entity_type="Entity",  # Default type
-            metadata=subject_metadata
-        )
+        # Convert AttributeValue objects to serializable dicts
+        object_custom_atts = {
+            attr_name: {"value": attr_val.value, "type": attr_val.type}
+            for attr_name, attr_val in triple.object.custom_atts.items()
+        }
         
         object_added = self.add_node(
-            name=triple.object,
-            entity_type="Entity",  # Default type
+            name=triple.object.name,
+            entity_type=triple.object.type,
+            description=triple.object.description,
+            custom_atts=object_custom_atts,
             metadata=object_metadata
         )
         
@@ -318,14 +351,17 @@ class GraphStore:
         Retrieve a node by name.
         
         Args:
-            name: Entity name
+            name: Entity name (will be converted to uppercase for lookup)
         
         Returns:
-            Dictionary with node properties or None if not found
+            Dictionary with node properties including description and custom_atts, or None if not found
         """
+        # Convert name to uppercase
+        name = name.upper()
+        
         try:
             result = self.conn.execute(
-                "MATCH (e:Entity {name: $name}) RETURN e.name, e.type, e.metadata",
+                "MATCH (e:Entity {name: $name}) RETURN e.name, e.type, e.description, e.custom_atts, e.metadata",
                 parameters={"name": name}
             )
             
@@ -337,6 +373,8 @@ class GraphStore:
             return {
                 "name": row["e.name"],
                 "type": row["e.type"],
+                "description": row["e.description"] if row["e.description"] else "",
+                "custom_atts": json.loads(row["e.custom_atts"]) if row["e.custom_atts"] else {},
                 "metadata": json.loads(row["e.metadata"]) if row["e.metadata"] else {}
             }
         except Exception as e:
@@ -347,12 +385,15 @@ class GraphStore:
         Update node properties.
         
         Args:
-            name: Entity name
+            name: Entity name (will be converted to uppercase for lookup)
             updates: Dictionary of properties to update (can include 'type', 'metadata')
         
         Returns:
             True if node was updated, False if not found
         """
+        # Convert name to uppercase
+        name = name.upper()
+        
         # Check if node exists
         if self.get_node(name) is None:
             return False
@@ -385,11 +426,14 @@ class GraphStore:
         Delete a node and all its edges.
         
         Args:
-            name: Entity name
+            name: Entity name (will be converted to uppercase for lookup)
         
         Returns:
             True if node was deleted, False if not found
         """
+        # Convert name to uppercase
+        name = name.upper()
+        
         # Check if node exists
         if self.get_node(name) is None:
             return False
@@ -496,9 +540,9 @@ class GraphStore:
         Add a single edge to the graph with intelligent evidence merging.
         
         Args:
-            subject: Subject entity name
-            predicate: Relationship type
-            obj: Object entity name
+            subject: Subject entity name (will be converted to uppercase)
+            predicate: Relationship type (will be converted to uppercase)
+            obj: Object entity name (will be converted to uppercase)
             metadata: Optional dictionary with 'supporting_evidence' (new nested format)
                      Format: {'supporting_evidence': [{'source_nm': '...', 'source_url': '...', 
                               'spans': [{'text': '...', 'start': 0, 'end': 10, 'extraction_datetime': '...'}]}]}
@@ -508,6 +552,11 @@ class GraphStore:
         """
         if metadata is None:
             metadata = {}
+        
+        # Convert subject, predicate, and object to uppercase
+        subject = subject.upper()
+        predicate = predicate.upper()
+        obj = obj.upper()
         
         # Extract supporting evidence (new nested format)
         new_evidence = metadata.get("supporting_evidence", [])
@@ -643,7 +692,8 @@ class GraphStore:
             "supporting_evidence": supporting_evidence
         }
         
-        result = self.add_edge(triple.subject, triple.predicate, triple.object, metadata)
+        # Use entity names for edge creation
+        result = self.add_edge(triple.subject.name, triple.predicate, triple.object.name, metadata)
         return result.get("success", False)
     
     def get_edge(
@@ -658,13 +708,18 @@ class GraphStore:
         Note: Now returns single edge with consolidated evidence from all sources.
         
         Args:
-            subject: Subject entity name
-            predicate: Relationship type
-            obj: Object entity name
+            subject: Subject entity name (will be converted to uppercase for lookup)
+            predicate: Relationship type (will be converted to uppercase for lookup)
+            obj: Object entity name (will be converted to uppercase for lookup)
         
         Returns:
             List with single edge dictionary (for consistency) or None if not found
         """
+        # Convert parameters to uppercase
+        subject = subject.upper()
+        predicate = predicate.upper()
+        obj = obj.upper()
+        
         try:
             result = self.conn.execute(
                 "MATCH (s:Entity {name: $subject})-[r:Relationship {predicate: $predicate}]->(o:Entity {name: $obj}) "
@@ -701,14 +756,19 @@ class GraphStore:
         Update edge properties.
         
         Args:
-            subject: Subject entity name
-            predicate: Relationship type
-            obj: Object entity name
+            subject: Subject entity name (will be converted to uppercase for lookup)
+            predicate: Relationship type (will be converted to uppercase for lookup)
+            obj: Object entity name (will be converted to uppercase for lookup)
             updates: Dictionary of properties to update
         
         Returns:
             True if edge was updated, False if none found
         """
+        # Convert parameters to uppercase
+        subject = subject.upper()
+        predicate = predicate.upper()
+        obj = obj.upper()
+        
         # Check if edge exists
         if self.get_edge(subject, predicate, obj) is None:
             return False
@@ -744,13 +804,18 @@ class GraphStore:
         Delete all edges matching the pattern.
         
         Args:
-            subject: Subject entity name
-            predicate: Relationship type
-            obj: Object entity name
+            subject: Subject entity name (will be converted to uppercase for lookup)
+            predicate: Relationship type (will be converted to uppercase for lookup)
+            obj: Object entity name (will be converted to uppercase for lookup)
         
         Returns:
             True if edges were deleted, False if none found
         """
+        # Convert parameters to uppercase
+        subject = subject.upper()
+        predicate = predicate.upper()
+        obj = obj.upper()
+        
         # Check if edges exist
         if self.get_edge(subject, predicate, obj) is None:
             return False
@@ -785,7 +850,7 @@ class GraphStore:
     
     def get_triples(self) -> List[Triple]:
         """
-        Export all edges as Triple objects.
+        Export all edges as Triple objects with full Entity information.
         
         Note: Since edges now consolidate evidence from multiple sources,
         this creates one Triple per source within each edge for backward compatibility.
@@ -796,13 +861,39 @@ class GraphStore:
         try:
             result = self.conn.execute(
                 "MATCH (s:Entity)-[r:Relationship]->(o:Entity) "
-                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata"
+                "RETURN s.name, s.type, s.description, s.custom_atts, "
+                "r.predicate, o.name, o.type, o.description, o.custom_atts, "
+                "r.supporting_evidence, r.metadata"
             )
             
             rows = result.get_as_df()
             triples = []
             
             for _, row in rows.iterrows():
+                # Parse subject entity
+                subject_custom_atts = json.loads(row["s.custom_atts"]) if row["s.custom_atts"] else {}
+                subject = Entity(
+                    name=row["s.name"],
+                    type=row["s.type"],
+                    description=row["s.description"] if row["s.description"] else "",
+                    custom_atts={
+                        attr_name: AttributeValue(value=attr_data["value"], type=attr_data["type"])
+                        for attr_name, attr_data in subject_custom_atts.items()
+                    }
+                )
+                
+                # Parse object entity
+                object_custom_atts = json.loads(row["o.custom_atts"]) if row["o.custom_atts"] else {}
+                obj = Entity(
+                    name=row["o.name"],
+                    type=row["o.type"],
+                    description=row["o.description"] if row["o.description"] else "",
+                    custom_atts={
+                        attr_name: AttributeValue(value=attr_data["value"], type=attr_data["type"])
+                        for attr_name, attr_data in object_custom_atts.items()
+                    }
+                )
+                
                 # Parse supporting evidence (new nested format)
                 evidence_list = json.loads(row["r.supporting_evidence"]) if row["r.supporting_evidence"] else []
                 
@@ -827,9 +918,9 @@ class GraphStore:
                     
                     # Create Triple object
                     triple = Triple(
-                        subject=row["s.name"],
+                        subject=subject,
                         predicate=row["r.predicate"],
-                        object=row["o.name"],
+                        object=obj,
                         source=SourceMetadata(
                             source_name=source_nm,
                             source_url=source_url
@@ -855,13 +946,21 @@ class GraphStore:
         Query edges by pattern with wildcards.
         
         Args:
-            subject: Optional subject name (None = wildcard)
-            predicate: Optional predicate name (None = wildcard)
-            obj: Optional object name (None = wildcard)
+            subject: Optional subject name (None = wildcard, will be converted to uppercase if provided)
+            predicate: Optional predicate name (None = wildcard, will be converted to uppercase if provided)
+            obj: Optional object name (None = wildcard, will be converted to uppercase if provided)
         
         Returns:
             List of matching edge dictionaries with nested evidence structure
         """
+        # Convert parameters to uppercase if provided
+        if subject is not None:
+            subject = subject.upper()
+        if predicate is not None:
+            predicate = predicate.upper()
+        if obj is not None:
+            obj = obj.upper()
+        
         # Build query with optional filters
         where_clauses = []
         params = {}

@@ -5,9 +5,12 @@ import pytest
 import tempfile
 import shutil
 from datetime import datetime
-from baml_client.types import (
+from spindle.baml_client.types import (
     Triple,
+    Entity,
     EntityType,
+    AttributeDefinition,
+    AttributeValue,
     RelationType,
     Ontology,
     ExtractionResult,
@@ -28,6 +31,20 @@ try:
 except ImportError:
     GraphStore = None
     GRAPH_STORE_AVAILABLE = False
+
+
+def _create_entity(name: str, entity_type: str, description: str = "", **attrs):
+    """Helper to create test Entity objects."""
+    custom_atts = {
+        attr_name: AttributeValue(value=attr_val, type="string")
+        for attr_name, attr_val in attrs.items()
+    }
+    return Entity(
+        name=name,
+        type=entity_type,
+        description=description,
+        custom_atts=custom_atts
+    )
 
 
 # Pytest configuration
@@ -73,9 +90,9 @@ def sample_character_span():
 def sample_triple(sample_source_metadata, sample_character_span):
     """Provide a sample triple with metadata."""
     return Triple(
-        subject="Alice Johnson",
+        subject=_create_entity("Alice Johnson", "Person", "A software engineer"),
         predicate="works_at",
-        object="TechCorp",
+        object=_create_entity("TechCorp", "Organization", "A technology company"),
         source=sample_source_metadata,
         supporting_spans=[sample_character_span],
         extraction_datetime="2024-01-15T10:30:00Z"
@@ -87,9 +104,9 @@ def sample_triples(sample_source_metadata):
     """Provide a list of sample triples."""
     return [
         Triple(
-            subject="Alice Johnson",
+            subject=_create_entity("Alice Johnson", "Person", "A software engineer"),
             predicate="works_at",
-            object="TechCorp",
+            object=_create_entity("TechCorp", "Organization", "A technology company"),
             source=sample_source_metadata,
             supporting_spans=[
                 CharacterSpan(text="Alice Johnson works at TechCorp", start=0, end=32)
@@ -97,9 +114,9 @@ def sample_triples(sample_source_metadata):
             extraction_datetime="2024-01-15T10:30:00Z"
         ),
         Triple(
-            subject="TechCorp",
+            subject=_create_entity("TechCorp", "Organization", "A technology company"),
             predicate="located_in",
-            object="San Francisco",
+            object=_create_entity("San Francisco", "Location", "A city in California"),
             source=sample_source_metadata,
             supporting_spans=[
                 CharacterSpan(text="TechCorp is located in San Francisco", start=34, end=71)
@@ -134,8 +151,18 @@ def mock_ontology_extension_needed():
     return OntologyExtension(
         needs_extension=True,
         new_entity_types=[
-            EntityType(name="Medication", description="A pharmaceutical drug or treatment"),
-            EntityType(name="Condition", description="A medical condition or disease")
+            EntityType(
+                name="Medication",
+                description="A pharmaceutical drug or treatment",
+                attributes=[
+                    AttributeDefinition(name="dosage", type="string", description="Medication dosage")
+                ]
+            ),
+            EntityType(
+                name="Condition",
+                description="A medical condition or disease",
+                attributes=[]
+            )
         ],
         new_relation_types=[
             RelationType(
@@ -251,59 +278,59 @@ def diverse_triples():
     return [
         # Employment relationships
         Triple(
-            subject="Alice Johnson",
+            subject=_create_entity("Alice Johnson", "Person", "Software engineer"),
             predicate="works_at",
-            object="TechCorp",
+            object=_create_entity("TechCorp", "Organization", "Technology company"),
             source=source1,
             supporting_spans=[CharacterSpan(text="Alice Johnson works at TechCorp", start=0, end=32)],
             extraction_datetime="2024-01-15T10:00:00Z"
         ),
         Triple(
-            subject="Bob Smith",
+            subject=_create_entity("Bob Smith", "Person", "Senior developer"),
             predicate="works_at",
-            object="TechCorp",
+            object=_create_entity("TechCorp", "Organization", "Technology company"),
             source=source1,
             supporting_spans=[CharacterSpan(text="Bob Smith works at TechCorp", start=34, end=62)],
             extraction_datetime="2024-01-15T10:30:00Z"
         ),
         Triple(
-            subject="Carol Davis",
+            subject=_create_entity("Carol Davis", "Person", "Data scientist"),
             predicate="works_at",
-            object="DataCorp",
+            object=_create_entity("DataCorp", "Organization", "Data analytics company"),
             source=source2,
             supporting_spans=[CharacterSpan(text="Carol Davis works at DataCorp", start=0, end=29)],
             extraction_datetime="2024-01-15T11:00:00Z"
         ),
         # Location relationships
         Triple(
-            subject="TechCorp",
+            subject=_create_entity("TechCorp", "Organization", "Technology company"),
             predicate="located_in",
-            object="San Francisco",
+            object=_create_entity("San Francisco", "Location", "City in California"),
             source=source1,
             supporting_spans=[CharacterSpan(text="TechCorp is in San Francisco", start=64, end=92)],
             extraction_datetime="2024-01-15T10:00:00Z"
         ),
         Triple(
-            subject="DataCorp",
+            subject=_create_entity("DataCorp", "Organization", "Data analytics company"),
             predicate="located_in",
-            object="New York",
+            object=_create_entity("New York", "Location", "City in New York state"),
             source=source2,
             supporting_spans=[CharacterSpan(text="DataCorp is in New York", start=31, end=54)],
             extraction_datetime="2024-01-15T11:00:00Z"
         ),
         # Technology usage
         Triple(
-            subject="Alice Johnson",
+            subject=_create_entity("Alice Johnson", "Person", "Software engineer"),
             predicate="uses",
-            object="Python",
+            object=_create_entity("Python", "Technology", "Programming language"),
             source=source1,
             supporting_spans=[CharacterSpan(text="Alice uses Python", start=94, end=111)],
             extraction_datetime="2024-01-15T10:00:00Z"
         ),
         Triple(
-            subject="Bob Smith",
+            subject=_create_entity("Bob Smith", "Person", "Senior developer"),
             predicate="uses",
-            object="TypeScript",
+            object=_create_entity("TypeScript", "Technology", "Programming language"),
             source=source1,
             supporting_spans=[CharacterSpan(text="Bob uses TypeScript", start=113, end=132)],
             extraction_datetime="2024-01-15T10:30:00Z"

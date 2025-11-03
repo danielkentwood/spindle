@@ -39,6 +39,9 @@ def main():
     print("Spindle GraphStore Example")
     print("=" * 70)
     print()
+    print("NOTE: GraphStore automatically converts all node names and edge predicates")
+    print("      to UPPERCASE for consistency. Queries are case-insensitive.")
+    print()
     
     # Use a temporary graph name for this example
     graph_name = f"example_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -59,10 +62,32 @@ def main():
         print("-" * 70)
         
         entity_types = [
-            {"name": "Person", "description": "A human being"},
-            {"name": "Organization", "description": "A company or institution"},
-            {"name": "Location", "description": "A geographic place"},
-            {"name": "Technology", "description": "A programming language or tool"}
+            {
+                "name": "Person", 
+                "description": "A human being",
+                "attributes": [
+                    {"name": "title", "type": "string", "description": "Job title"},
+                    {"name": "years_experience", "type": "int", "description": "Years at company"}
+                ]
+            },
+            {
+                "name": "Organization", 
+                "description": "A company or institution",
+                "attributes": [
+                    {"name": "founded_year", "type": "int", "description": "Year founded"},
+                    {"name": "industry", "type": "string", "description": "Industry sector"}
+                ]
+            },
+            {
+                "name": "Location", 
+                "description": "A geographic place",
+                "attributes": []
+            },
+            {
+                "name": "Technology", 
+                "description": "A programming language or tool",
+                "attributes": []
+            }
         ]
         
         relation_types = [
@@ -108,7 +133,9 @@ def main():
         
         print(f"Extracted {len(result1.triples)} triples from first source")
         for triple in result1.triples:
-            print(f"  - {triple.subject} --[{triple.predicate}]--> {triple.object}")
+            print(f"  - {triple.subject.name} ({triple.subject.type}) --[{triple.predicate}]--> {triple.object.name} ({triple.object.type})")
+            if triple.subject.custom_atts:
+                print(f"    Subject attributes: {triple.subject.custom_atts}")
         print()
         
         # Step 4: Store triples in graph database
@@ -137,7 +164,7 @@ def main():
         
         print(f"Extracted {len(result2.triples)} triples from second source")
         for triple in result2.triples:
-            print(f"  - {triple.subject} --[{triple.predicate}]--> {triple.object}")
+            print(f"  - {triple.subject.name} ({triple.subject.type}) --[{triple.predicate}]--> {triple.object.name} ({triple.object.type})")
         print()
         
         # Store second batch
@@ -299,7 +326,9 @@ def main():
         store.add_node(
             name="Carol Davis",
             entity_type="Person",
-            metadata={"title": "Data Scientist", "verified": True}
+            metadata={"title": "Data Scientist", "verified": True},
+            description="A data scientist at TechCorp",
+            custom_atts={}
         )
         print("✓ Added Carol Davis node")
         

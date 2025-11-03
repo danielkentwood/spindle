@@ -3,10 +3,31 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from freezegun import freeze_time
-from baml_client.types import ExtractionResult, Triple, CharacterSpan, SourceMetadata
+from spindle.baml_client.types import (
+    ExtractionResult,
+    Triple,
+    Entity,
+    AttributeValue,
+    CharacterSpan,
+    SourceMetadata
+)
 
 from spindle import SpindleExtractor
 from tests.fixtures.sample_texts import SIMPLE_TEXT, TEXT_WITH_NEWLINES
+
+
+def _create_test_entity(name: str, entity_type: str, description: str = "", **attrs):
+    """Helper to create a test Entity with custom attributes."""
+    custom_atts = {
+        attr_name: AttributeValue(value=attr_val, type="string")
+        for attr_name, attr_val in attrs.items()
+    }
+    return Entity(
+        name=name,
+        type=entity_type,
+        description=description,
+        custom_atts=custom_atts
+    )
 
 
 class TestSpindleExtractorInit:
@@ -41,13 +62,13 @@ class TestSpindleExtractorExtract:
     @freeze_time("2024-01-15 10:30:00")
     def test_extract_basic(self, mock_baml_extract, simple_ontology):
         """Test basic extraction with mocked BAML call."""
-        # Setup mock
+        # Setup mock with Entity objects
         mock_result = ExtractionResult(
             triples=[
                 Triple(
-                    subject="Alice Johnson",
+                    subject=_create_test_entity("Alice Johnson", "Person", "A software engineer"),
                     predicate="works_at",
-                    object="TechCorp",
+                    object=_create_test_entity("TechCorp", "Organization", "A technology company"),
                     source=SourceMetadata(source_name="Test", source_url=None),
                     supporting_spans=[
                         CharacterSpan(text="Alice Johnson works at TechCorp", start=None, end=None)
@@ -69,7 +90,10 @@ class TestSpindleExtractorExtract:
         
         # Verify
         assert len(result.triples) == 1
-        assert result.triples[0].subject == "Alice Johnson"
+        assert result.triples[0].subject.name == "Alice Johnson"
+        assert result.triples[0].subject.type == "Person"
+        assert result.triples[0].object.name == "TechCorp"
+        assert result.triples[0].object.type == "Organization"
         
         # Check that extraction_datetime was set
         assert result.triples[0].extraction_datetime == "2024-01-15T10:30:00Z"
@@ -108,9 +132,9 @@ class TestSpindleExtractorExtract:
         mock_result = ExtractionResult(
             triples=[
                 Triple(
-                    subject="Alice Johnson",
+                    subject=_create_test_entity("Alice Johnson", "Person"),
                     predicate="works_at",
-                    object="TechCorp",
+                    object=_create_test_entity("TechCorp", "Organization"),
                     source=SourceMetadata(source_name="Test"),
                     supporting_spans=[
                         CharacterSpan(text="Alice Johnson works at TechCorp", start=None, end=None)
@@ -142,9 +166,9 @@ class TestSpindleExtractorExtract:
         mock_result = ExtractionResult(
             triples=[
                 Triple(
-                    subject="Bob",
+                    subject=_create_test_entity("Bob", "Person"),
                     predicate="works_at",
-                    object="Google",
+                    object=_create_test_entity("Google", "Organization"),
                     source=SourceMetadata(source_name="Test"),
                     supporting_spans=[
                         CharacterSpan(text="Bob works at Google", start=None, end=None)
@@ -231,9 +255,9 @@ class TestSpindleExtractorExtract:
         mock_result = ExtractionResult(
             triples=[
                 Triple(
-                    subject="Alice",
+                    subject=_create_test_entity("Alice", "Person"),
                     predicate="works_at",
-                    object="TechCorp",
+                    object=_create_test_entity("TechCorp", "Organization"),
                     source=SourceMetadata(source_name="Test"),
                     supporting_spans=[
                         CharacterSpan(text="Alice works at TechCorp", start=0, end=23)
@@ -264,17 +288,17 @@ class TestSpindleExtractorExtract:
         mock_result = ExtractionResult(
             triples=[
                 Triple(
-                    subject="Alice",
+                    subject=_create_test_entity("Alice", "Person"),
                     predicate="works_at",
-                    object="TechCorp",
+                    object=_create_test_entity("TechCorp", "Organization"),
                     source=SourceMetadata(source_name="Test"),
                     supporting_spans=[],
                     extraction_datetime=None
                 ),
                 Triple(
-                    subject="Bob",
+                    subject=_create_test_entity("Bob", "Person"),
                     predicate="works_at",
-                    object="Google",
+                    object=_create_test_entity("Google", "Organization"),
                     source=SourceMetadata(source_name="Test"),
                     supporting_spans=[],
                     extraction_datetime=None

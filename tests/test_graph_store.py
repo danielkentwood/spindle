@@ -17,7 +17,7 @@ import pytest
 import os
 import json
 from datetime import datetime, timedelta
-from baml_client.types import Triple, SourceMetadata, CharacterSpan
+from spindle.baml_client.types import Triple, SourceMetadata, CharacterSpan
 
 # Skip all tests if kuzu not available
 try:
@@ -96,10 +96,10 @@ def test_add_node(temp_graph_store):
     )
     assert success is True
     
-    # Verify node was added
+    # Verify node was added (names are stored in uppercase)
     node = temp_graph_store.get_node("Alice Johnson")
     assert node is not None
-    assert node["name"] == "Alice Johnson"
+    assert node["name"] == "ALICE JOHNSON"
     assert node["type"] == "Person"
     assert node["metadata"]["age"] == 30
 
@@ -208,13 +208,13 @@ def test_add_edge(temp_graph_store):
     assert result["success"] is True
     assert "Created new edge" in result["message"]
     
-    # Verify edge exists with nested structure
+    # Verify edge exists with nested structure (names and predicates are stored in uppercase)
     edges = temp_graph_store.get_edge("Alice", "works_at", "TechCorp")
     assert edges is not None
     assert len(edges) == 1
-    assert edges[0]["subject"] == "Alice"
-    assert edges[0]["predicate"] == "works_at"
-    assert edges[0]["object"] == "TechCorp"
+    assert edges[0]["subject"] == "ALICE"
+    assert edges[0]["predicate"] == "WORKS_AT"
+    assert edges[0]["object"] == "TECHCORP"
     assert len(edges[0]["supporting_evidence"]) == 1
     assert edges[0]["supporting_evidence"][0]["source_nm"] == "Test"
 
@@ -465,9 +465,9 @@ def test_add_edge_from_triple(temp_graph_store, sample_triple):
     
     # Verify edge was created with correct nested metadata
     edges = temp_graph_store.get_edge(
-        sample_triple.subject,
+        sample_triple.subject.name,  # Use entity name
         sample_triple.predicate,
-        sample_triple.object
+        sample_triple.object.name  # Use entity name
     )
     assert edges is not None
     assert len(edges) == 1
@@ -505,9 +505,10 @@ def test_triple_roundtrip(temp_graph_store, sample_triples):
     # Compare (order may differ)
     assert len(exported) == len(sample_triples)
     
-    # Check that all original triples are in exported set
-    original_facts = {(t.subject, t.predicate, t.object) for t in sample_triples}
-    exported_facts = {(t.subject, t.predicate, t.object) for t in exported}
+    # Check that all original triples are in exported set (converted to uppercase)
+    # Now subject and object are Entity objects
+    original_facts = {(t.subject.name.upper(), t.predicate.upper(), t.object.name.upper()) for t in sample_triples}
+    exported_facts = {(t.subject.name, t.predicate, t.object.name) for t in exported}
     assert original_facts == exported_facts
 
 
@@ -526,7 +527,7 @@ def test_query_by_pattern_subject_only(graph_store_with_diverse_data):
     # Alice has 2 relationships: works_at and uses
     assert len(results) == 2
     for edge in results:
-        assert edge["subject"] == "Alice Johnson"
+        assert edge["subject"] == "ALICE JOHNSON"
 
 
 def test_query_by_pattern_predicate_only(graph_store_with_diverse_data):
@@ -536,7 +537,7 @@ def test_query_by_pattern_predicate_only(graph_store_with_diverse_data):
     # 3 people work at companies
     assert len(results) == 3
     for edge in results:
-        assert edge["predicate"] == "works_at"
+        assert edge["predicate"] == "WORKS_AT"
 
 
 def test_query_by_pattern_object_only(graph_store_with_diverse_data):
@@ -546,7 +547,7 @@ def test_query_by_pattern_object_only(graph_store_with_diverse_data):
     # 2 people work at TechCorp (TechCorp is the object in these relationships)
     assert len(results) == 2
     for edge in results:
-        assert edge["object"] == "TechCorp"
+        assert edge["object"] == "TECHCORP"
 
 
 def test_query_by_pattern_subject_and_predicate(graph_store_with_diverse_data):
@@ -557,9 +558,9 @@ def test_query_by_pattern_subject_and_predicate(graph_store_with_diverse_data):
     )
     
     assert len(results) == 1
-    assert results[0]["subject"] == "Alice Johnson"
-    assert results[0]["predicate"] == "works_at"
-    assert results[0]["object"] == "TechCorp"
+    assert results[0]["subject"] == "ALICE JOHNSON"
+    assert results[0]["predicate"] == "WORKS_AT"
+    assert results[0]["object"] == "TECHCORP"
 
 
 def test_query_by_pattern_no_matches(graph_store_with_diverse_data):
@@ -702,9 +703,10 @@ def test_query_cypher_count_edges(graph_store_with_diverse_data, diverse_triples
 def test_query_cypher_complex(graph_store_with_diverse_data):
     """Test complex Cypher query."""
     # Find all people, where they work, and where those companies are located
+    # Note: predicates are stored in uppercase
     query = """
-    MATCH (p:Entity)-[w:Relationship {predicate: 'works_at'}]->(c:Entity)
-    MATCH (c)-[l:Relationship {predicate: 'located_in'}]->(loc:Entity)
+    MATCH (p:Entity)-[w:Relationship {predicate: 'WORKS_AT'}]->(c:Entity)
+    MATCH (c)-[l:Relationship {predicate: 'LOCATED_IN'}]->(loc:Entity)
     RETURN p.name AS person, c.name AS company, loc.name AS location
     """
     
@@ -783,16 +785,16 @@ def test_add_nodes_from_triple_creates_nodes(temp_graph_store, sample_triple):
     assert subject_added is True
     assert object_added is True
     
-    # Verify nodes exist
-    assert temp_graph_store.get_node(sample_triple.subject) is not None
-    assert temp_graph_store.get_node(sample_triple.object) is not None
+    # Verify nodes exist - use entity names
+    assert temp_graph_store.get_node(sample_triple.subject.name) is not None
+    assert temp_graph_store.get_node(sample_triple.object.name) is not None
 
 
 def test_add_nodes_from_triple_existing_nodes(temp_graph_store, sample_triple):
     """Test that add_nodes_from_triple handles existing nodes."""
-    # Add nodes first
-    temp_graph_store.add_node(sample_triple.subject, "Person", {})
-    temp_graph_store.add_node(sample_triple.object, "Organization", {})
+    # Add nodes first - use entity names and types
+    temp_graph_store.add_node(sample_triple.subject.name, sample_triple.subject.type, {})
+    temp_graph_store.add_node(sample_triple.object.name, sample_triple.object.type, {})
     
     # Try to add again via triple
     subject_added, object_added = temp_graph_store.add_nodes_from_triple(sample_triple)
@@ -865,14 +867,20 @@ def test_end_to_end_workflow(temp_db_path, skip_if_no_api_key, skip_if_no_graph_
 
 def test_multi_source_workflow(temp_graph_store):
     """Test storing triples from multiple sources - should consolidate into one edge."""
+    from spindle.baml_client.types import Entity, AttributeValue
+    
     source1 = SourceMetadata(source_name="Source 1")
     source2 = SourceMetadata(source_name="Source 2")
     
+    # Create Entity objects
+    alice = Entity(name="Alice", type="Person", description="A person", custom_atts={})
+    techcorp = Entity(name="TechCorp", type="Organization", description="A company", custom_atts={})
+    
     triples1 = [
         Triple(
-            subject="Alice",
+            subject=alice,
             predicate="works_at",
-            object="TechCorp",
+            object=techcorp,
             source=source1,
             supporting_spans=[CharacterSpan(text="Alice works at TechCorp", start=0, end=23)],
             extraction_datetime="2024-01-15T10:00:00Z"
@@ -881,9 +889,9 @@ def test_multi_source_workflow(temp_graph_store):
     
     triples2 = [
         Triple(
-            subject="Alice",
+            subject=alice,
             predicate="works_at",
-            object="TechCorp",
+            object=techcorp,
             source=source2,
             supporting_spans=[CharacterSpan(text="Alice is employed at TechCorp", start=0, end=29)],
             extraction_datetime="2024-01-15T11:00:00Z"

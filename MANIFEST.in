@@ -4,7 +4,7 @@ include LICENSE
 recursive-include docs *.md
 
 # Include BAML source files
-recursive-include baml_src *.baml
+recursive-include spindle/baml_src *.baml
 
 # Exclude unnecessary files
 global-exclude __pycache__

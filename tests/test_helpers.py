@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime
-from baml_client.types import Triple, SourceMetadata, CharacterSpan
+from spindle.baml_client.types import Triple, SourceMetadata, CharacterSpan, Entity
 
 from spindle import (
     _find_span_indices,
@@ -19,6 +19,16 @@ from tests.fixtures.sample_ontologies import (
     get_complex_entity_types_dict,
     get_complex_relation_types_dict
 )
+
+
+def _create_test_entity(name: str, entity_type: str = "Unknown", description: str = "") -> Entity:
+    """Helper to create test Entity objects."""
+    return Entity(
+        name=name,
+        type=entity_type,
+        description=description or f"A {entity_type}",
+        custom_atts={}
+    )
 
 
 class TestFindSpanIndices:
@@ -220,9 +230,9 @@ class TestGetSupportingText:
     def test_multiple_spans(self):
         """Test extracting supporting text from multiple spans."""
         triple = Triple(
-            subject="Alice",
+            subject=_create_test_entity("Alice", "Person"),
             predicate="uses",
-            object="Python",
+            object=_create_test_entity("Python", "Technology"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[
                 CharacterSpan(text="Alice uses Python", start=0, end=17),
@@ -240,9 +250,9 @@ class TestGetSupportingText:
     def test_no_spans(self):
         """Test triple with no supporting spans."""
         triple = Triple(
-            subject="Alice",
+            subject=_create_test_entity("Alice", "Person"),
             predicate="works_at",
-            object="TechCorp",
+            object=_create_test_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[],
             extraction_datetime="2024-01-15T10:30:00Z"
@@ -260,17 +270,23 @@ class TestFilterTriplesBySource:
         """Test filtering triples from a single source."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Doc1"),
                 supporting_spans=[], extraction_datetime=""
             ),
             Triple(
-                subject="Bob", predicate="works_at", object="Google",
+                subject=_create_test_entity("Bob", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("Google", "Organization"),
                 source=SourceMetadata(source_name="Doc2"),
                 supporting_spans=[], extraction_datetime=""
             ),
             Triple(
-                subject="Carol", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Carol", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Doc1"),
                 supporting_spans=[], extraction_datetime=""
             )
@@ -285,7 +301,9 @@ class TestFilterTriplesBySource:
         """Test filtering when no triples match."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Doc1"),
                 supporting_spans=[], extraction_datetime=""
             )
@@ -308,7 +326,9 @@ class TestParseExtractionDatetime:
     def test_parse_iso_format_z(self):
         """Test parsing ISO format with Z suffix."""
         triple = Triple(
-            subject="Alice", predicate="works_at", object="TechCorp",
+            subject=_create_test_entity("Alice", "Person"),
+            predicate="works_at",
+            object=_create_test_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[],
             extraction_datetime="2024-01-15T10:30:00Z"
@@ -327,7 +347,9 @@ class TestParseExtractionDatetime:
     def test_parse_iso_format_with_microseconds(self):
         """Test parsing ISO format with microseconds."""
         triple = Triple(
-            subject="Alice", predicate="works_at", object="TechCorp",
+            subject=_create_test_entity("Alice", "Person"),
+            predicate="works_at",
+            object=_create_test_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[],
             extraction_datetime="2024-01-15T10:30:00.123456Z"
@@ -341,7 +363,9 @@ class TestParseExtractionDatetime:
     def test_parse_invalid_format(self):
         """Test parsing invalid datetime string."""
         triple = Triple(
-            subject="Alice", predicate="works_at", object="TechCorp",
+            subject=_create_test_entity("Alice", "Person"),
+            predicate="works_at",
+            object=_create_test_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[],
             extraction_datetime="invalid-datetime"
@@ -354,7 +378,9 @@ class TestParseExtractionDatetime:
     def test_parse_empty_string(self):
         """Test parsing empty datetime string."""
         triple = Triple(
-            subject="Alice", predicate="works_at", object="TechCorp",
+            subject=_create_test_entity("Alice", "Person"),
+            predicate="works_at",
+            object=_create_test_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[],
             extraction_datetime=""
@@ -372,13 +398,17 @@ class TestFilterTriplesByDateRange:
         """Test filtering with only start date."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-10T10:00:00Z"
             ),
             Triple(
-                subject="Bob", predicate="works_at", object="Google",
+                subject=_create_test_entity("Bob", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("Google", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-20T10:00:00Z"
@@ -389,19 +419,23 @@ class TestFilterTriplesByDateRange:
         filtered = filter_triples_by_date_range(triples, start_date=start_date)
         
         assert len(filtered) == 1
-        assert filtered[0].subject == "Bob"
+        assert filtered[0].subject.name == "Bob"
     
     def test_filter_with_end_date(self):
         """Test filtering with only end date."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-10T10:00:00Z"
             ),
             Triple(
-                subject="Bob", predicate="works_at", object="Google",
+                subject=_create_test_entity("Bob", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("Google", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-20T10:00:00Z"
@@ -412,25 +446,31 @@ class TestFilterTriplesByDateRange:
         filtered = filter_triples_by_date_range(triples, end_date=end_date)
         
         assert len(filtered) == 1
-        assert filtered[0].subject == "Alice"
+        assert filtered[0].subject.name == "Alice"
     
     def test_filter_with_date_range(self):
         """Test filtering with both start and end dates."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-10T10:00:00Z"
             ),
             Triple(
-                subject="Bob", predicate="works_at", object="Google",
+                subject=_create_test_entity("Bob", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("Google", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-15T10:00:00Z"
             ),
             Triple(
-                subject="Carol", predicate="works_at", object="Microsoft",
+                subject=_create_test_entity("Carol", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("Microsoft", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-20T10:00:00Z"
@@ -446,13 +486,15 @@ class TestFilterTriplesByDateRange:
         )
         
         assert len(filtered) == 1
-        assert filtered[0].subject == "Bob"
+        assert filtered[0].subject.name == "Bob"
     
     def test_filter_no_dates(self):
         """Test filtering with no date constraints."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-10T10:00:00Z"
@@ -467,13 +509,17 @@ class TestFilterTriplesByDateRange:
         """Test filtering skips triples with invalid datetimes."""
         triples = [
             Triple(
-                subject="Alice", predicate="works_at", object="TechCorp",
+                subject=_create_test_entity("Alice", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("TechCorp", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="invalid"
             ),
             Triple(
-                subject="Bob", predicate="works_at", object="Google",
+                subject=_create_test_entity("Bob", "Person"),
+                predicate="works_at",
+                object=_create_test_entity("Google", "Organization"),
                 source=SourceMetadata(source_name="Test"),
                 supporting_spans=[],
                 extraction_datetime="2024-01-15T10:00:00Z"
@@ -484,5 +530,5 @@ class TestFilterTriplesByDateRange:
         filtered = filter_triples_by_date_range(triples, start_date=start_date)
         
         assert len(filtered) == 1
-        assert filtered[0].subject == "Bob"
+        assert filtered[0].subject.name == "Bob"
 

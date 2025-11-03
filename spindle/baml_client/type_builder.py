@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["CharacterSpan","EntityType","ExtractionResult","Ontology","OntologyExtension","OntologyRecommendation","RelationType","SourceMetadata","Triple",]
+          ["AttributeDefinition","AttributeValue","CharacterSpan","Entity","EntityType","ExtractionResult","Ontology","OntologyExtension","OntologyRecommendation","RelationType","SourceMetadata","Triple",]
         ), enums=set(
           []
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -31,12 +31,24 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 9
+    # Generated classes 12
     # #########################################################################
+
+    @property
+    def AttributeDefinition(self) -> "AttributeDefinitionViewer":
+        return AttributeDefinitionViewer(self)
+
+    @property
+    def AttributeValue(self) -> "AttributeValueViewer":
+        return AttributeValueViewer(self)
 
     @property
     def CharacterSpan(self) -> "CharacterSpanViewer":
         return CharacterSpanViewer(self)
+
+    @property
+    def Entity(self) -> "EntityViewer":
+        return EntityViewer(self)
 
     @property
     def EntityType(self) -> "EntityTypeViewer":
@@ -78,8 +90,98 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
 # #########################################################################
-# Generated classes 9
+# Generated classes 12
 # #########################################################################
+
+class AttributeDefinitionAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("AttributeDefinition")
+        self._properties: typing.Set[str] = set([  "name",  "type",  "description",  ])
+        self._props = AttributeDefinitionProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "AttributeDefinitionProperties":
+        return self._props
+
+
+class AttributeDefinitionViewer(AttributeDefinitionAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class AttributeDefinitionProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def name(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("name"))
+    
+    @property
+    def type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("type"))
+    
+    @property
+    def description(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
+    
+    
+
+
+class AttributeValueAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("AttributeValue")
+        self._properties: typing.Set[str] = set([  "value",  "type",  ])
+        self._props = AttributeValueProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "AttributeValueProperties":
+        return self._props
+
+
+class AttributeValueViewer(AttributeValueAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class AttributeValueProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def value(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("value"))
+    
+    @property
+    def type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("type"))
+    
+    
+
 
 class CharacterSpanAst:
     def __init__(self, tb: type_builder.TypeBuilder):
@@ -128,11 +230,62 @@ class CharacterSpanProperties:
     
 
 
+class EntityAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("Entity")
+        self._properties: typing.Set[str] = set([  "name",  "type",  "description",  "custom_atts",  ])
+        self._props = EntityProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EntityProperties":
+        return self._props
+
+
+class EntityViewer(EntityAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EntityProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def name(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("name"))
+    
+    @property
+    def type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("type"))
+    
+    @property
+    def description(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
+    
+    @property
+    def custom_atts(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("custom_atts"))
+    
+    
+
+
 class EntityTypeAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
         self._bldr = _tb.class_("EntityType")
-        self._properties: typing.Set[str] = set([  "name",  "description",  ])
+        self._properties: typing.Set[str] = set([  "name",  "description",  "attributes",  ])
         self._props = EntityTypeProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
@@ -167,6 +320,10 @@ class EntityTypeProperties:
     @property
     def description(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
+    
+    @property
+    def attributes(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("attributes"))
     
     
 

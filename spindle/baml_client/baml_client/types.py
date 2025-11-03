@@ -41,17 +41,33 @@ def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
 # #########################################################################
 
 # #########################################################################
-# Generated classes (9)
+# Generated classes (12)
 # #########################################################################
+
+class AttributeDefinition(BaseModel):
+    name: str
+    type: str
+    description: str
+
+class AttributeValue(BaseModel):
+    value: typing.Optional[str] = None
+    type: str
 
 class CharacterSpan(BaseModel):
     text: str
     start: typing.Optional[int] = None
     end: typing.Optional[int] = None
 
+class Entity(BaseModel):
+    name: str
+    type: str
+    description: str
+    custom_atts: typing.Dict[str, "AttributeValue"]
+
 class EntityType(BaseModel):
     name: str
     description: str
+    attributes: typing.List["AttributeDefinition"]
 
 class ExtractionResult(BaseModel):
     triples: typing.List["Triple"]
@@ -84,9 +100,9 @@ class SourceMetadata(BaseModel):
     source_url: typing.Optional[str] = None
 
 class Triple(BaseModel):
-    subject: str
+    subject: "Entity"
     predicate: str
-    object: str
+    object: "Entity"
     source: "SourceMetadata"
     supporting_spans: typing.List["CharacterSpan"]
     extraction_datetime: typing.Optional[str] = None

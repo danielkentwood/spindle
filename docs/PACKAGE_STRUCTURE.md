@@ -11,13 +11,13 @@ spindle/
 ├── spindle/                         # Main package
 │   ├── __init__.py                  # Package exports (public API)
 │   ├── extractor.py                 # Core extraction functionality
-│   └── graph_store.py               # Graph database persistence
-├── baml_src/                        # BAML schema definitions
-│   ├── clients.baml                 # LLM client configurations
-│   ├── generators.baml              # Code generation config
-│   └── spindle.baml                 # Extraction function definitions
-├── baml_client/                     # Auto-generated BAML Python client
-│   └── types.py                     # Generated type definitions
+│   ├── graph_store.py               # Graph database persistence
+│   ├── baml_src/                    # BAML schema definitions
+│   │   ├── clients.baml             # LLM client configurations
+│   │   ├── generators.baml          # Code generation config
+│   │   └── spindle.baml             # Extraction function definitions
+│   └── baml_client/                 # Auto-generated BAML Python client
+│       └── types.py                 # Generated type definitions
 ├── demos/                           # Example scripts
 │   ├── example.py                   # Basic extraction example
 │   ├── example_graph_store.py       # GraphStore usage example
@@ -89,7 +89,7 @@ Graph database persistence (optional, requires kuzu):
 - Query operations (pattern matching, source filtering, date ranges)
 - Cypher query support
 
-### `baml_src/` BAML Schemas
+### `spindle/baml_src/` BAML Schemas
 
 BAML (Basically, A Made-up Language) schema definitions:
 
@@ -97,7 +97,7 @@ BAML (Basically, A Made-up Language) schema definitions:
 - `generators.baml`: Code generation settings
 - `spindle.baml`: Function definitions for extraction and ontology recommendation
 
-### `baml_client/` Generated Code
+### `spindle/baml_client/` Generated Code
 
 Auto-generated Python client from BAML schemas:
 - **Do not edit manually** - regenerated from BAML files
@@ -222,7 +222,7 @@ If you modify BAML schemas:
 baml-cli generate
 ```
 
-This updates `baml_client/` directory.
+This updates `spindle/baml_client/` directory.
 
 ### Running Tests
 

@@ -12,10 +12,13 @@ Key Components:
 
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
-from baml_client import b
-from baml_client.types import (
+from spindle.baml_client import b
+from spindle.baml_client.types import (
     Triple,
+    Entity,
     EntityType,
+    AttributeDefinition,
+    AttributeValue,
     RelationType,
     Ontology,
     ExtractionResult,
@@ -219,14 +222,15 @@ class SpindleExtractor:
 
 
 def create_ontology(
-    entity_types: List[Dict[str, str]],
+    entity_types: List[Dict[str, Any]],
     relation_types: List[Dict[str, str]]
 ) -> Ontology:
     """
     Factory function to create an Ontology object from dictionaries.
     
     Args:
-        entity_types: List of dicts with 'name' and 'description' keys
+        entity_types: List of dicts with 'name', 'description', and optional 'attributes' keys
+                     Each attribute should have 'name', 'type', and 'description'
         relation_types: List of dicts with 'name', 'description', 'domain',
                        and 'range' keys
     
@@ -235,23 +239,55 @@ def create_ontology(
     
     Example:
         >>> entity_types = [
-        ...     {"name": "Person", "description": "A human being"},
-        ...     {"name": "Organization", "description": "A company or institution"}
+        ...     {
+        ...         "name": "Campaign",
+        ...         "description": "A marketing campaign",
+        ...         "attributes": [
+        ...             {
+        ...                 "name": "campaign_launch_dt",
+        ...                 "type": "date",
+        ...                 "description": "The date the campaign launched"
+        ...             },
+        ...             {
+        ...                 "name": "campaign_completion_dt",
+        ...                 "type": "date",
+        ...                 "description": "The date the campaign completed"
+        ...             }
+        ...         ]
+        ...     },
+        ...     {"name": "Person", "description": "A human being"}
         ... ]
         >>> relation_types = [
         ...     {
-        ...         "name": "works_at",
-        ...         "description": "Employment relationship",
+        ...         "name": "manages",
+        ...         "description": "Management relationship",
         ...         "domain": "Person",
-        ...         "range": "Organization"
+        ...         "range": "Campaign"
         ...     }
         ... ]
         >>> ontology = create_ontology(entity_types, relation_types)
     """
-    entity_objs = [
-        EntityType(name=et["name"], description=et["description"])
-        for et in entity_types
-    ]
+    entity_objs = []
+    for et in entity_types:
+        # Handle attributes if present
+        attributes = []
+        if "attributes" in et and et["attributes"]:
+            attributes = [
+                AttributeDefinition(
+                    name=attr["name"],
+                    type=attr["type"],
+                    description=attr["description"]
+                )
+                for attr in et["attributes"]
+            ]
+        
+        entity_objs.append(
+            EntityType(
+                name=et["name"],
+                description=et["description"],
+                attributes=attributes
+            )
+        )
     
     relation_objs = [
         RelationType(
@@ -288,16 +324,42 @@ def triples_to_dict(triples: List[Triple]) -> List[Dict[str, Any]]:
     Convert Triple objects to dictionaries for serialization.
     
     Args:
-        triples: List of Triple objects
+        triples: List of Triple objects with Entity subjects and objects
     
     Returns:
-        List of dictionaries with all triple fields including metadata
+        List of dictionaries with all triple fields including structured entities
+        
+    Note:
+        Entities are serialized with name, type, description, and custom_atts.
+        Custom attributes include type metadata: {"value": "...", "type": "..."}
     """
     return [
         {
-            "subject": triple.subject,
+            "subject": {
+                "name": triple.subject.name,
+                "type": triple.subject.type,
+                "description": triple.subject.description,
+                "custom_atts": {
+                    attr_name: {
+                        "value": attr_val.value,
+                        "type": attr_val.type
+                    }
+                    for attr_name, attr_val in triple.subject.custom_atts.items()
+                }
+            },
             "predicate": triple.predicate,
-            "object": triple.object,
+            "object": {
+                "name": triple.object.name,
+                "type": triple.object.type,
+                "description": triple.object.description,
+                "custom_atts": {
+                    attr_name: {
+                        "value": attr_val.value,
+                        "type": attr_val.type
+                    }
+                    for attr_name, attr_val in triple.object.custom_atts.items()
+                }
+            },
             "source": {
                 "source_name": triple.source.source_name,
                 "source_url": triple.source.source_url
@@ -321,32 +383,87 @@ def dict_to_triples(dicts: List[Dict[str, Any]]) -> List[Triple]:
     Convert dictionaries back to Triple objects.
     
     Args:
-        dicts: List of dictionaries with triple fields including metadata
+        dicts: List of dictionaries with triple fields including structured entities
     
     Returns:
-        List of Triple objects
+        List of Triple objects with Entity subjects and objects
+        
+    Note:
+        Handles both old format (string entities) and new format (Entity objects)
+        for backward compatibility during migration.
     """
-    return [
-        Triple(
-            subject=d["subject"],
-            predicate=d["predicate"],
-            object=d["object"],
-            source=SourceMetadata(
-                source_name=d["source"]["source_name"],
-                source_url=d["source"].get("source_url")
-            ),
-            supporting_spans=[
-                CharacterSpan(
-                    text=span["text"],
-                    start=span.get("start") if span.get("start", -1) >= 0 else None,
-                    end=span.get("end") if span.get("end", -1) >= 0 else None
-                )
-                for span in d.get("supporting_spans", [])
-            ],
-            extraction_datetime=d.get("extraction_datetime", "")
+    triples = []
+    for d in dicts:
+        # Handle subject - support both old string format and new Entity format
+        if isinstance(d["subject"], str):
+            # Old format: convert string to minimal Entity
+            subject = Entity(
+                name=d["subject"],
+                type="Unknown",
+                description="",
+                custom_atts={}
+            )
+        else:
+            # New format: reconstruct Entity from dict
+            subject = Entity(
+                name=d["subject"]["name"],
+                type=d["subject"]["type"],
+                description=d["subject"]["description"],
+                custom_atts={
+                    attr_name: AttributeValue(
+                        value=attr_val["value"],
+                        type=attr_val["type"]
+                    )
+                    for attr_name, attr_val in d["subject"].get("custom_atts", {}).items()
+                }
+            )
+        
+        # Handle object - support both old string format and new Entity format
+        if isinstance(d["object"], str):
+            # Old format: convert string to minimal Entity
+            obj = Entity(
+                name=d["object"],
+                type="Unknown",
+                description="",
+                custom_atts={}
+            )
+        else:
+            # New format: reconstruct Entity from dict
+            obj = Entity(
+                name=d["object"]["name"],
+                type=d["object"]["type"],
+                description=d["object"]["description"],
+                custom_atts={
+                    attr_name: AttributeValue(
+                        value=attr_val["value"],
+                        type=attr_val["type"]
+                    )
+                    for attr_name, attr_val in d["object"].get("custom_atts", {}).items()
+                }
+            )
+        
+        triples.append(
+            Triple(
+                subject=subject,
+                predicate=d["predicate"],
+                object=obj,
+                source=SourceMetadata(
+                    source_name=d["source"]["source_name"],
+                    source_url=d["source"].get("source_url")
+                ),
+                supporting_spans=[
+                    CharacterSpan(
+                        text=span["text"],
+                        start=span.get("start") if span.get("start", -1) >= 0 else None,
+                        end=span.get("end") if span.get("end", -1) >= 0 else None
+                    )
+                    for span in d.get("supporting_spans", [])
+                ],
+                extraction_datetime=d.get("extraction_datetime", "")
+            )
         )
-        for d in dicts
-    ]
+    
+    return triples
 
 
 def get_supporting_text(triple: Triple) -> List[str]:
@@ -715,7 +832,7 @@ class OntologyRecommender:
         return extension, None
 
 
-def ontology_to_dict(ontology: Ontology) -> Dict[str, List[Dict[str, str]]]:
+def ontology_to_dict(ontology: Ontology) -> Dict[str, List[Dict[str, Any]]]:
     """
     Convert an Ontology object to a dictionary for serialization.
     
@@ -723,7 +840,8 @@ def ontology_to_dict(ontology: Ontology) -> Dict[str, List[Dict[str, str]]]:
         ontology: An Ontology object
     
     Returns:
-        Dictionary with 'entity_types' and 'relation_types' keys
+        Dictionary with 'entity_types' and 'relation_types' keys,
+        including attributes for entity types
     
     Example:
         >>> ontology = create_ontology(entity_types, relation_types)
@@ -732,7 +850,18 @@ def ontology_to_dict(ontology: Ontology) -> Dict[str, List[Dict[str, str]]]:
     """
     return {
         "entity_types": [
-            {"name": et.name, "description": et.description}
+            {
+                "name": et.name,
+                "description": et.description,
+                "attributes": [
+                    {
+                        "name": attr.name,
+                        "type": attr.type,
+                        "description": attr.description
+                    }
+                    for attr in et.attributes
+                ]
+            }
             for et in ontology.entity_types
         ],
         "relation_types": [
@@ -776,12 +905,23 @@ def extension_to_dict(
         extension: An OntologyExtension object
     
     Returns:
-        Dictionary with extension analysis results
+        Dictionary with extension analysis results including attributes
     """
     return {
         "needs_extension": extension.needs_extension,
         "new_entity_types": [
-            {"name": et.name, "description": et.description}
+            {
+                "name": et.name,
+                "description": et.description,
+                "attributes": [
+                    {
+                        "name": attr.name,
+                        "type": attr.type,
+                        "description": attr.description
+                    }
+                    for attr in et.attributes
+                ]
+            }
             for et in extension.new_entity_types
         ],
         "new_relation_types": [

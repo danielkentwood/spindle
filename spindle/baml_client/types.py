@@ -12,64 +12,98 @@
 
 import typing
 import typing_extensions
+from enum import Enum
+
+
 from pydantic import BaseModel, ConfigDict
+
 
 import baml_py
 
-from . import types
+CheckT = typing_extensions.TypeVar('CheckT')
+CheckName = typing_extensions.TypeVar('CheckName', bound=str)
 
-StreamStateValueT = typing.TypeVar('StreamStateValueT')
-class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
-    value: StreamStateValueT
-    state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
+class Check(BaseModel):
+    name: str
+    expression: str
+    status: str
+class Checked(BaseModel, typing.Generic[CheckT, CheckName]):
+    value: CheckT
+    checks: typing.Dict[CheckName, Check]
+
+def get_checks(checks: typing.Dict[CheckName, Check]) -> typing.List[Check]:
+    return list(checks.values())
+
+def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
+    return all(check.status == "succeeded" for check in get_checks(checks))
 # #########################################################################
-# Generated classes (9)
+# Generated enums (0)
 # #########################################################################
+
+# #########################################################################
+# Generated classes (12)
+# #########################################################################
+
+class AttributeDefinition(BaseModel):
+    name: str
+    type: str
+    description: str
+
+class AttributeValue(BaseModel):
+    value: typing.Optional[str] = None
+    type: str
 
 class CharacterSpan(BaseModel):
-    text: typing.Optional[str] = None
+    text: str
     start: typing.Optional[int] = None
     end: typing.Optional[int] = None
 
+class Entity(BaseModel):
+    name: str
+    type: str
+    description: str
+    custom_atts: typing.Dict[str, "AttributeValue"]
+
 class EntityType(BaseModel):
-    name: typing.Optional[str] = None
-    description: typing.Optional[str] = None
+    name: str
+    description: str
+    attributes: typing.List["AttributeDefinition"]
 
 class ExtractionResult(BaseModel):
     triples: typing.List["Triple"]
-    reasoning: typing.Optional[str] = None
+    reasoning: str
 
 class Ontology(BaseModel):
     entity_types: typing.List["EntityType"]
     relation_types: typing.List["RelationType"]
 
 class OntologyExtension(BaseModel):
-    needs_extension: typing.Optional[bool] = None
+    needs_extension: bool
     new_entity_types: typing.List["EntityType"]
     new_relation_types: typing.List["RelationType"]
-    critical_information_at_risk: typing.Optional[str] = None
-    reasoning: typing.Optional[str] = None
+    critical_information_at_risk: str
+    reasoning: str
 
 class OntologyRecommendation(BaseModel):
-    ontology: typing.Optional["Ontology"] = None
-    text_purpose: typing.Optional[str] = None
-    reasoning: typing.Optional[str] = None
+    ontology: "Ontology"
+    text_purpose: str
+    reasoning: str
 
 class RelationType(BaseModel):
-    name: typing.Optional[str] = None
-    description: typing.Optional[str] = None
-    domain: typing.Optional[str] = None
-    range: typing.Optional[str] = None
+    name: str
+    description: str
+    domain: str
+    range: str
 
 class SourceMetadata(BaseModel):
-    source_name: typing.Optional[str] = None
+    source_name: str
     source_url: typing.Optional[str] = None
 
 class Triple(BaseModel):
-    subject: typing.Optional[str] = None
-    predicate: typing.Optional[str] = None
-    object: typing.Optional[str] = None
-    source: typing.Optional["SourceMetadata"] = None
+    subject: "Entity"
+    predicate: str
+    object: "Entity"
+    source: "SourceMetadata"
     supporting_spans: typing.List["CharacterSpan"]
     extraction_datetime: typing.Optional[str] = None
 

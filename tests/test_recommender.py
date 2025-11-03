@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
-from baml_client.types import OntologyRecommendation, OntologyExtension, EntityType, RelationType
+from spindle.baml_client.types import OntologyRecommendation, OntologyExtension, EntityType, RelationType
 
 from spindle import OntologyRecommender, SpindleExtractor
 from tests.fixtures.sample_texts import SIMPLE_TEXT, MEDICAL_TEXT

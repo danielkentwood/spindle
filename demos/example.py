@@ -42,19 +42,27 @@ def main():
     entity_types = [
         {
             "name": "Person",
-            "description": "A human being, identified by their name"
+            "description": "A human being, identified by their name",
+            "attributes": [
+                {"name": "title", "type": "string", "description": "Job title or role"}
+            ]
         },
         {
             "name": "Organization",
-            "description": "A company, institution, or organized group"
+            "description": "A company, institution, or organized group",
+            "attributes": [
+                {"name": "founded_year", "type": "int", "description": "Year the organization was founded"}
+            ]
         },
         {
             "name": "Location",
-            "description": "A geographic place, city, or address"
+            "description": "A geographic place, city, or address",
+            "attributes": []
         },
         {
             "name": "Technology",
-            "description": "A programming language, framework, or technical tool"
+            "description": "A programming language, framework, or technical tool",
+            "attributes": []
         }
     ]
     
@@ -141,7 +149,13 @@ def main():
     
     print(f"Extracted {len(result1.triples)} triples:")
     for i, triple in enumerate(result1.triples, 1):
-        print(f"  {i}. ({triple.subject}) --[{triple.predicate}]--> ({triple.object})")
+        print(f"  {i}. ({triple.subject.name}: {triple.subject.type}) --[{triple.predicate}]--> ({triple.object.name}: {triple.object.type})")
+        print(f"     Subject: {triple.subject.description}")
+        if triple.subject.custom_atts:
+            print(f"     Subject attributes: {triple.subject.custom_atts}")
+        print(f"     Object: {triple.object.description}")
+        if triple.object.custom_atts:
+            print(f"     Object attributes: {triple.object.custom_atts}")
         print(f"     Source: {triple.source.source_name}")
         if triple.source.source_url:
             print(f"     URL: {triple.source.source_url}")
@@ -254,7 +268,7 @@ def main():
     print("Checking for duplicate facts from different sources...")
     fact_to_sources = {}
     for triple in all_triples:
-        fact = (triple.subject, triple.predicate, triple.object)
+        fact = (triple.subject.name, triple.predicate, triple.object.name)
         if fact not in fact_to_sources:
             fact_to_sources[fact] = []
         fact_to_sources[fact].append(triple.source.source_name)

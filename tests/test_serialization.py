@@ -1,8 +1,10 @@
 """Unit tests for serialization functions in spindle.py."""
 
 import pytest
-from baml_client.types import (
+from spindle.baml_client.types import (
     Triple,
+    Entity,
+    AttributeValue,
     SourceMetadata,
     CharacterSpan,
     EntityType,
@@ -21,6 +23,11 @@ from spindle import (
 )
 
 
+def _create_entity(name: str, entity_type: str, description: str = ""):
+    """Helper to create test Entity."""
+    return Entity(name=name, type=entity_type, description=description, custom_atts={})
+
+
 class TestTriplesSerializatio:
     """Tests for triples_to_dict and dict_to_triples functions."""
     
@@ -30,9 +37,11 @@ class TestTriplesSerializatio:
         
         assert len(dicts) == 1
         d = dicts[0]
-        assert d["subject"] == "Alice Johnson"
+        assert d["subject"]["name"] == "Alice Johnson"
+        assert d["subject"]["type"] == "Person"
         assert d["predicate"] == "works_at"
-        assert d["object"] == "TechCorp"
+        assert d["object"]["name"] == "TechCorp"
+        assert d["object"]["type"] == "Organization"
         assert d["source"]["source_name"] == "Test Document"
         assert d["source"]["source_url"] == "https://example.com/test"
         assert d["extraction_datetime"] == "2024-01-15T10:30:00Z"
@@ -43,8 +52,8 @@ class TestTriplesSerializatio:
         dicts = triples_to_dict(sample_triples)
         
         assert len(dicts) == 2
-        assert dicts[0]["subject"] == "Alice Johnson"
-        assert dicts[1]["subject"] == "TechCorp"
+        assert dicts[0]["subject"]["name"] == "Alice Johnson"
+        assert dicts[1]["subject"]["name"] == "TechCorp"
     
     def test_triples_to_dict_empty(self):
         """Test converting empty list to dict."""
@@ -55,9 +64,9 @@ class TestTriplesSerializatio:
     def test_triples_to_dict_with_no_spans(self):
         """Test converting triple with no supporting spans."""
         triple = Triple(
-            subject="Alice",
+            subject=_create_entity("Alice", "Person"),
             predicate="works_at",
-            object="TechCorp",
+            object=_create_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[],
             extraction_datetime="2024-01-15T10:30:00Z"
@@ -70,9 +79,9 @@ class TestTriplesSerializatio:
     def test_triples_to_dict_with_none_indices(self):
         """Test converting triple with None span indices."""
         triple = Triple(
-            subject="Alice",
+            subject=_create_entity("Alice", "Person"),
             predicate="works_at",
-            object="TechCorp",
+            object=_create_entity("TechCorp", "Organization"),
             source=SourceMetadata(source_name="Test"),
             supporting_spans=[
                 CharacterSpan(text="Alice works at TechCorp", start=None, end=None)
@@ -88,7 +97,7 @@ class TestTriplesSerializatio:
     def test_dict_to_triples_single(self):
         """Test converting a single dict back to triple."""
         dict_data = {
-            "subject": "Alice Johnson",
+            "subject": "Alice Johnson",  # Old format - will be converted
             "predicate": "works_at",
             "object": "TechCorp",
             "source": {
@@ -109,9 +118,12 @@ class TestTriplesSerializatio:
         
         assert len(triples) == 1
         triple = triples[0]
-        assert triple.subject == "Alice Johnson"
+        # Old format is converted to Entity with Unknown type
+        assert triple.subject.name == "Alice Johnson"
+        assert triple.subject.type == "Unknown"
         assert triple.predicate == "works_at"
-        assert triple.object == "TechCorp"
+        assert triple.object.name == "TechCorp"
+        assert triple.object.type == "Unknown"
         assert triple.source.source_name == "Test Document"
         assert triple.source.source_url == "https://example.com/test"
         assert triple.extraction_datetime == "2024-01-15T10:30:00Z"

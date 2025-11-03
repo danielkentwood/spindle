@@ -8,6 +8,8 @@ GraphStore provides persistent storage and querying capabilities for Spindle kno
 
 - **Embedded Database**: No separate server needed - Kùzu runs in-process like SQLite
 - **Full CRUD Operations**: Create, read, update, and delete nodes and edges
+- **Case Normalization**: All node names and edge predicates automatically converted to UPPERCASE for consistency
+- **Case-Insensitive Queries**: Query with any case - automatically converted to uppercase
 - **Multi-Source Evidence Consolidation**: Duplicate triples from different sources merge into single edges
 - **Intelligent Deduplication**: Automatically detects and merges evidence from multiple sources
 - **Pattern Matching**: Query with wildcards for flexible graph exploration
@@ -101,6 +103,74 @@ store.add_triples([
 edges = store.get_edge("Alice", "works_at", "TechCorp")
 assert len(edges) == 1
 assert len(edges[0]['supporting_evidence']) == 2  # Two sources
+```
+
+## Case Normalization
+
+**Important:** GraphStore automatically converts all node names and edge predicates (relationship types) to UPPERCASE for consistency and improved matching across different sources.
+
+### Why Uppercase?
+
+- **Consistency**: Ensures "Alice Johnson", "alice johnson", and "ALICE JOHNSON" all refer to the same entity
+- **Deduplication**: Better merging of facts from different sources with inconsistent casing
+- **Query Reliability**: Eliminates case-sensitivity issues in pattern matching
+
+### How It Works
+
+```python
+# Input with mixed case
+store.add_node(name="Alice Johnson", entity_type="Person")
+store.add_edge(subject="Alice Johnson", predicate="works_at", obj="TechCorp")
+
+# Stored as uppercase
+node = store.get_node("alice johnson")  # Case-insensitive lookup
+print(node["name"])  # Output: "ALICE JOHNSON"
+
+edges = store.query_by_pattern(predicate="Works_At")  # Case-insensitive
+print(edges[0]["predicate"])  # Output: "WORKS_AT"
+```
+
+### What Gets Converted
+
+✅ **Converted to uppercase:**
+
+- Node names (entity identifiers)
+- Edge predicates (relationship types)
+
+❌ **NOT converted:**
+
+- Entity types (e.g., "Person", "Organization")
+- Source names
+- Metadata values
+- Supporting evidence text
+
+### Query Examples
+
+All queries are case-insensitive - you can use any case when querying:
+
+```python
+# All of these work identically:
+store.get_node("alice johnson")
+store.get_node("Alice Johnson")
+store.get_node("ALICE JOHNSON")
+
+# All return the same results:
+store.query_by_pattern(predicate="works_at")
+store.query_by_pattern(predicate="Works_At")
+store.query_by_pattern(predicate="WORKS_AT")
+```
+
+### Direct Cypher Queries
+
+When writing direct Cypher queries, remember to use uppercase for names and predicates:
+
+```python
+# Correct - use uppercase in Cypher queries
+query = """
+MATCH (p:Entity {name: 'ALICE JOHNSON'})-[r:Relationship {predicate: 'WORKS_AT'}]->(c:Entity)
+RETURN p.name, c.name
+"""
+results = store.query_cypher(query)
 ```
 
 ## Installation

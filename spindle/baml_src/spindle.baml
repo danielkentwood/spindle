@@ -14,11 +14,32 @@ class CharacterSpan {
   end int? @description("Ending character index in the source text (exclusive, computed in post-processing)")
 }
 
+// Attribute definition for entity types in the ontology
+class AttributeDefinition {
+  name string @description("The name of the attribute (e.g., 'campaign_launch_dt', 'founded_date')")
+  type string @description("Data type: 'string', 'int', 'float', 'bool', 'date', or a nested object schema definition")
+  description string @description("A description of what this attribute represents")
+}
+
+// Attribute value in extracted entities (includes type metadata)
+class AttributeValue {
+  value string? @description("The extracted value as a string, or null if not found in the text")
+  type string @description("The data type of this attribute (matches the type from AttributeDefinition)")
+}
+
+// Structured entity in a triple
+class Entity {
+  name string @description("The entity's name or identifier extracted from the text")
+  type string @description("The entity type from the ontology (must match an EntityType.name exactly)")
+  description string @description("A brief description of the entity generated from the text context")
+  custom_atts map<string, AttributeValue> @description("Type-specific attributes as defined in the entity type's AttributeDefinition list")
+}
+
 // A triple represents a subject-predicate-object relationship with supporting evidence
 class Triple {
-  subject string @description("The subject entity of the triple")
+  subject Entity @description("The subject entity with full metadata and attributes")
   predicate string @description("The relationship/predicate connecting subject and object")
-  object string @description("The object entity of the triple")
+  object Entity @description("The object entity with full metadata and attributes")
   source SourceMetadata @description("Metadata about the source of this triple")
   supporting_spans CharacterSpan[] @description("Character spans in the source text that support this triple")
   extraction_datetime string? @description("ISO 8601 datetime when this triple was extracted (set automatically in post-processing)")
@@ -26,8 +47,9 @@ class Triple {
 
 // Defines a type of entity that can appear in the knowledge graph
 class EntityType {
-  name string @description("The name of the entity type (e.g., 'Person', 'Organization')")
+  name string @description("The name of the entity type (e.g., 'Person', 'Organization', 'Campaign')")
   description string @description("A description of what this entity type represents")
+  attributes AttributeDefinition[] @description("List of custom attributes that should be extracted for entities of this type")
 }
 
 // Defines a type of relationship between entities
@@ -73,9 +95,9 @@ function ExtractTriples(
   source_metadata: SourceMetadata,
   existing_triples: Triple[]
 ) -> ExtractionResult {
-  client CustomSonnet4
+  client CustomFast
   prompt #"
-    You are a knowledge graph extraction expert. Your task is to extract structured triples (subject-predicate-object) from the provided text, along with supporting evidence.
+    You are a knowledge graph extraction expert. Your task is to extract structured triples (subject-predicate-object) from the provided text, with rich entity metadata, custom attributes, and supporting evidence.
 
     {{ _.role("user") }}
     
@@ -85,6 +107,12 @@ function ExtractTriples(
     Valid Entity Types:
     {% for entity_type in ontology.entity_types %}
     - {{ entity_type.name }}: {{ entity_type.description }}
+      {% if entity_type.attributes|length > 0 %}
+      Custom Attributes:
+      {% for attr in entity_type.attributes %}
+        * {{ attr.name }} ({{ attr.type }}): {{ attr.description }}
+      {% endfor %}
+      {% endif %}
     {% endfor %}
     
     Valid Relation Types:
@@ -108,7 +136,7 @@ function ExtractTriples(
     4. If you extract the same fact that exists in existing triples, it's okay as long as it's from this new source
     
     {% for triple in existing_triples %}
-    - {{ triple.subject }} -> {{ triple.predicate }} -> {{ triple.object }} (from: {{ triple.source.source_name }})
+    - {{ triple.subject.name }} ({{ triple.subject.type }}) -> {{ triple.predicate }} -> {{ triple.object.name }} ({{ triple.object.type }}) [from: {{ triple.source.source_name }}]
     {% endfor %}
     {% else %}
     This is the first extraction, so there are no existing triples to consider.
@@ -117,24 +145,61 @@ function ExtractTriples(
     TEXT TO ANALYZE:
     {{ text }}
     
-    INSTRUCTIONS:
+    ENTITY EXTRACTION INSTRUCTIONS:
+    
+    For each entity in a triple (both subject and object), you MUST provide:
+    
+    1. **name**: The entity's name or identifier from the text
+       - Use clear, consistent names (e.g., "John Smith" not "John" or "Smith")
+       - If the entity appears in existing triples, use the EXACT same name
+    
+    2. **type**: The entity type from the ontology
+       - Must match exactly one of the EntityType names defined above
+       - Check domain/range constraints in relation types
+    
+    3. **description**: A brief description of the entity
+       - Generate this from the text context (1-2 sentences)
+       - Include relevant details that help identify or characterize the entity
+       - Be concise but informative
+    
+    4. **custom_atts**: Extract ALL attributes defined for this entity type
+       - Format: {"attribute_name": {"value": "extracted_value", "type": "attribute_type"}}
+       - Set "value" to null if the attribute is not mentioned in the text
+       - "type" must match the type from the AttributeDefinition
+       - Extract dates in ISO format (YYYY-MM-DD) when possible
+       - For nested objects, use JSON string representation
+    
+    TRIPLE EXTRACTION INSTRUCTIONS:
+    
     1. Extract all meaningful triples from the text that conform to the ontology
     2. Only use entity types and relation types defined in the ontology
-    3. Use clear, consistent entity names (e.g., "John Smith" not "John" or "Smith")
-    4. If an entity appears in existing triples, use the exact same name for consistency
-    5. For each triple, identify the TEXT SPANS that provide evidence for the triple
+    3. For each triple, identify TEXT SPANS that provide evidence:
        - Copy the EXACT text from the source that supports the triple
-       - You can include multiple text spans if the evidence is spread across different parts of the text
-       - Be precise - copy the text exactly as it appears, including punctuation and spacing
+       - You can include multiple text spans if evidence is spread across different parts
+       - Be precise - copy text exactly as it appears, including punctuation and spacing
        - Include enough context to make the evidence clear
-    6. Set the source metadata for each triple to the provided source information
-    7. Provide reasoning explaining your extraction decisions, entity consistency choices, and how you identified supporting spans
+    4. Provide reasoning explaining your extraction decisions
     
-    EXAMPLE of text spans:
-    If the text is "Alice works at TechCorp in San Francisco." and you extract the triple (Alice, works_at, TechCorp),
-    the supporting span text would be: "Alice works at TechCorp"
+    EXAMPLE:
     
-    Note: You only need to provide the text content. Character indices will be computed automatically in post-processing.
+    Text: "The Check Your A1C campaign launched on August 10, 2025, targeting diabetic members to remind them to get their A1C checked."
+    
+    Ontology has EntityType "Campaign" with attributes:
+    - campaign_launch_dt (date): Launch date
+    - campaign_completion_dt (date): Completion date
+    
+    Extracted entity for subject:
+    {
+      "name": "Check Your A1C campaign",
+      "type": "Campaign",
+      "description": "A campaign targeting diabetic members to remind them to get their A1C checked",
+      "custom_atts": {
+        "campaign_launch_dt": {"value": "2025-08-10", "type": "date"},
+        "campaign_completion_dt": {"value": null, "type": "date"}
+      }
+    }
+    
+    Note: Character indices for supporting spans will be computed automatically in post-processing.
     
     {{ ctx.output_format }}
   "#
@@ -145,7 +210,7 @@ function RecommendOntology(
   text: string,
   scope: string
 ) -> OntologyRecommendation {
-  client CustomSonnet4
+  client CustomFast
   prompt #"
     You are a knowledge graph ontology design expert. Your task is to analyze the provided text, understand its overarching purpose and domain, and recommend an appropriate ontology (entity types and relation types) that would be suitable for extracting knowledge from this and similar texts.
 
@@ -266,8 +331,62 @@ function RecommendOntology(
     - Think about what would be useful for querying and analyzing this type of text
     - Ensure descriptions are clear and detailed enough for accurate extraction
     
+    CUSTOM ATTRIBUTES FOR ENTITY TYPES:
+    
+    For each entity type, you should define custom attributes that capture type-specific information:
+    
+    1. **Identify Key Attributes**: What information is important for this entity type?
+       - For Person: birth_date, nationality, occupation
+       - For Organization: founded_date, headquarters_location, industry
+       - For Campaign: launch_date, end_date, budget, target_audience
+       - For Product: release_date, version, price
+    
+    2. **Attribute Types**: Use appropriate data types
+       - "string": General text (names, descriptions, IDs)
+       - "int": Whole numbers (counts, quantities, years)
+       - "float": Decimal numbers (prices, percentages, measurements)
+       - "bool": True/false values (is_active, is_public)
+       - "date": ISO dates (YYYY-MM-DD format)
+       - Nested objects: For complex structured data (use JSON schema description)
+    
+    3. **Domain-Relevant Attributes**: Focus on what matters for this domain
+       - Medical domain: diagnosis_date, treatment_status, dosage
+       - Business domain: funding_amount, employee_count, revenue
+       - Academic domain: publication_date, citation_count, affiliation
+    
+    4. **Extraction-Friendly**: Choose attributes that can be extracted from text
+       - Prefer attributes commonly mentioned in text
+       - Avoid attributes requiring external knowledge
+       - Balance detail with extractability
+    
+    5. **Scope Considerations**:
+       - Minimal scope: 0-2 attributes per entity type (only essential ones)
+       - Balanced scope: 2-4 attributes per entity type (common, useful attributes)
+       - Comprehensive scope: 4-8 attributes per entity type (detailed characterization)
+    
+    EXAMPLE ENTITY TYPE WITH ATTRIBUTES:
+    
+    ```
+    EntityType: Campaign
+    Description: A marketing or outreach campaign
+    Attributes:
+      - name: campaign_launch_dt
+        type: date
+        description: The date when the campaign was launched
+      - name: campaign_completion_dt
+        type: date
+        description: The date when the campaign ended or is planned to end
+      - name: target_audience
+        type: string
+        description: The intended audience or demographic for the campaign
+      - name: campaign_budget
+        type: float
+        description: The budget allocated for the campaign in dollars
+    ```
+    
     Your task is to analyze THIS specific text and recommend the most appropriate ontology for it,
     following the principles above and designing for the requested "{{ scope }}" scope level.
+    Include appropriate custom attributes for each entity type based on the domain and text content.
     
     {{ ctx.output_format }}
   "#
@@ -279,7 +398,7 @@ function AnalyzeOntologyExtension(
   current_ontology: Ontology,
   scope: string
 ) -> OntologyExtension {
-  client CustomSonnet4
+  client CustomFast
   prompt #"
     You are a knowledge graph ontology expert. Your task is to analyze whether an existing ontology needs to be extended to properly extract knowledge from new text.
     
@@ -290,6 +409,12 @@ function AnalyzeOntologyExtension(
     Current Entity Types:
     {% for entity_type in current_ontology.entity_types %}
     - {{ entity_type.name }}: {{ entity_type.description }}
+      {% if entity_type.attributes|length > 0 %}
+      Attributes:
+      {% for attr in entity_type.attributes %}
+        * {{ attr.name }} ({{ attr.type }}): {{ attr.description }}
+      {% endfor %}
+      {% endif %}
     {% endfor %}
     
     Current Relation Types:
