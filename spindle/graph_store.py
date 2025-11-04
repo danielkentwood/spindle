@@ -17,6 +17,7 @@ Key Features:
 import os
 import json
 import shutil
+import uuid
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,14 @@ except ImportError:
     )
 
 from spindle.baml_client.types import Triple, Entity, SourceMetadata, CharacterSpan, AttributeValue
+
+# Import VectorStore with optional dependency handling
+try:
+    from spindle.vector_store import VectorStore
+    _VECTOR_STORE_AVAILABLE = True
+except ImportError:
+    VectorStore = None
+    _VECTOR_STORE_AVAILABLE = False
 
 
 class GraphStore:
@@ -62,7 +71,7 @@ class GraphStore:
         ...     store.add_triples(triples)
     """
     
-    def __init__(self, db_path: str = "spindle_graph"):
+    def __init__(self, db_path: str = "spindle_graph", vector_store: Optional['VectorStore'] = None):
         """
         Initialize GraphStore with Kùzu database.
         
@@ -70,11 +79,14 @@ class GraphStore:
             db_path: Graph name or path. If just a name (e.g., "my_graph"),
                     creates /graphs/my_graph/ directory. If an absolute path,
                     uses that path directly. Defaults to "spindle_graph".
+            vector_store: Optional VectorStore instance for automatic embedding generation.
+                         If provided, embeddings will be automatically created for nodes and edges.
         """
         # Convert to absolute path in /graphs directory structure
         self.db_path = self._resolve_graph_path(db_path)
         self.db = None
         self.conn = None
+        self.vector_store = vector_store
         
         # Initialize database and schema
         self._initialize_database()
@@ -145,6 +157,8 @@ class GraphStore:
                 "description STRING, "
                 "custom_atts STRING, "
                 "metadata STRING, "
+                "id STRING, "
+                "vector_index STRING, "
                 "PRIMARY KEY(name)"
                 ")"
             )
@@ -159,7 +173,9 @@ class GraphStore:
                 "FROM Entity TO Entity, "
                 "predicate STRING, "
                 "supporting_evidence STRING, "
-                "metadata STRING"
+                "metadata STRING, "
+                "id STRING, "
+                "vector_index STRING"
                 ")"
             )
         except Exception as e:
@@ -226,7 +242,8 @@ class GraphStore:
         entity_type: str,
         metadata: Optional[Dict[str, Any]] = None,
         description: str = "",
-        custom_atts: Optional[Dict[str, Any]] = None
+        custom_atts: Optional[Dict[str, Any]] = None,
+        vector_index: Optional[str] = None
     ) -> bool:
         """
         Add a single node to the graph.
@@ -237,6 +254,7 @@ class GraphStore:
             metadata: Optional dictionary of additional metadata
             description: Entity description
             custom_atts: Optional dictionary of custom attributes with type metadata
+            vector_index: Optional UID of the embedding in the vector store
         
         Returns:
             True if node was added, False if it already exists
@@ -253,19 +271,40 @@ class GraphStore:
         if self.get_node(name) is not None:
             return False
         
+        # Generate unique ID
+        node_id = str(uuid.uuid4())
+        
+        # Generate embedding if vector_store is provided and vector_index not already set
+        if self.vector_store is not None and vector_index is None:
+            # Create text for embedding: name | type | description
+            embedding_text = f"{name} | {entity_type}"
+            if description:
+                embedding_text += f" | {description}"
+            
+            try:
+                vector_index = self.vector_store.add(
+                    text=embedding_text,
+                    metadata={"type": "node", "entity_type": entity_type, "name": name}
+                )
+            except Exception:
+                # If embedding generation fails, continue without vector_index
+                vector_index = None
+        
         metadata_json = json.dumps(metadata)
         custom_atts_json = json.dumps(custom_atts)
         
         try:
             self.conn.execute(
                 "CREATE (e:Entity {name: $name, type: $type, description: $description, "
-                "custom_atts: $custom_atts, metadata: $metadata})",
+                "custom_atts: $custom_atts, metadata: $metadata, id: $id, vector_index: $vector_index})",
                 parameters={
                     "name": name,
                     "type": entity_type,
                     "description": description,
                     "custom_atts": custom_atts_json,
-                    "metadata": metadata_json
+                    "metadata": metadata_json,
+                    "id": node_id,
+                    "vector_index": vector_index or ""
                 }
             )
             return True
@@ -278,7 +317,7 @@ class GraphStore:
         Add multiple nodes in bulk.
         
         Args:
-            nodes: List of node dictionaries with keys: 'name', 'type', 'metadata'
+            nodes: List of node dictionaries with keys: 'name', 'type', 'metadata', 'vector_index'
         
         Returns:
             Number of nodes successfully added
@@ -288,18 +327,33 @@ class GraphStore:
             name = node.get("name")
             entity_type = node.get("type", "Unknown")
             metadata = node.get("metadata", {})
+            description = node.get("description", "")
+            custom_atts = node.get("custom_atts")
+            vector_index = node.get("vector_index")
             
-            if name and self.add_node(name, entity_type, metadata):
+            if name and self.add_node(
+                name, entity_type, metadata,
+                description=description,
+                custom_atts=custom_atts,
+                vector_index=vector_index
+            ):
                 count += 1
         
         return count
     
-    def add_nodes_from_triple(self, triple: Triple) -> Tuple[bool, bool]:
+    def add_nodes_from_triple(
+        self,
+        triple: Triple,
+        subject_vector_index: Optional[str] = None,
+        object_vector_index: Optional[str] = None
+    ) -> Tuple[bool, bool]:
         """
         Extract and add subject and object nodes from a triple.
         
         Args:
             triple: Triple object containing subject and object Entity objects
+            subject_vector_index: Optional vector index UID for subject embedding
+            object_vector_index: Optional vector index UID for object embedding
         
         Returns:
             Tuple of (subject_added, object_added) booleans
@@ -321,7 +375,8 @@ class GraphStore:
             entity_type=triple.subject.type,
             description=triple.subject.description,
             custom_atts=subject_custom_atts,
-            metadata=subject_metadata
+            metadata=subject_metadata,
+            vector_index=subject_vector_index
         )
         
         # Extract object entity information
@@ -341,7 +396,8 @@ class GraphStore:
             entity_type=triple.object.type,
             description=triple.object.description,
             custom_atts=object_custom_atts,
-            metadata=object_metadata
+            metadata=object_metadata,
+            vector_index=object_vector_index
         )
         
         return (subject_added, object_added)
@@ -354,14 +410,14 @@ class GraphStore:
             name: Entity name (will be converted to uppercase for lookup)
         
         Returns:
-            Dictionary with node properties including description and custom_atts, or None if not found
+            Dictionary with node properties including description, custom_atts, id, and vector_index, or None if not found
         """
         # Convert name to uppercase
         name = name.upper()
         
         try:
             result = self.conn.execute(
-                "MATCH (e:Entity {name: $name}) RETURN e.name, e.type, e.description, e.custom_atts, e.metadata",
+                "MATCH (e:Entity {name: $name}) RETURN e.name, e.type, e.description, e.custom_atts, e.metadata, e.id, e.vector_index",
                 parameters={"name": name}
             )
             
@@ -375,7 +431,9 @@ class GraphStore:
                 "type": row["e.type"],
                 "description": row["e.description"] if row["e.description"] else "",
                 "custom_atts": json.loads(row["e.custom_atts"]) if row["e.custom_atts"] else {},
-                "metadata": json.loads(row["e.metadata"]) if row["e.metadata"] else {}
+                "metadata": json.loads(row["e.metadata"]) if row["e.metadata"] else {},
+                "id": row["e.id"] if row["e.id"] else None,
+                "vector_index": row["e.vector_index"] if row["e.vector_index"] else None
             }
         except Exception as e:
             return None
@@ -386,7 +444,7 @@ class GraphStore:
         
         Args:
             name: Entity name (will be converted to uppercase for lookup)
-            updates: Dictionary of properties to update (can include 'type', 'metadata')
+            updates: Dictionary of properties to update (can include 'type', 'metadata', 'vector_index')
         
         Returns:
             True if node was updated, False if not found
@@ -409,6 +467,10 @@ class GraphStore:
         if "metadata" in updates:
             set_clauses.append("e.metadata = $metadata")
             params["metadata"] = json.dumps(updates["metadata"])
+        
+        if "vector_index" in updates:
+            set_clauses.append("e.vector_index = $vector_index")
+            params["vector_index"] = updates["vector_index"] or ""
         
         if not set_clauses:
             return True  # Nothing to update
@@ -534,7 +596,8 @@ class GraphStore:
         subject: str,
         predicate: str,
         obj: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        vector_index: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Add a single edge to the graph with intelligent evidence merging.
@@ -546,6 +609,7 @@ class GraphStore:
             metadata: Optional dictionary with 'supporting_evidence' (new nested format)
                      Format: {'supporting_evidence': [{'source_nm': '...', 'source_url': '...', 
                               'spans': [{'text': '...', 'start': 0, 'end': 10, 'extraction_datetime': '...'}]}]}
+            vector_index: Optional UID of the embedding in the vector store
         
         Returns:
             Dictionary with 'success' (bool) and 'message' (str) keys
@@ -586,19 +650,31 @@ class GraphStore:
                 all_messages.append(message)
             
             # Update the edge with merged evidence
+            # Also update vector_index if provided
             try:
-                self.conn.execute(
+                set_clauses = [
+                    "r.supporting_evidence = $evidence",
+                    "r.metadata = $metadata"
+                ]
+                params = {
+                    "subject": subject,
+                    "predicate": predicate,
+                    "obj": obj,
+                    "evidence": json.dumps(existing_evidence),
+                    "metadata": json.dumps(extra_metadata)
+                }
+                
+                if vector_index is not None:
+                    set_clauses.append("r.vector_index = $vector_index")
+                    params["vector_index"] = vector_index
+                
+                query = (
                     "MATCH (s:Entity {name: $subject})-[r:Relationship {predicate: $predicate}]->"
                     "(o:Entity {name: $obj}) "
-                    "SET r.supporting_evidence = $evidence, r.metadata = $metadata",
-                    parameters={
-                        "subject": subject,
-                        "predicate": predicate,
-                        "obj": obj,
-                        "evidence": json.dumps(existing_evidence),
-                        "metadata": json.dumps(extra_metadata)
-                    }
+                    f"SET {', '.join(set_clauses)}"
                 )
+                
+                self.conn.execute(query, parameters=params)
                 return {"success": True, "message": "; ".join(all_messages)}
             except Exception as e:
                 return {"success": False, "message": f"Failed to update edge: {str(e)}"}
@@ -611,20 +687,41 @@ class GraphStore:
             if subject_node is None or obj_node is None:
                 return {"success": False, "message": f"Nodes do not exist"}
             
+            # Generate unique ID
+            edge_id = str(uuid.uuid4())
+            
+            # Generate embedding if vector_store is provided and vector_index not already set
+            if self.vector_store is not None and vector_index is None:
+                # Create text for embedding: subject predicate object
+                embedding_text = f"{subject} {predicate} {obj}"
+                
+                try:
+                    vector_index = self.vector_store.add(
+                        text=embedding_text,
+                        metadata={"type": "edge", "predicate": predicate, "subject": subject, "object": obj}
+                    )
+                except Exception:
+                    # If embedding generation fails, continue without vector_index
+                    vector_index = None
+            
             try:
                 self.conn.execute(
                     "MATCH (s:Entity {name: $subject}), (o:Entity {name: $obj}) "
                     "CREATE (s)-[r:Relationship {"
                     "predicate: $predicate, "
                     "supporting_evidence: $evidence, "
-                    "metadata: $metadata"
+                    "metadata: $metadata, "
+                    "id: $id, "
+                    "vector_index: $vector_index"
                     "}]->(o)",
                     parameters={
                         "subject": subject,
                         "obj": obj,
                         "predicate": predicate,
                         "evidence": json.dumps(new_evidence),
-                        "metadata": json.dumps(extra_metadata)
+                        "metadata": json.dumps(extra_metadata),
+                        "id": edge_id,
+                        "vector_index": vector_index or ""
                     }
                 )
                 return {"success": True, "message": "Created new edge"}
@@ -637,7 +734,7 @@ class GraphStore:
         
         Args:
             edges: List of edge dictionaries with keys: 'subject', 'predicate',
-                  'object', 'metadata'
+                  'object', 'metadata', 'vector_index'
         
         Returns:
             Number of edges successfully added
@@ -648,20 +745,22 @@ class GraphStore:
             predicate = edge.get("predicate")
             obj = edge.get("object")
             metadata = edge.get("metadata", {})
+            vector_index = edge.get("vector_index")
             
             if subject and predicate and obj:
-                result = self.add_edge(subject, predicate, obj, metadata)
+                result = self.add_edge(subject, predicate, obj, metadata, vector_index=vector_index)
                 if result.get("success"):
                     count += 1
         
         return count
     
-    def add_edge_from_triple(self, triple: Triple) -> bool:
+    def add_edge_from_triple(self, triple: Triple, vector_index: Optional[str] = None) -> bool:
         """
         Create an edge from a Triple object with new nested evidence format.
         
         Args:
             triple: Triple object from Spindle extraction
+            vector_index: Optional UID of the embedding in the vector store
         
         Returns:
             True if edge was added successfully
@@ -693,7 +792,7 @@ class GraphStore:
         }
         
         # Use entity names for edge creation
-        result = self.add_edge(triple.subject.name, triple.predicate, triple.object.name, metadata)
+        result = self.add_edge(triple.subject.name, triple.predicate, triple.object.name, metadata, vector_index=vector_index)
         return result.get("success", False)
     
     def get_edge(
@@ -723,7 +822,7 @@ class GraphStore:
         try:
             result = self.conn.execute(
                 "MATCH (s:Entity {name: $subject})-[r:Relationship {predicate: $predicate}]->(o:Entity {name: $obj}) "
-                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata",
+                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata, r.id, r.vector_index",
                 parameters={"subject": subject, "predicate": predicate, "obj": obj}
             )
             
@@ -738,7 +837,9 @@ class GraphStore:
                     "predicate": row["r.predicate"],
                     "object": row["o.name"],
                     "supporting_evidence": json.loads(row["r.supporting_evidence"]) if row["r.supporting_evidence"] else [],
-                    "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {}
+                    "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {},
+                    "id": row["r.id"] if row["r.id"] else None,
+                    "vector_index": row["r.vector_index"] if row["r.vector_index"] else None
                 })
             
             return edges
@@ -759,7 +860,7 @@ class GraphStore:
             subject: Subject entity name (will be converted to uppercase for lookup)
             predicate: Relationship type (will be converted to uppercase for lookup)
             obj: Object entity name (will be converted to uppercase for lookup)
-            updates: Dictionary of properties to update
+            updates: Dictionary of properties to update (can include 'supporting_evidence', 'metadata', 'vector_index')
         
         Returns:
             True if edge was updated, False if none found
@@ -784,6 +885,10 @@ class GraphStore:
         if "metadata" in updates:
             set_clauses.append("r.metadata = $metadata")
             params["metadata"] = json.dumps(updates["metadata"])
+        
+        if "vector_index" in updates:
+            set_clauses.append("r.vector_index = $vector_index")
+            params["vector_index"] = updates["vector_index"] or ""
         
         if not set_clauses:
             return True  # Nothing to update
@@ -982,7 +1087,7 @@ class GraphStore:
         query = (
             f"MATCH (s:Entity)-[r:Relationship]->(o:Entity) "
             f"WHERE {where_clause} "
-            f"RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata"
+            f"RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata, r.id, r.vector_index"
         )
         
         try:
@@ -996,7 +1101,9 @@ class GraphStore:
                     "predicate": row["r.predicate"],
                     "object": row["o.name"],
                     "supporting_evidence": json.loads(row["r.supporting_evidence"]) if row["r.supporting_evidence"] else [],
-                    "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {}
+                    "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {},
+                    "id": row.get("r.id") if "r.id" in row else None,
+                    "vector_index": row.get("r.vector_index") if "r.vector_index" in row else None
                 })
             
             return edges
@@ -1020,7 +1127,7 @@ class GraphStore:
             # Get all edges
             result = self.conn.execute(
                 "MATCH (s:Entity)-[r:Relationship]->(o:Entity) "
-                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata"
+                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata, r.id, r.vector_index"
             )
             
             rows = result.get_as_df()
@@ -1041,7 +1148,9 @@ class GraphStore:
                         "predicate": row["r.predicate"],
                         "object": row["o.name"],
                         "supporting_evidence": supporting_evidence,
-                        "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {}
+                        "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {},
+                        "id": row.get("r.id") if "r.id" in row else None,
+                        "vector_index": row.get("r.vector_index") if "r.vector_index" in row else None
                     })
             
             return edges
@@ -1070,7 +1179,7 @@ class GraphStore:
             # Get all edges
             result = self.conn.execute(
                 "MATCH (s:Entity)-[r:Relationship]->(o:Entity) "
-                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata"
+                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata, r.id, r.vector_index"
             )
             
             rows = result.get_as_df()
@@ -1125,7 +1234,9 @@ class GraphStore:
                         "predicate": row["r.predicate"],
                         "object": row["o.name"],
                         "supporting_evidence": supporting_evidence,
-                        "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {}
+                        "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {},
+                        "id": row.get("r.id") if "r.id" in row else None,
+                        "vector_index": row.get("r.vector_index") if "r.vector_index" in row else None
                     })
             
             return edges

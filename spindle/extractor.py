@@ -207,16 +207,33 @@ class SpindleExtractor:
             triple.extraction_datetime = extraction_time
             
             # Post-processing: Compute character indices for supporting spans
+            # Replace spans in the list to ensure mutations are persisted
+            updated_spans = []
             for span in triple.supporting_spans:
                 if span.start is None or span.end is None:
                     # Find the span text in the source text
                     indices = _find_span_indices(text, span.text)
                     if indices:
-                        span.start, span.end = indices
+                        # Create a new span with computed indices to ensure persistence
+                        updated_span = CharacterSpan(
+                            text=span.text,
+                            start=indices[0],
+                            end=indices[1]
+                        )
+                        updated_spans.append(updated_span)
                     else:
                         # If exact match not found, set to -1 to indicate failure
-                        span.start = -1
-                        span.end = -1
+                        updated_span = CharacterSpan(
+                            text=span.text,
+                            start=-1,
+                            end=-1
+                        )
+                        updated_spans.append(updated_span)
+                else:
+                    # Span already has indices, keep it as-is
+                    updated_spans.append(span)
+            # Replace the spans list
+            triple.supporting_spans = updated_spans
         
         return result
 

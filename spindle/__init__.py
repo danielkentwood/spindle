@@ -45,6 +45,15 @@ except ImportError:
     GraphStore = None
     _GRAPH_STORE_AVAILABLE = False
 
+# Import VectorStore classes (optional dependency)
+try:
+    from spindle.vector_store import VectorStore, ChromaVectorStore
+    _VECTOR_STORE_AVAILABLE = True
+except ImportError:
+    VectorStore = None
+    ChromaVectorStore = None
+    _VECTOR_STORE_AVAILABLE = False
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -52,6 +61,8 @@ __all__ = [
     "SpindleExtractor",
     "OntologyRecommender",
     "GraphStore",
+    "VectorStore",
+    "ChromaVectorStore",
     # Factory functions
     "create_ontology",
     "create_source_metadata",
