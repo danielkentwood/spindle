@@ -79,8 +79,9 @@ class GraphStore:
             db_path: Graph name or path. If just a name (e.g., "my_graph"),
                     creates /graphs/my_graph/ directory. If an absolute path,
                     uses that path directly. Defaults to "spindle_graph".
-            vector_store: Optional VectorStore instance for automatic embedding generation.
-                         If provided, embeddings will be automatically created for nodes and edges.
+            vector_store: Optional VectorStore instance for storing embeddings.
+                         Required for compute_graph_embeddings() method.
+                         Embeddings are computed on-demand, not automatically.
         """
         # Convert to absolute path in /graphs directory structure
         self.db_path = self._resolve_graph_path(db_path)
@@ -274,22 +275,6 @@ class GraphStore:
         # Generate unique ID
         node_id = str(uuid.uuid4())
         
-        # Generate embedding if vector_store is provided and vector_index not already set
-        if self.vector_store is not None and vector_index is None:
-            # Create text for embedding: name | type | description
-            embedding_text = f"{name} | {entity_type}"
-            if description:
-                embedding_text += f" | {description}"
-            
-            try:
-                vector_index = self.vector_store.add(
-                    text=embedding_text,
-                    metadata={"type": "node", "entity_type": entity_type, "name": name}
-                )
-            except Exception:
-                # If embedding generation fails, continue without vector_index
-                vector_index = None
-        
         metadata_json = json.dumps(metadata)
         custom_atts_json = json.dumps(custom_atts)
         
@@ -437,6 +422,37 @@ class GraphStore:
             }
         except Exception as e:
             return None
+    
+    def nodes(self) -> List[Dict[str, Any]]:
+        """
+        Retrieve all nodes in the graph.
+        
+        Returns:
+            List of node dictionaries, each with keys: name, type, description,
+            custom_atts, metadata, id, and vector_index
+        """
+        try:
+            result = self.conn.execute(
+                "MATCH (e:Entity) RETURN e.name, e.type, e.description, e.custom_atts, e.metadata, e.id, e.vector_index"
+            )
+            
+            rows = result.get_as_df()
+            nodes = []
+            
+            for _, row in rows.iterrows():
+                nodes.append({
+                    "name": row["e.name"],
+                    "type": row["e.type"],
+                    "description": row["e.description"] if row["e.description"] else "",
+                    "custom_atts": json.loads(row["e.custom_atts"]) if row["e.custom_atts"] else {},
+                    "metadata": json.loads(row["e.metadata"]) if row["e.metadata"] else {},
+                    "id": row["e.id"] if row["e.id"] else None,
+                    "vector_index": row["e.vector_index"] if row["e.vector_index"] else None
+                })
+            
+            return nodes
+        except Exception as e:
+            return []
     
     def update_node(self, name: str, updates: Dict[str, Any]) -> bool:
         """
@@ -690,20 +706,6 @@ class GraphStore:
             # Generate unique ID
             edge_id = str(uuid.uuid4())
             
-            # Generate embedding if vector_store is provided and vector_index not already set
-            if self.vector_store is not None and vector_index is None:
-                # Create text for embedding: subject predicate object
-                embedding_text = f"{subject} {predicate} {obj}"
-                
-                try:
-                    vector_index = self.vector_store.add(
-                        text=embedding_text,
-                        metadata={"type": "edge", "predicate": predicate, "subject": subject, "object": obj}
-                    )
-                except Exception:
-                    # If embedding generation fails, continue without vector_index
-                    vector_index = None
-            
             try:
                 self.conn.execute(
                     "MATCH (s:Entity {name: $subject}), (o:Entity {name: $obj}) "
@@ -845,6 +847,38 @@ class GraphStore:
             return edges
         except Exception as e:
             return None
+    
+    def edges(self) -> List[Dict[str, Any]]:
+        """
+        Retrieve all edges in the graph.
+        
+        Returns:
+            List of edge dictionaries, each with keys: subject, predicate, object,
+            supporting_evidence, metadata, id, and vector_index
+        """
+        try:
+            result = self.conn.execute(
+                "MATCH (s:Entity)-[r:Relationship]->(o:Entity) "
+                "RETURN s.name, r.predicate, o.name, r.supporting_evidence, r.metadata, r.id, r.vector_index"
+            )
+            
+            rows = result.get_as_df()
+            edges = []
+            
+            for _, row in rows.iterrows():
+                edges.append({
+                    "subject": row["s.name"],
+                    "predicate": row["r.predicate"],
+                    "object": row["o.name"],
+                    "supporting_evidence": json.loads(row["r.supporting_evidence"]) if row["r.supporting_evidence"] else [],
+                    "metadata": json.loads(row["r.metadata"]) if row["r.metadata"] else {},
+                    "id": row["r.id"] if row["r.id"] else None,
+                    "vector_index": row["r.vector_index"] if row["r.vector_index"] else None
+                })
+            
+            return edges
+        except Exception as e:
+            return []
     
     def update_edge(
         self,
@@ -1333,6 +1367,120 @@ class GraphStore:
             pass
         
         return stats
+    
+    # ========== Graph Embedding Methods ==========
+    
+    def compute_graph_embeddings(
+        self,
+        vector_store: 'VectorStore',
+        dimensions: int = 128,
+        walk_length: int = 80,
+        num_walks: int = 10,
+        p: float = 1.0,
+        q: float = 1.0,
+        workers: int = 1
+    ) -> Dict[str, str]:
+        """
+        Compute Node2Vec embeddings for all nodes in the graph and store them.
+        
+        This method:
+        1. Extracts the graph structure from the database
+        2. Computes Node2Vec embeddings that capture structural relationships
+        3. Stores embeddings in the provided VectorStore
+        4. Updates all nodes with their vector_index values
+        
+        Args:
+            vector_store: VectorStore instance to store embeddings in
+            dimensions: Dimensionality of embedding vectors (default: 128)
+            walk_length: Length of each random walk (default: 80)
+            num_walks: Number of random walks per node (default: 10)
+            p: Return parameter - controls likelihood of revisiting a node (default: 1.0)
+            q: In-out parameter - controls exploration vs exploitation (default: 1.0)
+            workers: Number of worker threads (default: 1)
+        
+        Returns:
+            Dictionary mapping node names to vector_index UIDs in VectorStore
+        
+        Raises:
+            ImportError: If required dependencies (networkx, node2vec) are not installed
+            ValueError: If vector_store is None
+        """
+        if vector_store is None:
+            raise ValueError("vector_store is required for computing embeddings")
+        
+        try:
+            from spindle.graph_embeddings import GraphEmbeddingGenerator
+        except ImportError:
+            raise ImportError(
+                "Graph embedding computation requires graph_embeddings module. "
+                "Ensure all dependencies are installed: pip install node2vec networkx"
+            )
+        
+        # Compute embeddings
+        vector_index_map = GraphEmbeddingGenerator.compute_and_store_embeddings(
+            store=self,
+            vector_store=vector_store,
+            dimensions=dimensions,
+            walk_length=walk_length,
+            num_walks=num_walks,
+            p=p,
+            q=q,
+            workers=workers
+        )
+        
+        # Update all nodes with their vector_index values
+        self.update_node_embeddings(vector_index_map)
+        
+        return vector_index_map
+    
+    def _extract_graph_for_embeddings(self):
+        """
+        Extract graph structure for embedding computation.
+        
+        This is a private helper method that uses GraphEmbeddingGenerator
+        to extract the graph structure.
+        
+        Returns:
+            NetworkX Graph object
+        
+        Raises:
+            ImportError: If required dependencies are not installed
+        """
+        try:
+            from spindle.graph_embeddings import GraphEmbeddingGenerator
+        except ImportError:
+            raise ImportError(
+                "Graph extraction requires graph_embeddings module. "
+                "Ensure all dependencies are installed: pip install networkx"
+            )
+        
+        return GraphEmbeddingGenerator.extract_graph_structure(self)
+    
+    def update_node_embeddings(self, embeddings: Dict[str, str]) -> int:
+        """
+        Update nodes with their computed vector_index values.
+        
+        Args:
+            embeddings: Dictionary mapping node names to vector_index UIDs
+        
+        Returns:
+            Number of nodes successfully updated
+        """
+        updated_count = 0
+        
+        for node_name, vector_index in embeddings.items():
+            try:
+                success = self.update_node(
+                    node_name,
+                    updates={"vector_index": vector_index}
+                )
+                if success:
+                    updated_count += 1
+            except Exception:
+                # Skip nodes that can't be updated
+                continue
+        
+        return updated_count
     
     def close(self):
         """Close database connection."""

@@ -7,7 +7,7 @@ name = "spindle-kg"
 version = "0.1.0"
 description = "A tool for real-time extraction of knowledge graphs from multimodal data using BAML and LLMs"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "Spindle Contributors"}
@@ -19,7 +19,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -31,6 +30,11 @@ dependencies = [
     "python-dotenv==1.0.0",
     "kuzu>=0.7.0",
     "pandas>=2.0.0",
+    "chromadb>=0.4.0",
+    "numpy",
+    "ipywidgets>=8.0.0",
+    "node2vec>=0.4.5",
+    "networkx>=3.0",
 ]
 
 [project.optional-dependencies]
@@ -40,14 +44,26 @@ dev = [
     "pytest-mock>=3.12.0",
     "freezegun>=1.4.0",
     "hypothesis>=6.98.0",
+    "ipykernel>=6.0.0",
 ]
 graph = [
     "kuzu>=0.7.0",
+    "node2vec>=0.4.5",
+    "networkx>=3.0",
+]
+embeddings = [
+    "sentence-transformers>=2.2.0",
+]
+embeddings-api = [
+    "openai>=1.0.0",
+    "requests>=2.31.0",
+    "huggingface_hub",
+    "google-generativeai",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/spindle"
-Repository = "https://github.com/yourusername/spindle"
+Homepage = "https://github.com/danielkentwood/spindle"
+Repository = "https://github.com/danielkentwood/spindle"
 
 [tool.setuptools]
 packages = ["spindle", "spindle.baml_client"]
@@ -87,4 +103,3 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
-

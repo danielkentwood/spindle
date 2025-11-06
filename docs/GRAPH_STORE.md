@@ -569,6 +569,90 @@ Extract and add subject and object nodes from a triple.
 subject_added, object_added = store.add_nodes_from_triple(triple)
 ```
 
+### Node Embeddings
+
+GraphStore supports Node2Vec-based graph structure-aware embeddings that capture the structural relationships between nodes. Unlike text-based embeddings, Node2Vec embeddings are computed from the graph structure itself, making nodes with similar connection patterns have similar embeddings.
+
+#### Why Node2Vec?
+
+Node2Vec embeddings are structure-aware, meaning they consider:
+- **Node connections**: Nodes with similar neighborhoods get similar embeddings
+- **Graph topology**: Structural roles are captured (e.g., hub nodes, bridge nodes)
+- **Relationship patterns**: Nodes connected through similar paths have similar representations
+
+This is particularly valuable for knowledge graphs where the structure contains semantic information beyond just node attributes.
+
+#### Computing Embeddings
+
+Embeddings are computed on-demand using the `compute_graph_embeddings()` method. You must first build your graph, then compute embeddings:
+
+```python
+from spindle import GraphStore, ChromaVectorStore
+
+# Create graph store and vector store
+store = GraphStore(db_path="my_graph")
+vector_store = ChromaVectorStore(collection_name="my_embeddings")
+
+# Build your graph first
+store.add_node("Alice", "Person")
+store.add_node("Bob", "Person")
+store.add_node("TechCorp", "Organization")
+store.add_edge("Alice", "works_at", "TechCorp")
+store.add_edge("Bob", "works_at", "TechCorp")
+
+# Compute embeddings after graph is built
+embeddings = store.compute_graph_embeddings(
+    vector_store,
+    dimensions=128,      # Embedding dimension
+    walk_length=80,      # Length of random walks
+    num_walks=10,        # Number of walks per node
+    p=1.0,               # Return parameter
+    q=1.0                # In-out parameter
+)
+
+# embeddings is a dict mapping node names to vector_index UIDs
+print(f"Computed embeddings for {len(embeddings)} nodes")
+```
+
+#### Parameters
+
+- **dimensions** (default: 128): Dimensionality of embedding vectors
+- **walk_length** (default: 80): Length of each random walk
+- **num_walks** (default: 10): Number of random walks per node
+- **p** (default: 1.0): Return parameter - controls likelihood of immediately revisiting a node
+- **q** (default: 1.0): In-out parameter - controls exploration vs exploitation
+- **workers** (default: 1): Number of worker threads
+
+#### Using Embeddings
+
+After computing embeddings, nodes are automatically updated with their `vector_index` values. You can then use the VectorStore to query for similar nodes:
+
+```python
+# Query for nodes similar to a specific node
+alice = store.get_node("Alice")
+if alice and alice.get("vector_index"):
+    # Find similar nodes using vector store
+    similar = vector_store.query(
+        text=alice["vector_index"],  # Query by embedding UID
+        top_k=5,
+        metadata_filter={"type": "node"}
+    )
+```
+
+#### Edge Cases
+
+- **Empty graph**: Raises `ValueError` - cannot compute embeddings for empty graphs
+- **Single node**: Returns zero vector embedding
+- **Isolated nodes**: Handled correctly - nodes with no edges get embeddings based on their isolation
+- **Disconnected components**: Each component is processed independently within the random walk
+
+#### Requirements
+
+Node2Vec embeddings require additional dependencies:
+```bash
+pip install node2vec>=0.4.5 networkx>=3.0
+```
+
 ### Query Operations
 
 #### `query_by_pattern(subject: Optional[str] = None, predicate: Optional[str] = None, obj: Optional[str] = None) -> List[Dict]`

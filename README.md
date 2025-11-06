@@ -423,6 +423,7 @@ with GraphStore() as store:
 
 - **Embedded Database**: No separate server needed - Kùzu runs in-process
 - **Full CRUD Operations**: Create, read, update, delete nodes and edges
+- **Node Embeddings**: Node2Vec-based structure-aware embeddings for similarity search
 - **Pattern Matching**: Query with wildcards for flexible exploration
 - **Source Tracking**: Filter triples by source document
 - **Temporal Queries**: Filter by extraction date ranges
@@ -445,6 +446,26 @@ store = GraphStore(db_path="custom_graph.db")  # Still creates /graphs/custom_gr
 ```
 
 All graph databases are stored in: `/graphs/<graph_name>/`
+
+### Example: Computing Node Embeddings
+
+```python
+from spindle import GraphStore, ChromaVectorStore
+
+with GraphStore() as store:
+    # Build your graph
+    store.add_triples(result.triples)
+    
+    # Compute Node2Vec embeddings (structure-aware)
+    vector_store = ChromaVectorStore()
+    embeddings = store.compute_graph_embeddings(
+        vector_store,
+        dimensions=128
+    )
+    
+    # Nodes now have embeddings that capture structural similarity
+    # Find structurally similar nodes using vector store queries
+```
 
 ### Example: Multi-Source Knowledge Graph
 

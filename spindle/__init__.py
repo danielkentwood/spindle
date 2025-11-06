@@ -47,11 +47,20 @@ except ImportError:
 
 # Import VectorStore classes (optional dependency)
 try:
-    from spindle.vector_store import VectorStore, ChromaVectorStore
+    from spindle.vector_store import (
+        VectorStore,
+        ChromaVectorStore,
+        create_openai_embedding_function,
+        create_huggingface_embedding_function,
+        get_default_embedding_function,
+    )
     _VECTOR_STORE_AVAILABLE = True
 except ImportError:
     VectorStore = None
     ChromaVectorStore = None
+    create_openai_embedding_function = None
+    create_huggingface_embedding_function = None
+    get_default_embedding_function = None
     _VECTOR_STORE_AVAILABLE = False
 
 __version__ = "0.1.0"
@@ -66,6 +75,10 @@ __all__ = [
     # Factory functions
     "create_ontology",
     "create_source_metadata",
+    # Embedding functions
+    "create_openai_embedding_function",
+    "create_huggingface_embedding_function",
+    "get_default_embedding_function",
     # Serialization functions
     "triples_to_dict",
     "dict_to_triples",

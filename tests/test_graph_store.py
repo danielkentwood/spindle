@@ -134,6 +134,79 @@ def test_get_nonexistent_node(temp_graph_store):
     assert node is None
 
 
+def test_nodes_empty_graph(temp_graph_store):
+    """Test nodes() on empty graph returns empty list."""
+    all_nodes = temp_graph_store.nodes()
+    assert isinstance(all_nodes, list)
+    assert len(all_nodes) == 0
+
+
+def test_nodes_populated_graph(temp_graph_store):
+    """Test nodes() returns all nodes in graph."""
+    # Add several nodes
+    temp_graph_store.add_node("Alice", "Person", {"age": 30})
+    temp_graph_store.add_node("Bob", "Person", {"age": 25})
+    temp_graph_store.add_node("TechCorp", "Organization", {})
+    
+    all_nodes = temp_graph_store.nodes()
+    assert len(all_nodes) == 3
+    
+    # Check node names (stored in uppercase)
+    node_names = {node["name"] for node in all_nodes}
+    assert node_names == {"ALICE", "BOB", "TECHCORP"}
+
+
+def test_nodes_structure(temp_graph_store):
+    """Test that nodes() returns correct structure."""
+    temp_graph_store.add_node(
+        name="Alice",
+        entity_type="Person",
+        metadata={"age": 30, "verified": True},
+        description="A software engineer",
+        custom_atts={"email": {"value": "alice@example.com", "type": "string"}},
+        vector_index="test_vector_id"
+    )
+    
+    all_nodes = temp_graph_store.nodes()
+    assert len(all_nodes) == 1
+    
+    node = all_nodes[0]
+    assert node["name"] == "ALICE"
+    assert node["type"] == "Person"
+    assert node["description"] == "A software engineer"
+    assert node["metadata"]["age"] == 30
+    assert node["metadata"]["verified"] is True
+    assert node["custom_atts"]["email"]["value"] == "alice@example.com"
+    assert node["id"] is not None
+    assert node["vector_index"] == "test_vector_id"
+
+
+def test_nodes_from_triples(populated_graph_store, sample_triples):
+    """Test nodes() returns nodes created from triples."""
+    all_nodes = populated_graph_store.nodes()
+    
+    # Should have nodes from sample_triples (Alice Johnson, TechCorp, San Francisco)
+    assert len(all_nodes) == 3
+    
+    node_names = {node["name"] for node in all_nodes}
+    assert "ALICE JOHNSON" in node_names
+    assert "TECHCORP" in node_names
+    assert "SAN FRANCISCO" in node_names
+
+
+def test_nodes_matches_statistics(temp_graph_store):
+    """Test that nodes() count matches statistics."""
+    # Add nodes
+    temp_graph_store.add_node("Alice", "Person", {})
+    temp_graph_store.add_node("Bob", "Person", {})
+    temp_graph_store.add_node("TechCorp", "Organization", {})
+    
+    all_nodes = temp_graph_store.nodes()
+    stats = temp_graph_store.get_statistics()
+    
+    assert len(all_nodes) == stats["node_count"]
+
+
 def test_update_node(temp_graph_store):
     """Test updating node properties."""
     temp_graph_store.add_node("Alice", "Person", {"age": 30})
@@ -384,6 +457,156 @@ def test_get_nonexistent_edge(temp_graph_store):
     
     edges = temp_graph_store.get_edge("Alice", "works_at", "TechCorp")
     assert edges is None
+
+
+def test_edges_empty_graph(temp_graph_store):
+    """Test edges() on empty graph returns empty list."""
+    all_edges = temp_graph_store.edges()
+    assert isinstance(all_edges, list)
+    assert len(all_edges) == 0
+
+
+def test_edges_populated_graph(temp_graph_store):
+    """Test edges() returns all edges in graph."""
+    # Add nodes and edges
+    temp_graph_store.add_node("Alice", "Person", {})
+    temp_graph_store.add_node("Bob", "Person", {})
+    temp_graph_store.add_node("TechCorp", "Organization", {})
+    
+    metadata = {
+        "supporting_evidence": [{
+            "source_nm": "Test",
+            "source_url": "",
+            "spans": [{"text": "test", "start": 0, "end": 4, "extraction_datetime": "2024-01-15T10:00:00Z"}]
+        }]
+    }
+    
+    temp_graph_store.add_edge("Alice", "works_at", "TechCorp", metadata)
+    temp_graph_store.add_edge("Bob", "works_at", "TechCorp", metadata)
+    
+    all_edges = temp_graph_store.edges()
+    assert len(all_edges) == 2
+    
+    # Check edge predicates (stored in uppercase)
+    predicates = {edge["predicate"] for edge in all_edges}
+    assert predicates == {"WORKS_AT"}
+    
+    # Check subjects and objects
+    subjects = {edge["subject"] for edge in all_edges}
+    objects = {edge["object"] for edge in all_edges}
+    assert subjects == {"ALICE", "BOB"}
+    assert objects == {"TECHCORP"}
+
+
+def test_edges_structure(temp_graph_store):
+    """Test that edges() returns correct structure."""
+    # Setup
+    temp_graph_store.add_node("Alice", "Person", {})
+    temp_graph_store.add_node("TechCorp", "Organization", {})
+    
+    metadata = {
+        "supporting_evidence": [{
+            "source_nm": "Company Directory",
+            "source_url": "http://example.com",
+            "spans": [{
+                "text": "Alice works at TechCorp",
+                "start": 0,
+                "end": 23,
+                "extraction_datetime": "2024-01-15T10:00:00Z"
+            }]
+        }],
+        "confidence": 0.95
+    }
+    
+    result = temp_graph_store.add_edge("Alice", "works_at", "TechCorp", metadata)
+    assert result["success"] is True
+    
+    all_edges = temp_graph_store.edges()
+    assert len(all_edges) == 1
+    
+    edge = all_edges[0]
+    assert edge["subject"] == "ALICE"
+    assert edge["predicate"] == "WORKS_AT"
+    assert edge["object"] == "TECHCORP"
+    assert len(edge["supporting_evidence"]) == 1
+    assert edge["supporting_evidence"][0]["source_nm"] == "Company Directory"
+    assert edge["supporting_evidence"][0]["source_url"] == "http://example.com"
+    assert len(edge["supporting_evidence"][0]["spans"]) == 1
+    assert edge["metadata"]["confidence"] == 0.95
+    assert edge["id"] is not None
+
+
+def test_edges_from_triples(populated_graph_store, sample_triples):
+    """Test edges() returns edges created from triples."""
+    all_edges = populated_graph_store.edges()
+    
+    # Should have edges from sample_triples
+    assert len(all_edges) == len(sample_triples)
+    
+    # Verify structure
+    for edge in all_edges:
+        assert "subject" in edge
+        assert "predicate" in edge
+        assert "object" in edge
+        assert "supporting_evidence" in edge
+        assert "metadata" in edge
+
+
+def test_edges_matches_statistics(temp_graph_store):
+    """Test that edges() count matches statistics."""
+    # Setup
+    temp_graph_store.add_node("Alice", "Person", {})
+    temp_graph_store.add_node("Bob", "Person", {})
+    temp_graph_store.add_node("TechCorp", "Organization", {})
+    
+    metadata = {
+        "supporting_evidence": [{
+            "source_nm": "Test",
+            "source_url": "",
+            "spans": [{"text": "test", "start": 0, "end": 4, "extraction_datetime": "2024-01-15T10:00:00Z"}]
+        }]
+    }
+    
+    temp_graph_store.add_edge("Alice", "works_at", "TechCorp", metadata)
+    temp_graph_store.add_edge("Bob", "works_at", "TechCorp", metadata)
+    
+    all_edges = temp_graph_store.edges()
+    stats = temp_graph_store.get_statistics()
+    
+    assert len(all_edges) == stats["edge_count"]
+
+
+def test_edges_matches_query_by_pattern(temp_graph_store):
+    """Test that edges() returns same results as query_by_pattern() with all None."""
+    # Setup
+    temp_graph_store.add_node("Alice", "Person", {})
+    temp_graph_store.add_node("Bob", "Person", {})
+    temp_graph_store.add_node("TechCorp", "Organization", {})
+    
+    metadata = {
+        "supporting_evidence": [{
+            "source_nm": "Test",
+            "source_url": "",
+            "spans": [{"text": "test", "start": 0, "end": 4, "extraction_datetime": "2024-01-15T10:00:00Z"}]
+        }]
+    }
+    
+    temp_graph_store.add_edge("Alice", "works_at", "TechCorp", metadata)
+    temp_graph_store.add_edge("Bob", "works_at", "TechCorp", metadata)
+    
+    all_edges = temp_graph_store.edges()
+    pattern_edges = temp_graph_store.query_by_pattern()
+    
+    assert len(all_edges) == len(pattern_edges)
+    
+    # Sort both by subject for comparison
+    all_edges_sorted = sorted(all_edges, key=lambda e: (e["subject"], e["predicate"], e["object"]))
+    pattern_edges_sorted = sorted(pattern_edges, key=lambda e: (e["subject"], e["predicate"], e["object"]))
+    
+    for edge1, edge2 in zip(all_edges_sorted, pattern_edges_sorted):
+        assert edge1["subject"] == edge2["subject"]
+        assert edge1["predicate"] == edge2["predicate"]
+        assert edge1["object"] == edge2["object"]
 
 
 def test_update_edge(temp_graph_store):
@@ -917,4 +1140,229 @@ def test_multi_source_workflow(temp_graph_store):
     # When exporting as triples, should get one triple per source
     exported_triples = temp_graph_store.get_triples()
     assert len(exported_triples) == 2  # One per source
+
+
+# ========== Graph Embedding Tests ==========
+
+# Skip embedding tests if dependencies not available
+try:
+    import networkx as nx
+    try:
+        from node2vec import Node2Vec
+        _EMBEDDING_DEPS_AVAILABLE = True
+    except ImportError:
+        _EMBEDDING_DEPS_AVAILABLE = False
+except ImportError:
+    _EMBEDDING_DEPS_AVAILABLE = False
+
+try:
+    from spindle import ChromaVectorStore
+    _VECTOR_STORE_AVAILABLE = True
+except ImportError:
+    _VECTOR_STORE_AVAILABLE = False
+
+EMBEDDING_TESTS_SKIP = pytest.mark.skipif(
+    not _EMBEDDING_DEPS_AVAILABLE or not _VECTOR_STORE_AVAILABLE,
+    reason="Graph embedding tests require node2vec, networkx, and chromadb"
+)
+
+
+@EMBEDDING_TESTS_SKIP
+def test_extract_graph_structure(temp_graph_store):
+    """Test extracting graph structure from GraphStore."""
+    from spindle.graph_embeddings import GraphEmbeddingGenerator
+    
+    # Add some nodes and edges
+    temp_graph_store.add_node("Alice", "Person", description="A person")
+    temp_graph_store.add_node("Bob", "Person", description="Another person")
+    temp_graph_store.add_node("TechCorp", "Organization", description="A company")
+    
+    temp_graph_store.add_edge("Alice", "works_at", "TechCorp")
+    temp_graph_store.add_edge("Bob", "works_at", "TechCorp")
+    
+    # Extract graph
+    graph = GraphEmbeddingGenerator.extract_graph_structure(temp_graph_store)
+    
+    # Verify structure
+    assert isinstance(graph, nx.Graph)
+    assert len(graph.nodes()) == 3
+    assert len(graph.edges()) == 2
+    
+    # Check node attributes
+    assert "ALICE" in graph.nodes()
+    assert graph.nodes["ALICE"]["type"] == "Person"
+    
+    # Check edges
+    assert graph.has_edge("ALICE", "TECHCORP")
+    assert graph.has_edge("BOB", "TECHCORP")
+
+
+@EMBEDDING_TESTS_SKIP
+def test_compute_graph_embeddings(temp_graph_store):
+    """Test computing Node2Vec embeddings for graph."""
+    from spindle import ChromaVectorStore
+    
+    # Create a simple graph
+    temp_graph_store.add_node("Alice", "Person")
+    temp_graph_store.add_node("Bob", "Person")
+    temp_graph_store.add_node("TechCorp", "Organization")
+    
+    temp_graph_store.add_edge("Alice", "works_at", "TechCorp")
+    temp_graph_store.add_edge("Bob", "works_at", "TechCorp")
+    
+    # Create vector store
+    vector_store = ChromaVectorStore(collection_name="test_embeddings")
+    
+    try:
+        # Compute embeddings
+        embeddings = temp_graph_store.compute_graph_embeddings(
+            vector_store,
+            dimensions=64,  # Smaller for testing
+            num_walks=5,    # Fewer walks for faster testing
+            walk_length=10  # Shorter walks for faster testing
+        )
+        
+        # Verify embeddings were created
+        assert len(embeddings) == 3
+        assert "ALICE" in embeddings
+        assert "BOB" in embeddings
+        assert "TECHCORP" in embeddings
+        
+        # Verify all embeddings have vector_index values
+        assert all(isinstance(uid, str) and len(uid) > 0 for uid in embeddings.values())
+        
+        # Verify nodes were updated with vector_index
+        alice = temp_graph_store.get_node("Alice")
+        assert alice is not None
+        assert alice.get("vector_index") is not None
+        assert alice["vector_index"] == embeddings["ALICE"]
+        
+    finally:
+        vector_store.close()
+
+
+@EMBEDDING_TESTS_SKIP
+def test_update_node_embeddings(temp_graph_store):
+    """Test updating nodes with computed embeddings."""
+    # Add nodes
+    temp_graph_store.add_node("Alice", "Person")
+    temp_graph_store.add_node("Bob", "Person")
+    
+    # Initially no embeddings
+    alice = temp_graph_store.get_node("Alice")
+    assert alice.get("vector_index") is None or alice.get("vector_index") == ""
+    
+    # Update with embeddings
+    embeddings = {"ALICE": "test_vector_id_1", "BOB": "test_vector_id_2"}
+    updated_count = temp_graph_store.update_node_embeddings(embeddings)
+    
+    assert updated_count == 2
+    
+    # Verify nodes were updated
+    alice = temp_graph_store.get_node("Alice")
+    bob = temp_graph_store.get_node("Bob")
+    
+    assert alice.get("vector_index") == "test_vector_id_1"
+    assert bob.get("vector_index") == "test_vector_id_2"
+
+
+@EMBEDDING_TESTS_SKIP
+def test_graph_embeddings_empty_graph(temp_graph_store):
+    """Test embedding computation on empty graph."""
+    from spindle import ChromaVectorStore
+    from spindle.graph_embeddings import GraphEmbeddingGenerator
+    
+    vector_store = ChromaVectorStore(collection_name="test_empty")
+    
+    try:
+        # Extract empty graph
+        graph = GraphEmbeddingGenerator.extract_graph_structure(temp_graph_store)
+        assert len(graph.nodes()) == 0
+        assert len(graph.edges()) == 0
+        
+        # Should raise ValueError when trying to compute embeddings
+        with pytest.raises(ValueError, match="empty graph"):
+            GraphEmbeddingGenerator.compute_node2vec_embeddings(graph)
+            
+    finally:
+        vector_store.close()
+
+
+@EMBEDDING_TESTS_SKIP
+def test_graph_embeddings_single_node(temp_graph_store):
+    """Test embedding computation with single node (no edges)."""
+    from spindle import ChromaVectorStore
+    
+    # Add single node
+    temp_graph_store.add_node("Alice", "Person")
+    
+    vector_store = ChromaVectorStore(collection_name="test_single")
+    
+    try:
+        # Compute embeddings - should work (returns zero vector)
+        embeddings = temp_graph_store.compute_graph_embeddings(
+            vector_store,
+            dimensions=64,
+            num_walks=5,
+            walk_length=10
+        )
+        
+        assert len(embeddings) == 1
+        assert "ALICE" in embeddings
+        
+        # Verify embedding was stored
+        alice = temp_graph_store.get_node("Alice")
+        assert alice.get("vector_index") is not None
+        
+    finally:
+        vector_store.close()
+
+
+@EMBEDDING_TESTS_SKIP
+def test_graph_embeddings_with_isolated_nodes(temp_graph_store):
+    """Test embedding computation with isolated nodes."""
+    from spindle import ChromaVectorStore
+    
+    # Add connected nodes
+    temp_graph_store.add_node("Alice", "Person")
+    temp_graph_store.add_node("Bob", "Person")
+    temp_graph_store.add_edge("Alice", "knows", "Bob")
+    
+    # Add isolated node
+    temp_graph_store.add_node("Isolated", "Person")
+    
+    vector_store = ChromaVectorStore(collection_name="test_isolated")
+    
+    try:
+        # Compute embeddings
+        embeddings = temp_graph_store.compute_graph_embeddings(
+            vector_store,
+            dimensions=64,
+            num_walks=5,
+            walk_length=10
+        )
+        
+        # Should have all 3 nodes
+        assert len(embeddings) == 3
+        assert "ALICE" in embeddings
+        assert "BOB" in embeddings
+        assert "ISOLATED" in embeddings
+        
+        # All nodes should have embeddings
+        for node_name in ["Alice", "Bob", "Isolated"]:
+            node = temp_graph_store.get_node(node_name)
+            assert node.get("vector_index") is not None
+            
+    finally:
+        vector_store.close()
+
+
+@EMBEDDING_TESTS_SKIP
+def test_compute_graph_embeddings_no_vector_store(temp_graph_store):
+    """Test that compute_graph_embeddings requires vector_store."""
+    temp_graph_store.add_node("Alice", "Person")
+    
+    # Should raise ValueError if vector_store is None
+    with pytest.raises(ValueError, match="vector_store is required"):
+        temp_graph_store.compute_graph_embeddings(None)
 
