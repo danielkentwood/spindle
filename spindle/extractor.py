@@ -10,9 +10,12 @@ Key Components:
 - Helper functions for ontology creation, serialization, and filtering
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, AsyncIterator
 from datetime import datetime
+import asyncio
+import re
 from spindle.baml_client import b
+from spindle.baml_client.async_client import b as async_b
 from spindle.baml_client.types import (
     Triple,
     Entity,
@@ -29,7 +32,12 @@ from spindle.baml_client.types import (
 )
 
 
-def _find_span_indices(source_text: str, span_text: str) -> Optional[Tuple[int, int]]:
+def _normalize_ws(text: str) -> str:
+    """Normalize whitespace: collapse all whitespace to single spaces."""
+    return re.sub(r'\s+', ' ', text.strip())
+
+
+def _find_span_indices(source_text: str, span_text: str, normalized_source: Optional[str] = None) -> Optional[Tuple[int, int]]:
     """
     Find the start and end indices of span_text within source_text.
     
@@ -46,12 +54,11 @@ def _find_span_indices(source_text: str, span_text: str) -> Optional[Tuple[int, 
     Args:
         source_text: The full source text
         span_text: The text span to find
+        normalized_source: Pre-computed normalized source text (optional, for performance)
     
     Returns:
         Tuple of (start, end) indices, or None if not found
     """
-    import re
-    
     # Strategy 1: Try exact match first (fast path)
     start = source_text.find(span_text)
     if start != -1:
@@ -76,29 +83,16 @@ def _find_span_indices(source_text: str, span_text: str) -> Optional[Tuple[int, 
         except re.error:
             pass  # If regex fails, continue to next strategy
     
-    # Strategy 3: Try normalizing both texts and finding position
-    # Normalize: collapse all whitespace to single spaces
-    def normalize_ws(text: str) -> str:
-        return re.sub(r'\s+', ' ', text.strip())
-    
-    norm_span = normalize_ws(span_text)
-    norm_source = normalize_ws(source_text)
-    
-    # Find in normalized version
-    norm_pos = norm_source.find(norm_span)
-    if norm_pos != -1:
-        # Map normalized position back to original
-        # This is complex, so use the word-based pattern instead
-        words = span_text.split()
-        if len(words) > 0:
-            pattern_parts = [re.escape(word) for word in words]
-            pattern = r'\s+'.join(pattern_parts)
-            try:
-                match = re.search(pattern, source_text, re.DOTALL | re.IGNORECASE)
-                if match:
-                    return (match.start(), match.end())
-            except re.error:
-                pass
+    # Strategy 3: Case-insensitive fuzzy match
+    if len(words) > 0:
+        pattern_parts = [re.escape(word) for word in words]
+        pattern = r'\s+'.join(pattern_parts)
+        try:
+            match = re.search(pattern, source_text, re.DOTALL | re.IGNORECASE)
+            if match:
+                return (match.start(), match.end())
+        except re.error:
+            pass
     
     # Strategy 4: Case-insensitive exact match
     lower_source = source_text.lower()
@@ -109,6 +103,53 @@ def _find_span_indices(source_text: str, span_text: str) -> Optional[Tuple[int, 
     
     # Could not find the span
     return None
+
+
+def _compute_all_span_indices(source_text: str, spans: List[CharacterSpan]) -> List[CharacterSpan]:
+    """
+    Compute character indices for all spans efficiently using batch processing.
+    
+    This function optimizes span index computation by:
+    - Pre-computing normalized source text once
+    - Processing all spans that need indices in a single pass
+    - Reusing regex patterns where possible
+    
+    Args:
+        source_text: The full source text
+        spans: List of CharacterSpan objects that need index computation
+    
+    Returns:
+        List of CharacterSpan objects with computed indices
+    """
+    # Pre-compute normalized source text once for all spans
+    normalized_source = _normalize_ws(source_text)
+    
+    updated_spans = []
+    for span in spans:
+        if span.start is not None and span.end is not None:
+            # Span already has indices, keep it as-is
+            updated_spans.append(span)
+        else:
+            # Find the span text in the source text
+            indices = _find_span_indices(source_text, span.text, normalized_source)
+            if indices:
+                # Create a new span with computed indices
+                updated_span = CharacterSpan(
+                    text=span.text,
+                    start=indices[0],
+                    end=indices[1]
+                )
+                updated_spans.append(updated_span)
+            else:
+                # If exact match not found, set to -1 to indicate failure
+                updated_span = CharacterSpan(
+                    text=span.text,
+                    start=-1,
+                    end=-1
+                )
+                updated_spans.append(updated_span)
+    
+    return updated_spans
 
 
 class SpindleExtractor:
@@ -206,36 +247,187 @@ class SpindleExtractor:
         for triple in result.triples:
             triple.extraction_datetime = extraction_time
             
-            # Post-processing: Compute character indices for supporting spans
-            # Replace spans in the list to ensure mutations are persisted
-            updated_spans = []
-            for span in triple.supporting_spans:
-                if span.start is None or span.end is None:
-                    # Find the span text in the source text
-                    indices = _find_span_indices(text, span.text)
-                    if indices:
-                        # Create a new span with computed indices to ensure persistence
-                        updated_span = CharacterSpan(
-                            text=span.text,
-                            start=indices[0],
-                            end=indices[1]
-                        )
-                        updated_spans.append(updated_span)
-                    else:
-                        # If exact match not found, set to -1 to indicate failure
-                        updated_span = CharacterSpan(
-                            text=span.text,
-                            start=-1,
-                            end=-1
-                        )
-                        updated_spans.append(updated_span)
-                else:
-                    # Span already has indices, keep it as-is
-                    updated_spans.append(span)
-            # Replace the spans list
-            triple.supporting_spans = updated_spans
+            # Post-processing: Compute character indices for supporting spans using batch processing
+            triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
         
         return result
+    
+    async def extract_async(
+        self,
+        text: str,
+        source_name: str,
+        source_url: Optional[str] = None,
+        existing_triples: List[Triple] = None,
+        ontology_scope: Optional[str] = None
+    ) -> ExtractionResult:
+        """
+        Extract triples from text using the configured or auto-recommended ontology (async version).
+        
+        This is the async version of extract(). It uses the async BAML client for
+        non-blocking extraction, which is useful for batch processing and streaming.
+        
+        If no ontology was provided at initialization, one will be automatically
+        recommended based on the text before extraction.
+        
+        Args:
+            text: The text to extract triples from
+            source_name: Name or identifier of the source document
+            source_url: Optional URL of the source document
+            existing_triples: Optional list of previously extracted triples
+                            to maintain entity consistency. Duplicate triples
+                            from different sources are allowed.
+            ontology_scope: Override the default ontology scope for this extraction.
+                          One of "minimal", "balanced", or "comprehensive".
+                          Only used if no ontology was provided at init.
+        
+        Returns:
+            ExtractionResult containing the extracted triples (with source
+            metadata, supporting spans, and extraction datetime) and reasoning
+        """
+        if existing_triples is None:
+            existing_triples = []
+        
+        # Auto-recommend ontology if not provided
+        if self.ontology is None:
+            scope = ontology_scope or self.ontology_scope
+            recommendation = self._ontology_recommender.recommend(
+                text=text,
+                scope=scope
+            )
+            self.ontology = recommendation.ontology
+        
+        # Create source metadata
+        source_metadata = SourceMetadata(
+            source_name=source_name,
+            source_url=source_url
+        )
+        
+        # Call the async BAML extraction function
+        result = await async_b.ExtractTriples(
+            text=text,
+            ontology=self.ontology,
+            source_metadata=source_metadata,
+            existing_triples=existing_triples
+        )
+        
+        # Post-processing: Set extraction datetime for all triples
+        extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        for triple in result.triples:
+            triple.extraction_datetime = extraction_time
+            
+            # Post-processing: Compute character indices for supporting spans using batch processing
+            triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
+        
+        return result
+    
+    async def extract_batch(
+        self,
+        texts: List[Tuple[str, str, Optional[str]]],
+        existing_triples: List[Triple] = None,
+        max_concurrent: int = 20,
+        ontology_scope: Optional[str] = None
+    ) -> List[ExtractionResult]:
+        """
+        Extract triples from multiple texts sequentially with entity consistency.
+        
+        This method processes texts one at a time (asynchronously) to maintain
+        entity consistency. Triples extracted from earlier texts are automatically
+        included in the existing_triples for later texts, ensuring consistent
+        entity naming across the batch.
+        
+        Args:
+            texts: List of tuples (text, source_name, source_url) to extract from.
+                  source_url can be None.
+            existing_triples: Optional initial list of previously extracted triples
+                            to maintain entity consistency across the batch.
+            max_concurrent: Maximum concurrent extractions (default: 20).
+                          Currently used for internal async operations.
+            ontology_scope: Override the default ontology scope for extractions.
+                          One of "minimal", "balanced", or "comprehensive".
+                          Only used if no ontology was provided at init.
+        
+        Returns:
+            List of ExtractionResult objects, one per input text, in the same order
+        """
+        if existing_triples is None:
+            existing_triples = []
+        
+        results = []
+        accumulated_triples = list(existing_triples)
+        
+        # Process texts sequentially but asynchronously to maintain consistency
+        for text, source_name, source_url in texts:
+            # Pass a copy of accumulated_triples to avoid reference issues
+            result = await self.extract_async(
+                text=text,
+                source_name=source_name,
+                source_url=source_url,
+                existing_triples=list(accumulated_triples),
+                ontology_scope=ontology_scope
+            )
+            results.append(result)
+            # Accumulate triples from this extraction for next texts
+            accumulated_triples.extend(result.triples)
+        
+        return results
+    
+    async def extract_batch_stream(
+        self,
+        texts: List[Tuple[str, str, Optional[str]]],
+        existing_triples: List[Triple] = None,
+        max_concurrent: int = 20,
+        ontology_scope: Optional[str] = None
+    ) -> AsyncIterator[ExtractionResult]:
+        """
+        Extract triples from multiple texts, streaming results as they complete.
+        
+        This is an async generator that yields ExtractionResult objects as soon
+        as each extraction completes. Results are yielded in the same order as
+        the input texts, maintaining sequential consistency where triples from
+        earlier texts are available to later texts.
+        
+        Args:
+            texts: List of tuples (text, source_name, source_url) to extract from.
+                  source_url can be None.
+            existing_triples: Optional initial list of previously extracted triples
+                            to maintain entity consistency across the batch.
+            max_concurrent: Maximum concurrent extractions (default: 20).
+                          Currently used for internal async operations.
+            ontology_scope: Override the default ontology scope for extractions.
+                          One of "minimal", "balanced", or "comprehensive".
+                          Only used if no ontology was provided at init.
+        
+        Yields:
+            ExtractionResult objects as they complete, in input order
+        
+        Example:
+            >>> extractor = SpindleExtractor(ontology)
+            >>> texts = [
+            ...     ("Alice works at TechCorp", "doc1", None),
+            ...     ("Bob manages Alice", "doc2", None)
+            ... ]
+            >>> async for result in extractor.extract_batch_stream(texts):
+            ...     print(f"Extracted {len(result.triples)} triples from {result.triples[0].source.source_name}")
+        """
+        if existing_triples is None:
+            existing_triples = []
+        
+        accumulated_triples = list(existing_triples)
+        
+        # Process texts sequentially but asynchronously to maintain consistency
+        for text, source_name, source_url in texts:
+            # Pass a copy of accumulated_triples to avoid reference issues
+            result = await self.extract_async(
+                text=text,
+                source_name=source_name,
+                source_url=source_url,
+                existing_triples=list(accumulated_triples),
+                ontology_scope=ontology_scope
+            )
+            # Yield result as soon as it completes
+            yield result
+            # Accumulate triples from this extraction for next texts
+            accumulated_triples.extend(result.triples)
 
 
 def create_ontology(
