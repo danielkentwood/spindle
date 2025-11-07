@@ -4,7 +4,7 @@ To use Spindle, you need to set up your API key.
 
 ## Create .env file
 
-Create a file named `.env` in the root directory with the following content:
+Create a file named `.env` in the root directory (it is automatically loaded by `python-dotenv` in the demos and examples) with the following content:
 
 ```
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
@@ -20,10 +20,17 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 ## Optional Keys
 
-If you plan to use OpenAI models in the future, you can also add:
+Add the keys that match the embedding providers you intend to use:
 
 ```
+# OpenAI embeddings (VectorStore helpers)
 OPENAI_API_KEY=your_openai_api_key_here
+
+# Hugging Face Inference API
+HF_API_KEY=your_hugging_face_key_here  # alias: HUGGINGFACE_API_KEY
+
+# Gemini embeddings
+GEMINI_API_KEY=your_gemini_key_here
 ```
 
 ## Security Note

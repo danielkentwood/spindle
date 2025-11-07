@@ -9,7 +9,7 @@ The **OntologyRecommender** is a new service in Spindle that automatically analy
 - **Automatic Domain Detection**: Analyzes text to understand its overarching purpose and domain
 - **Smart Type Inference**: Recommends entity and relation types that are relevant to the text
 - **Ready-to-Use Output**: Returns an `Ontology` object that can be directly used with `SpindleExtractor`
-- **Flexible Constraints**: Control the complexity by setting max entity and relation types
+- **Scope Controls**: Choose `minimal`, `balanced`, or `comprehensive` ontologies depending on your needs
 - **One-Step Workflow**: Optional combined recommendation + extraction method
 
 ## How It Works
@@ -39,8 +39,7 @@ to evaluate Medication A for treating chronic migraines...
 
 recommendation = recommender.recommend(
     text=text,
-    max_entity_types=8,
-    max_relation_types=10
+    scope="balanced"  # "minimal", "balanced", or "comprehensive"
 )
 
 # Examine the recommendation
@@ -54,6 +53,8 @@ extractor = SpindleExtractor(recommendation.ontology)
 result = extractor.extract(text, source_name="Medical Research")
 ```
 
+> Tip: Instantiating `SpindleExtractor()` without providing an ontology automatically calls `OntologyRecommender.recommend()` on the first `extract()`.
+
 ### One-Step Recommendation + Extraction
 
 ```python
@@ -62,8 +63,7 @@ recommender = OntologyRecommender()
 recommendation, extraction = recommender.recommend_and_extract(
     text=your_text,
     source_name="Document Name",
-    max_entity_types=6,
-    max_relation_types=8
+    scope="minimal"
 )
 
 print(f"Purpose: {recommendation.text_purpose}")
@@ -77,15 +77,13 @@ print(f"Extracted {len(extraction.triples)} triples")
 ```python
 def recommend(
     text: str,
-    max_entity_types: int = 10,
-    max_relation_types: int = 15
+    scope: str = "balanced"
 ) -> OntologyRecommendation
 ```
 
 **Parameters:**
 - `text`: The text to analyze for ontology recommendation
-- `max_entity_types`: Maximum number of entity types to recommend (default: 10)
-- `max_relation_types`: Maximum number of relation types to recommend (default: 15)
+- `scope`: Granularity level for the ontology (`"minimal"`, `"balanced"`, or `"comprehensive"`)
 
 **Returns:** `OntologyRecommendation` with:
 - `ontology`: The recommended `Ontology` object
@@ -99,9 +97,8 @@ def recommend_and_extract(
     text: str,
     source_name: str,
     source_url: Optional[str] = None,
-    max_entity_types: int = 10,
-    max_relation_types: int = 15,
-    existing_triples: List[Triple] = None
+    scope: str = "balanced",
+    existing_triples: Optional[List[Triple]] = None
 ) -> Tuple[OntologyRecommendation, ExtractionResult]
 ```
 
@@ -109,11 +106,52 @@ def recommend_and_extract(
 - `text`: The text to analyze and extract from
 - `source_name`: Name or identifier of the source document
 - `source_url`: Optional URL of the source document
-- `max_entity_types`: Maximum number of entity types to recommend
-- `max_relation_types`: Maximum number of relation types to recommend
-- `existing_triples`: Optional list of previously extracted triples
+- `scope`: Granularity level (`"minimal"`, `"balanced"`, `"comprehensive"`)
+- `existing_triples`: Optional list of previously extracted triples for entity consistency
 
 **Returns:** Tuple of (`OntologyRecommendation`, `ExtractionResult`)
+
+### `OntologyRecommender.analyze_extension()`
+
+```python
+def analyze_extension(
+    text: str,
+    current_ontology: Ontology,
+    scope: str = "balanced"
+) -> OntologyExtension
+```
+
+Assesses whether new text would cause information loss with the current ontology.
+
+**Returns:** `OntologyExtension` detailing:
+- `needs_extension`: Whether new types are required
+- `new_entity_types` / `new_relation_types`: Suggested additions (if any)
+- `critical_information_at_risk`: Rationale for extending
+- `reasoning`: Full explanation from the model
+
+### `OntologyRecommender.extend_ontology()`
+
+```python
+def extend_ontology(
+    current_ontology: Ontology,
+    extension: OntologyExtension
+) -> Ontology
+```
+
+Applies an `OntologyExtension`, producing a new ontology that merges existing and new types.
+
+### `OntologyRecommender.analyze_and_extend()`
+
+```python
+def analyze_and_extend(
+    text: str,
+    current_ontology: Ontology,
+    scope: str = "balanced",
+    auto_apply: bool = True
+) -> Tuple[OntologyExtension, Optional[Ontology]]
+```
+
+Combines analysis + application. When `auto_apply=True`, a new ontology is returned if an extension is required; otherwise the second item is `None` and you can keep the original ontology.
 
 ## When to Use
 
@@ -146,14 +184,13 @@ class OntologyRecommendation {
 
 function RecommendOntology(
   text: string,
-  max_entity_types: int,
-  max_relation_types: int
+  scope: string
 ) -> OntologyRecommendation
 ```
 
 ### Python Wrapper
 
-The `OntologyRecommender` class in `spindle.py` provides a clean interface:
+The `OntologyRecommender` class in `spindle/extractor.py` provides a clean interface:
 - Wraps the BAML function for easy use
 - Provides the convenience `recommend_and_extract()` method
 - Handles integration with `SpindleExtractor`
@@ -203,21 +240,30 @@ The ontology is returned in the exact same format as manually created ontologies
 
 ## Files
 
-- `baml_src/spindle.baml`: BAML schema with `RecommendOntology` function
-- `spindle.py`: Python wrapper with `OntologyRecommender` class
-- `example_ontology_recommender.py`: Complete usage example
-- `test_ontology_recommender.py`: Quick test script
+- `spindle/baml_src/spindle.baml`: BAML schema with ontology + extension functions
+- `spindle/extractor.py`: Python implementation of `OntologyRecommender`
+- `demos/example_auto_ontology.py`: Automatic recommendation inside `SpindleExtractor`
+- `demos/example_scope_comparison.py`: Demonstrates scope levels
+- `demos/example_ontology_extension.py`: Conservative extension workflow
+- `tests/test_recommender.py`: Unit tests covering the recommender API
 
 ## Testing
 
-Run the example:
+Run the demos:
 ```bash
-python example_ontology_recommender.py
+# Auto-ontology workflow (recommender invoked inside SpindleExtractor)
+uv run python demos/example_auto_ontology.py
+
+# Scope comparison across minimal/balanced/comprehensive
+uv run python demos/example_scope_comparison.py
+
+# Conservative ontology extension flow
+uv run python demos/example_ontology_extension.py
 ```
 
-Run the quick test:
+Run recommender-specific unit tests:
 ```bash
-python test_ontology_recommender.py
+uv run pytest tests/test_recommender.py -v
 ```
 
 ## Future Enhancements

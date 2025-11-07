@@ -4,58 +4,58 @@
 
 ```bash
 # Run all unit tests (development default)
-pytest tests/ -m "not integration"
+uv run pytest tests/ -m "not integration"
 
 # Run with coverage
-pytest tests/ --cov=spindle --cov-report=term-missing
+uv run pytest tests/ --cov=spindle --cov-report=term-missing
 
 # Run specific test file
-pytest tests/test_helpers.py -v
+uv run pytest tests/test_helpers.py -v
 
 # Run specific test
-pytest tests/test_helpers.py::TestFindSpanIndices::test_exact_match -v
+uv run pytest tests/test_helpers.py::TestFindSpanIndices::test_exact_match -v
 
 # Run integration tests (requires API key)
-pytest tests/ -m integration
+uv run pytest tests/ -m integration
 ```
 
 ## Test Structure
 
 ```
 tests/
-├── test_helpers.py          # Helper function tests (44 tests)
-├── test_serialization.py    # Serialization tests (22 tests)
-├── test_extractor.py        # SpindleExtractor tests (13 tests)
-├── test_recommender.py      # OntologyRecommender tests (17 tests)
-└── test_integration.py      # Integration tests (12 tests)
+├── test_helpers.py          # Helper function coverage
+├── test_serialization.py    # Serialization utilities
+├── test_extractor.py        # SpindleExtractor flows
+├── test_recommender.py      # OntologyRecommender logic
+└── test_integration.py      # Real LLM exercises (requires API key)
 ```
 
 ## Coverage
 
-Current: **91%**
+Check with `uv run pytest tests/ --cov=spindle --cov-report=term-missing`.
 
-Target: **>80%** for core functions
+Target: **≥80%** for core extraction + ontology modules
 
 ## Quick Checks
 
 ```bash
 # Before committing
-pytest tests/ -m "not integration" && echo "✓ All tests passed"
+uv run pytest tests/ -m "not integration" && echo "✓ All tests passed"
 
 # Check coverage threshold
-pytest tests/ --cov=spindle --cov-fail-under=80
+uv run pytest tests/ --cov=spindle --cov-fail-under=80
 
 # Generate HTML coverage report
-pytest tests/ --cov=spindle --cov-report=html
+uv run pytest tests/ --cov=spindle --cov-report=html
 open htmlcov/index.html
 ```
 
 ## Test Categories
 
-| Category | Count | Speed | API Calls |
-|----------|-------|-------|-----------|
-| Unit Tests | 84 | <1s | No (mocked) |
-| Integration | 12 | ~30s | Yes (real LLM) |
+| Category | Rough Count | Speed | API Calls |
+|----------|--------------|-------|-----------|
+| Unit Tests | ~80 | <1s | No (mocked) |
+| Integration | <15 | ~30s | Yes (real LLM) |
 
 ## Fixtures Available
 
@@ -105,22 +105,22 @@ def test_real_extraction(skip_if_no_api_key):
 
 ```bash
 # Show print statements
-pytest tests/test_helpers.py -s
+uv run pytest tests/test_helpers.py -s
 
 # Drop into debugger on failure
-pytest tests/ --pdb
+uv run pytest tests/ --pdb
 
 # Verbose output
-pytest tests/ -vv
+uv run pytest tests/ -vv
 
 # Show log output
-pytest tests/ --log-cli-level=DEBUG
+uv run pytest tests/ --log-cli-level=DEBUG
 ```
 
 ## Common Issues
 
 **"API key not set"**
-→ Skip integration tests: `pytest tests/ -m "not integration"`
+→ Skip integration tests: `uv run pytest tests/ -m "not integration"`
 
 **"Mock not working"**
 → Check patch path: `@patch('spindle.b.ExtractTriples')`
@@ -131,6 +131,6 @@ pytest tests/ --log-cli-level=DEBUG
 ## More Info
 
 - Full Guide: `docs/TESTING.md`
-- Summary: `docs/TESTING_SUMMARY.md`
-- Example CI/CD: `.github/workflows/tests.yml.example`
+- UV Workflow Details: `docs/UV_SETUP.md`
+- Project Overview: `README.md`
 

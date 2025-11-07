@@ -64,50 +64,46 @@ Integration tests make actual LLM calls and are marked with `@pytest.mark.integr
 
 ### Setup
 
-1. Ensure you're in the `kgx` conda environment:
+1. Make sure the uv environment is ready (run once per machine):
 ```bash
-conda activate kgx
-```
-
-2. Install testing dependencies:
-```bash
-pip install -r requirements-dev.txt
+uv venv
+uv pip install -e ".[dev]"
 ```
 
 ### Run All Unit Tests (Fast)
 
 ```bash
 # Run all unit tests (excludes integration tests)
-pytest tests/ -m "not integration"
+uv run pytest tests/ -m "not integration"
 
 # Or simply (integration tests are skipped by default if no API key)
-pytest tests/
+uv run pytest tests/
 ```
 
 ### Run Specific Test Files
 
 ```bash
 # Test helper functions only
-pytest tests/test_helpers.py -v
+uv run pytest tests/test_helpers.py -v
 
 # Test serialization only
-pytest tests/test_serialization.py -v
+uv run pytest tests/test_serialization.py -v
 
 # Test extractor only
-pytest tests/test_extractor.py -v
+uv run pytest tests/test_extractor.py -v
 
 # Test recommender only
-pytest tests/test_recommender.py -v
+uv run pytest tests/test_recommender.py -v
 ```
 
 ### Run with Coverage
 
 ```bash
 # Generate coverage report
-pytest tests/ -m "not integration" --cov=spindle --cov-report=term-missing
+uv run pytest tests/ -m "not integration" --cov=spindle --cov-report=term-missing
 
 # Generate HTML coverage report
-pytest tests/ -m "not integration" --cov=spindle --cov-report=html
+uv run pytest tests/ -m "not integration" --cov=spindle --cov-report=html
 
 # View HTML report (opens in browser)
 open htmlcov/index.html
@@ -122,10 +118,10 @@ Integration tests require an `ANTHROPIC_API_KEY` to be set:
 export ANTHROPIC_API_KEY=your_key_here
 
 # Run integration tests only
-pytest tests/ -m integration -v
+uv run pytest tests/ -m integration -v
 
 # Run all tests including integration tests
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 **Note:** Integration tests make actual API calls and will incur costs. Use sparingly during development.
@@ -134,10 +130,10 @@ pytest tests/ -v
 
 ```bash
 # Run a specific test class
-pytest tests/test_helpers.py::TestFindSpanIndices -v
+uv run pytest tests/test_helpers.py::TestFindSpanIndices -v
 
 # Run a specific test method
-pytest tests/test_helpers.py::TestFindSpanIndices::test_exact_match -v
+uv run pytest tests/test_helpers.py::TestFindSpanIndices::test_exact_match -v
 ```
 
 ## Test Execution Options
@@ -145,22 +141,22 @@ pytest tests/test_helpers.py::TestFindSpanIndices::test_exact_match -v
 ### Verbose Output
 
 ```bash
-pytest tests/ -v          # Verbose (show test names)
-pytest tests/ -vv         # More verbose (show full diffs)
+uv run pytest tests/ -v          # Verbose (show test names)
+uv run pytest tests/ -vv         # More verbose (show full diffs)
 ```
 
 ### Stop on First Failure
 
 ```bash
-pytest tests/ -x          # Stop after first failure
-pytest tests/ --maxfail=3 # Stop after 3 failures
+uv run pytest tests/ -x          # Stop after first failure
+uv run pytest tests/ --maxfail=3 # Stop after 3 failures
 ```
 
 ### Run Failed Tests Only
 
 ```bash
-pytest tests/ --lf        # Run last failed tests
-pytest tests/ --ff        # Run failed tests first, then others
+uv run pytest tests/ --lf        # Run last failed tests
+uv run pytest tests/ --ff        # Run failed tests first, then others
 ```
 
 ### Parallel Execution (Optional)
@@ -168,10 +164,10 @@ pytest tests/ --ff        # Run failed tests first, then others
 Install `pytest-xdist` for parallel test execution:
 
 ```bash
-pip install pytest-xdist
+uv pip install pytest-xdist
 
 # Run tests in parallel (4 workers)
-pytest tests/ -n 4
+uv run pytest tests/ -n 4
 ```
 
 ## Writing New Tests
@@ -262,17 +258,17 @@ When setting up CI/CD:
 
 1. Run unit tests on every PR:
 ```bash
-pytest tests/ -m "not integration" --cov=spindle --cov-report=xml
+uv run pytest tests/ -m "not integration" --cov=spindle --cov-report=xml
 ```
 
 2. Run integration tests on main branch only (or scheduled):
 ```bash
-pytest tests/ -m integration
+uv run pytest tests/ -m integration
 ```
 
 3. Fail if coverage drops below threshold (e.g., 80%):
 ```bash
-pytest tests/ -m "not integration" --cov=spindle --cov-report=term --cov-fail-under=80
+uv run pytest tests/ -m "not integration" --cov=spindle --cov-report=term --cov-fail-under=80
 ```
 
 ## Debugging Tests
@@ -281,27 +277,27 @@ pytest tests/ -m "not integration" --cov=spindle --cov-report=term --cov-fail-un
 
 ```bash
 # Drop into debugger on failure
-pytest tests/ --pdb
+uv run pytest tests/ --pdb
 
 # Drop into debugger on error
-pytest tests/ --pdb --pdbcls=IPython.terminal.debugger:Pdb
+uv run pytest tests/ --pdb --pdbcls=IPython.terminal.debugger:Pdb
 ```
 
 ### Print Output
 
 ```bash
 # Show print statements
-pytest tests/ -s
+uv run pytest tests/ -s
 
 # Show captured output for failed tests
-pytest tests/ --capture=no
+uv run pytest tests/ --capture=no
 ```
 
 ### Increase Logging
 
 ```bash
 # Show log output
-pytest tests/ --log-cli-level=DEBUG
+uv run pytest tests/ --log-cli-level=DEBUG
 ```
 
 ## Coverage Goals
@@ -315,7 +311,7 @@ pytest tests/ --log-cli-level=DEBUG
 ### Issue: Tests fail with "ANTHROPIC_API_KEY not set"
 
 **Solution:** Integration tests require an API key. Either:
-- Skip them: `pytest tests/ -m "not integration"`
+- Skip them: `uv run pytest tests/ -m "not integration"`
 - Set the key: `export ANTHROPIC_API_KEY=your_key_here`
 
 ### Issue: Mocked tests not working
@@ -340,6 +336,6 @@ pytest tests/ --log-cli-level=DEBUG
 3. **One assertion per test** - Or related assertions only
 4. **Use fixtures** - Avoid repeating test setup
 5. **Test edge cases** - Empty inputs, None values, errors
-6. **Run tests before committing** - `pytest tests/ -m "not integration"`
+6. **Run tests before committing** - `uv run pytest tests/ -m "not integration"`
 7. **Monitor coverage** - Aim for >80% on critical functions
 

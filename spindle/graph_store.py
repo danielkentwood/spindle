@@ -1409,10 +1409,10 @@ class GraphStore:
             raise ValueError("vector_store is required for computing embeddings")
         
         try:
-            from spindle.graph_embeddings import GraphEmbeddingGenerator
+            from spindle.vector_store import GraphEmbeddingGenerator
         except ImportError:
             raise ImportError(
-                "Graph embedding computation requires graph_embeddings module. "
+                "Graph embedding computation requires optional dependencies. "
                 "Ensure all dependencies are installed: pip install node2vec networkx"
             )
         
@@ -1447,10 +1447,10 @@ class GraphStore:
             ImportError: If required dependencies are not installed
         """
         try:
-            from spindle.graph_embeddings import GraphEmbeddingGenerator
+            from spindle.vector_store import GraphEmbeddingGenerator
         except ImportError:
             raise ImportError(
-                "Graph extraction requires graph_embeddings module. "
+                "Graph extraction requires optional dependencies. "
                 "Ensure all dependencies are installed: pip install networkx"
             )
         

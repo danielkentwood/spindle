@@ -9,33 +9,40 @@ Spindle is organized as a proper Python package for better maintainability and d
 ```
 spindle/
 ├── spindle/                         # Main package
-│   ├── __init__.py                  # Package exports (public API)
-│   ├── extractor.py                 # Core extraction functionality
-│   ├── graph_store.py               # Graph database persistence
-│   ├── baml_src/                    # BAML schema definitions
+│   ├── __init__.py                  # Public API exports
+│   ├── extractor.py                 # Extraction + ontology workflows
+│   ├── graph_store.py               # Embedded Kùzu persistence layer
+│   ├── vector_store.py              # Embedding + vector DB integrations
+│   ├── baml_src/                    # Authoritative BAML schemas
 │   │   ├── clients.baml             # LLM client configurations
-│   │   ├── generators.baml          # Code generation config
-│   │   └── spindle.baml             # Extraction function definitions
-│   └── baml_client/                 # Auto-generated BAML Python client
-│       └── types.py                 # Generated type definitions
-├── demos/                           # Example scripts
-│   ├── example.py                   # Basic extraction example
-│   ├── example_graph_store.py       # GraphStore usage example
-│   └── ...                          # Other examples
-├── tests/                           # Test suite
-│   ├── conftest.py                  # Shared test fixtures
-│   ├── test_extractor.py            # Extractor tests
-│   ├── test_graph_store.py          # GraphStore tests
-│   └── ...                          # Other test files
-├── docs/                            # Documentation
-│   ├── GRAPH_STORE.md               # GraphStore usage guide
-│   ├── TESTING.md                   # Testing documentation
-│   └── ...                          # Other documentation
-├── setup.py                         # Package installation configuration
-├── MANIFEST.in                      # Package data specification
-├── requirements.txt                 # Python dependencies
-├── requirements-dev.txt             # Development dependencies
-└── README.md                        # Main documentation
+│   │   ├── generators.baml          # Code generation settings
+│   │   └── spindle.baml             # Extraction + recommendation endpoints
+│   ├── baml_client/                 # Auto-generated BAML Python client (do not edit)
+│   └── notebooks/                   # Exploratory notebooks (optional tooling)
+├── demos/                           # Runnable examples (invoke with uv run)
+│   ├── example.py                   # Manual ontology workflow
+│   ├── example_auto_ontology.py     # Auto-recommended ontology flow
+│   ├── example_scope_comparison.py  # Minimal vs balanced vs comprehensive scopes
+│   └── example_ontology_extension.py # Conservative ontology extension demo
+├── tests/                           # Pytest suite
+│   ├── conftest.py                  # Shared fixtures + marks
+│   ├── fixtures/                    # Sample ontologies/text fixtures
+│   ├── test_extractor.py            # SpindleExtractor unit tests
+│   ├── test_graph_store.py          # GraphStore behaviour
+│   ├── test_embeddings.py           # Vector store + embedding helpers
+│   ├── test_recommender.py          # OntologyRecommender logic
+│   └── test_integration.py          # Real LLM integration tests (requires API keys)
+├── docs/                            # Additional documentation
+│   ├── QUICKSTART.md
+│   ├── UV_SETUP.md
+│   └── ...
+├── graphs/                          # Local graph databases produced during runs
+├── htmlcov/                         # Coverage reports (generated)
+├── pyproject.toml                   # Project metadata + dependencies
+├── requirements.txt                 # Locked dependency snapshot (optional)
+├── requirements-dev.txt             # Dev-only dependencies snapshot
+├── setup.py                         # Legacy setuptools entry point
+└── README.md                        # Top-level overview
 ```
 
 ## Module Organization
@@ -54,7 +61,9 @@ Public API:
 # Main classes
 SpindleExtractor
 OntologyRecommender
-GraphStore
+GraphStore              # Optional (requires kuzu)
+VectorStore             # Optional (requires chromadb + embeddings extras)
+ChromaVectorStore
 
 # Factory functions
 create_ontology
@@ -72,6 +81,11 @@ get_supporting_text
 filter_triples_by_source
 parse_extraction_datetime
 filter_triples_by_date_range
+
+# Embedding helpers
+create_openai_embedding_function
+create_huggingface_embedding_function
+get_default_embedding_function
 ```
 
 #### `spindle/extractor.py`
@@ -88,6 +102,14 @@ Graph database persistence (optional, requires kuzu):
 - CRUD operations for nodes and edges
 - Query operations (pattern matching, source filtering, date ranges)
 - Cypher query support
+
+#### `spindle/vector_store.py`
+Vector embeddings and similarity search utilities (optional extras):
+- `VectorStore` abstract base class for embedding backends
+- `ChromaVectorStore` implementation for local retrieval
+- Embedding helpers (`create_openai_embedding_function`, `create_huggingface_embedding_function`, `create_gemini_embedding_function`)
+- Convenience factory `get_default_embedding_function`
+- Optional integration with `GraphStore.compute_graph_embeddings`
 
 ### `spindle/baml_src/` BAML Schemas
 
@@ -108,7 +130,8 @@ Auto-generated Python client from BAML schemas:
 
 Runnable examples demonstrating various features:
 - All examples import from `spindle` package
-- Run from repo root: `python demos/example.py`
+- Run from repo root with uv: `uv run python demos/example.py`
+- Additional demos cover auto-ontology, scope comparison, and ontology extension flows
 
 ### `tests/` Test Suite
 
@@ -116,7 +139,7 @@ Comprehensive test coverage:
 - Unit tests for all major functionality
 - Integration tests (require API key)
 - Fixtures in `conftest.py`
-- Run with: `pytest tests/`
+- Run with: `uv run pytest tests/`
 
 ## Installation
 
@@ -125,7 +148,7 @@ Comprehensive test coverage:
 Recommended for active development:
 
 ```bash
-pip install -e .
+uv pip install -e ".[dev]"
 ```
 
 This installs the package in "editable" mode - changes to the code are immediately available.
@@ -133,20 +156,20 @@ This installs the package in "editable" mode - changes to the code are immediate
 ### With Optional Dependencies
 
 ```bash
-# Install with GraphStore support
-pip install -e ".[graph]"
+# Add embeddings backends (local sentence-transformers)
+uv pip install -e ".[dev,embeddings]"
 
-# Install with development tools
-pip install -e ".[dev]"
+# Add remote embedding APIs (OpenAI, Gemini, Hugging Face)
+uv pip install -e ".[dev,embeddings-api]"
 
-# Install everything
-pip install -e ".[graph,dev]"
+# Full toolbox (dev + local + remote embeddings)
+uv pip install -e ".[dev,embeddings,embeddings-api]"
 ```
 
 ### Direct Requirements
 
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 ## Imports
@@ -199,7 +222,7 @@ The package is configured for distribution via PyPI:
 
 To build distribution:
 ```bash
-python setup.py sdist bdist_wheel
+uv run python -m build  # install with `uv pip install build` if missing
 ```
 
 ## Best Practices
@@ -219,7 +242,7 @@ If you modify BAML schemas:
 
 ```bash
 # Regenerate Python client
-baml-cli generate
+uv run baml-cli generate
 ```
 
 This updates `spindle/baml_client/` directory.
@@ -228,29 +251,29 @@ This updates `spindle/baml_client/` directory.
 
 ```bash
 # All tests
-pytest tests/
+uv run pytest tests/
 
 # Specific test file
-pytest tests/test_extractor.py -v
+uv run pytest tests/test_extractor.py -v
 
 # Without integration tests (no API key needed)
-pytest tests/ -m "not integration"
+uv run pytest tests/ -m "not integration"
 
 # With coverage
-pytest tests/ --cov=spindle --cov-report=term-missing
+uv run pytest tests/ --cov=spindle --cov-report=term-missing
 ```
 
 ### Checking Package Structure
 
 ```bash
 # Verify imports
-python -c "from spindle import *; print('OK')"
+uv run python -c "from spindle import *; print('OK')"
 
 # List package contents
-python -c "import spindle; print(dir(spindle))"
+uv run python -c "import spindle; print(dir(spindle))"
 
 # Check version
-python -c "import spindle; print(spindle.__version__)"
+uv run python -c "import spindle; print(spindle.__version__)"
 ```
 
 ## Migration from Old Structure

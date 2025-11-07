@@ -178,13 +178,13 @@ results = store.query_cypher(query)
 GraphStore requires the Kùzu Python package:
 
 ```bash
-pip install kuzu>=0.7.0
+uv pip install kuzu>=0.7.0
 ```
 
 Or install all Spindle dependencies including GraphStore support:
 
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 ## Quick Start
@@ -650,7 +650,7 @@ if alice and alice.get("vector_index"):
 
 Node2Vec embeddings require additional dependencies:
 ```bash
-pip install node2vec>=0.4.5 networkx>=3.0
+uv pip install node2vec>=0.4.5 networkx>=3.0
 ```
 
 ### Query Operations
@@ -1091,7 +1091,7 @@ with GraphStore() as store:
 If GraphStore import fails:
 
 ```bash
-pip install kuzu>=0.7.0
+uv pip install kuzu>=0.7.0
 ```
 
 ### Memory Issues
@@ -1107,13 +1107,7 @@ for i in range(0, len(all_triples), batch_size):
 
 ## Examples
 
-See `demos/example_graph_store.py` for a comprehensive demonstration of all GraphStore features.
-
-Run the example:
-
-```bash
-python demos/example_graph_store.py
-```
+See `spindle/notebooks/example_graph_store.ipynb` for a comprehensive walkthrough of GraphStore features (launch with `uv run jupyter lab` or view directly in your IDE).
 
 ## Further Reading
 

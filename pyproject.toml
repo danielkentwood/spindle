@@ -47,11 +47,6 @@ dev = [
     "hypothesis>=6.98.0",
     "ipykernel>=6.0.0",
 ]
-graph = [
-    "kuzu>=0.7.0",
-    "node2vec>=0.4.5",
-    "networkx>=3.0",
-]
 embeddings = [
     "sentence-transformers>=2.2.0",
 ]

@@ -1170,7 +1170,7 @@ EMBEDDING_TESTS_SKIP = pytest.mark.skipif(
 @EMBEDDING_TESTS_SKIP
 def test_extract_graph_structure(temp_graph_store):
     """Test extracting graph structure from GraphStore."""
-    from spindle.graph_embeddings import GraphEmbeddingGenerator
+    from spindle.vector_store import GraphEmbeddingGenerator
     
     # Add some nodes and edges
     temp_graph_store.add_node("Alice", "Person", description="A person")
@@ -1270,7 +1270,7 @@ def test_update_node_embeddings(temp_graph_store):
 def test_graph_embeddings_empty_graph(temp_graph_store):
     """Test embedding computation on empty graph."""
     from spindle import ChromaVectorStore
-    from spindle.graph_embeddings import GraphEmbeddingGenerator
+    from spindle.vector_store import GraphEmbeddingGenerator
     
     vector_store = ChromaVectorStore(collection_name="test_empty")
     
