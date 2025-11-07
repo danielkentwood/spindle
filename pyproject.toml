@@ -31,6 +31,12 @@ dependencies = [
     "kuzu>=0.7.0",
     "pandas>=2.0.0",
     "chromadb>=0.4.0",
+    "langchain-core>=0.2.0",
+    "langchain-community>=0.2.0",
+    "langchain-text-splitters>=0.2.0",
+    "PyYAML>=6.0",
+    "sqlalchemy>=2.0.0",
+    "tomli>=2.0.1; python_version < '3.11'",
     "numpy",
     "ipywidgets>=8.0.0",
     "node2vec>=0.4.5",
@@ -61,8 +67,23 @@ embeddings-api = [
 Homepage = "https://github.com/danielkentwood/spindle"
 Repository = "https://github.com/danielkentwood/spindle"
 
+[project.scripts]
+spindle-ingest = "spindle.ingestion.cli:main"
+
 [tool.setuptools]
-packages = ["spindle", "spindle.baml_client"]
+packages = [
+    "spindle",
+    "spindle.baml_client",
+    "spindle.baml_client.baml_client",
+    "spindle.ingestion",
+    "spindle.ingestion.pipeline",
+    "spindle.ingestion.loaders",
+    "spindle.ingestion.splitters",
+    "spindle.ingestion.templates",
+    "spindle.ingestion.observers",
+    "spindle.ingestion.storage",
+    "spindle.ingestion.graph",
+]
 
 [tool.setuptools.package-data]
 spindle = ["py.typed"]
