@@ -31,6 +31,9 @@ type_map = {
     "types.EntityType": types.EntityType,
     "stream_types.EntityType": stream_types.EntityType,
 
+    "types.EvidenceSpan": types.EvidenceSpan,
+    "stream_types.EvidenceSpan": stream_types.EvidenceSpan,
+
     "types.ExtractionResult": types.ExtractionResult,
     "stream_types.ExtractionResult": stream_types.ExtractionResult,
 
@@ -43,6 +46,21 @@ type_map = {
     "types.OntologyRecommendation": types.OntologyRecommendation,
     "stream_types.OntologyRecommendation": stream_types.OntologyRecommendation,
 
+    "types.ProcessDependency": types.ProcessDependency,
+    "stream_types.ProcessDependency": stream_types.ProcessDependency,
+
+    "types.ProcessExtractionIssue": types.ProcessExtractionIssue,
+    "stream_types.ProcessExtractionIssue": stream_types.ProcessExtractionIssue,
+
+    "types.ProcessExtractionResult": types.ProcessExtractionResult,
+    "stream_types.ProcessExtractionResult": stream_types.ProcessExtractionResult,
+
+    "types.ProcessGraph": types.ProcessGraph,
+    "stream_types.ProcessGraph": stream_types.ProcessGraph,
+
+    "types.ProcessStep": types.ProcessStep,
+    "stream_types.ProcessStep": stream_types.ProcessStep,
+
     "types.RelationType": types.RelationType,
     "stream_types.RelationType": stream_types.RelationType,
 
@@ -52,5 +70,7 @@ type_map = {
     "types.Triple": types.Triple,
     "stream_types.Triple": stream_types.Triple,
 
+
+    "types.ProcessStepType": types.ProcessStepType,
 
 }

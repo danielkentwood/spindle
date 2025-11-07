@@ -63,6 +63,31 @@ You can extend or replace them by placing new template files inside a directory
 and pointing `spindle` to it using `template_search_paths` in your ingestion
 configuration.
 
+## Process DAG Extraction
+
+The ingestion graph (`DocumentGraph`) intentionally focuses on documents and
+their chunk relationships only. If you need to extract structured process DAGs
+from text, use the high-level helper in `spindle.extractor` instead of the
+ingestion pipeline:
+
+```python
+from spindle import extractor
+
+result = extractor.extract_process_graph(
+    text=procedure_text,
+    process_hint="Customer onboarding workflow",
+)
+
+if result.graph:
+    print("Found steps:", [step.step_id for step in result.graph.steps])
+    print("Dependencies:", [(d.from_step, d.to_step) for d in result.graph.dependencies])
+```
+
+The helper wraps the new BAML template (`ExtractProcessGraph`) and performs
+post-processing such as evidence span indexing, DAG validation, and merging with
+existing graphs. This keeps ingestion focused on document topology while still
+enabling process reasoning when needed.
+
 ## Hot reloading
 
 The template registry watches for changes every time you invoke an ingestion

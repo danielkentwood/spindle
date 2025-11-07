@@ -105,6 +105,20 @@ class BamlSyncClient:
                 "text": text,"current_ontology": current_ontology,"scope": scope,
             })
             return typing.cast(types.OntologyExtension, result.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
+        baml_options: BamlCallOptions = {},
+    ) -> types.ProcessExtractionResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.ExtractProcessGraph(text=text,process_hint=process_hint,existing_graph=existing_graph,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractProcessGraph", args={
+                "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
+            })
+            return typing.cast(types.ProcessExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
         baml_options: BamlCallOptions = {},
     ) -> types.ExtractionResult:
@@ -154,6 +168,18 @@ class BamlStreamClient:
           lambda x: typing.cast(types.OntologyExtension, x.cast_to(types, types, stream_types, False, __runtime__)),
           ctx,
         )
+    def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.ProcessExtractionResult, types.ProcessExtractionResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractProcessGraph", args={
+            "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
+        })
+        return baml_py.BamlSyncStream[stream_types.ProcessExtractionResult, types.ProcessExtractionResult](
+          result,
+          lambda x: typing.cast(stream_types.ProcessExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.ProcessExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[stream_types.ExtractionResult, types.ExtractionResult]:
@@ -193,6 +219,13 @@ class BamlHttpRequestClient:
             "text": text,"current_ontology": current_ontology,"scope": scope,
         }, mode="request")
         return result
+    def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractProcessGraph", args={
+            "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
+        }, mode="request")
+        return result
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -220,6 +253,13 @@ class BamlHttpStreamRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="AnalyzeOntologyExtension", args={
             "text": text,"current_ontology": current_ontology,"scope": scope,
+        }, mode="stream")
+        return result
+    def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractProcessGraph", args={
+            "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
         }, mode="stream")
         return result
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],

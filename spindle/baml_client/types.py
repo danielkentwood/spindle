@@ -37,11 +37,18 @@ def get_checks(checks: typing.Dict[CheckName, Check]) -> typing.List[Check]:
 def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
     return all(check.status == "succeeded" for check in get_checks(checks))
 # #########################################################################
-# Generated enums (0)
+# Generated enums (1)
 # #########################################################################
 
+class ProcessStepType(str, Enum):
+    ACTIVITY = "ACTIVITY"
+    DECISION = "DECISION"
+    EVENT = "EVENT"
+    PARALLEL_GATEWAY = "PARALLEL_GATEWAY"
+    SUBPROCESS = "SUBPROCESS"
+
 # #########################################################################
-# Generated classes (12)
+# Generated classes (18)
 # #########################################################################
 
 class AttributeDefinition(BaseModel):
@@ -69,6 +76,11 @@ class EntityType(BaseModel):
     description: str
     attributes: typing.List["AttributeDefinition"]
 
+class EvidenceSpan(BaseModel):
+    text: str
+    start: typing.Optional[int] = None
+    end: typing.Optional[int] = None
+
 class ExtractionResult(BaseModel):
     triples: typing.List["Triple"]
     reasoning: str
@@ -88,6 +100,46 @@ class OntologyRecommendation(BaseModel):
     ontology: "Ontology"
     text_purpose: str
     reasoning: str
+
+class ProcessDependency(BaseModel):
+    from_step: str
+    to_step: str
+    relation: str
+    condition: typing.Optional[str] = None
+    evidence: typing.List["EvidenceSpan"]
+
+class ProcessExtractionIssue(BaseModel):
+    code: str
+    message: str
+    related_step_ids: typing.List[str]
+
+class ProcessExtractionResult(BaseModel):
+    status: typing.Union[typing_extensions.Literal['process_found'], typing_extensions.Literal['no_process'], typing_extensions.Literal['incomplete']]
+    graph: typing.Optional["ProcessGraph"] = None
+    reasoning: str
+    issues: typing.List["ProcessExtractionIssue"]
+
+class ProcessGraph(BaseModel):
+    process_name: typing.Optional[str] = None
+    scope: typing.Optional[str] = None
+    primary_goal: str
+    start_step_ids: typing.List[str]
+    end_step_ids: typing.List[str]
+    steps: typing.List["ProcessStep"]
+    dependencies: typing.List["ProcessDependency"]
+    notes: typing.List[str]
+
+class ProcessStep(BaseModel):
+    step_id: str
+    title: str
+    summary: str
+    step_type: ProcessStepType
+    actors: typing.List[str]
+    inputs: typing.List[str]
+    outputs: typing.List[str]
+    duration: typing.Optional[str] = None
+    prerequisites: typing.List[str]
+    evidence: typing.List["EvidenceSpan"]
 
 class RelationType(BaseModel):
     name: str

@@ -6,7 +6,9 @@ generator target {
     output_type "python/pydantic"
 
     // Where the generated code will be saved (relative to baml_src/)
-    output_dir "../baml_client"
+    // BAML creates a baml_client/ subdir inside this path, so we use ".."
+    // to generate directly into spindle/baml_client/
+    output_dir ".."
 
     // The version of the BAML package you have installed (e.g. same version as your baml-py or @boundaryml/baml).
     // The BAML VSCode extension version should also match this version.

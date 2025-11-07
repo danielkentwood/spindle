@@ -30,6 +30,12 @@ class LlmResponseParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="request")
         return typing.cast(types.OntologyExtension, result)
 
+    def ExtractProcessGraph(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.ProcessExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractProcessGraph", llm_response=llm_response, mode="request")
+        return typing.cast(types.ProcessExtractionResult, result)
+
     def ExtractTriples(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.ExtractionResult:
@@ -55,6 +61,12 @@ class LlmStreamParser:
     ) -> stream_types.OntologyExtension:
         result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.OntologyExtension, result)
+
+    def ExtractProcessGraph(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.ProcessExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractProcessGraph", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.ProcessExtractionResult, result)
 
     def ExtractTriples(
         self, llm_response: str, baml_options: BamlCallOptions = {},
