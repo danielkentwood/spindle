@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["AttributeDefinition","AttributeValue","CharacterSpan","Entity","EntityType","EvidenceSpan","ExtractionResult","Ontology","OntologyExtension","OntologyRecommendation","ProcessDependency","ProcessExtractionIssue","ProcessExtractionResult","ProcessGraph","ProcessStep","RelationType","SourceMetadata","Triple",]
+          ["AttributeDefinition","AttributeValue","CharacterSpan","EdgeForMatching","EdgeMatch","EdgeMatchingResult","Entity","EntityForMatching","EntityMatch","EntityMatchingResult","EntityType","EvidenceSpan","ExtractionResult","Ontology","OntologyExtension","OntologyRecommendation","ProcessDependency","ProcessExtractionIssue","ProcessExtractionResult","ProcessGraph","ProcessStep","RelationType","SourceMetadata","Triple",]
         ), enums=set(
           ["ProcessStepType",]
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -35,7 +35,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 18
+    # Generated classes 24
     # #########################################################################
 
     @property
@@ -51,8 +51,32 @@ class TypeBuilder(type_builder.TypeBuilder):
         return CharacterSpanViewer(self)
 
     @property
+    def EdgeForMatching(self) -> "EdgeForMatchingViewer":
+        return EdgeForMatchingViewer(self)
+
+    @property
+    def EdgeMatch(self) -> "EdgeMatchViewer":
+        return EdgeMatchViewer(self)
+
+    @property
+    def EdgeMatchingResult(self) -> "EdgeMatchingResultViewer":
+        return EdgeMatchingResultViewer(self)
+
+    @property
     def Entity(self) -> "EntityViewer":
         return EntityViewer(self)
+
+    @property
+    def EntityForMatching(self) -> "EntityForMatchingViewer":
+        return EntityForMatchingViewer(self)
+
+    @property
+    def EntityMatch(self) -> "EntityMatchViewer":
+        return EntityMatchViewer(self)
+
+    @property
+    def EntityMatchingResult(self) -> "EntityMatchingResultViewer":
+        return EntityMatchingResultViewer(self)
 
     @property
     def EntityType(self) -> "EntityTypeViewer":
@@ -172,7 +196,7 @@ class ProcessStepTypeValues:
 
 
 # #########################################################################
-# Generated classes 18
+# Generated classes 24
 # #########################################################################
 
 class AttributeDefinitionAst:
@@ -312,6 +336,159 @@ class CharacterSpanProperties:
     
 
 
+class EdgeForMatchingAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("EdgeForMatching")
+        self._properties: typing.Set[str] = set([  "id",  "subject",  "predicate",  "object",  "evidence_summary",  ])
+        self._props = EdgeForMatchingProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EdgeForMatchingProperties":
+        return self._props
+
+
+class EdgeForMatchingViewer(EdgeForMatchingAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EdgeForMatchingProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("id"))
+    
+    @property
+    def subject(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("subject"))
+    
+    @property
+    def predicate(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("predicate"))
+    
+    @property
+    def object(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("object"))
+    
+    @property
+    def evidence_summary(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("evidence_summary"))
+    
+    
+
+
+class EdgeMatchAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("EdgeMatch")
+        self._properties: typing.Set[str] = set([  "edge1_id",  "edge2_id",  "is_duplicate",  "confidence_level",  "reasoning",  ])
+        self._props = EdgeMatchProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EdgeMatchProperties":
+        return self._props
+
+
+class EdgeMatchViewer(EdgeMatchAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EdgeMatchProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def edge1_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("edge1_id"))
+    
+    @property
+    def edge2_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("edge2_id"))
+    
+    @property
+    def is_duplicate(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("is_duplicate"))
+    
+    @property
+    def confidence_level(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("confidence_level"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
+class EdgeMatchingResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("EdgeMatchingResult")
+        self._properties: typing.Set[str] = set([  "matches",  "reasoning",  ])
+        self._props = EdgeMatchingResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EdgeMatchingResultProperties":
+        return self._props
+
+
+class EdgeMatchingResultViewer(EdgeMatchingResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EdgeMatchingResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def matches(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("matches"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
 class EntityAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
@@ -359,6 +536,155 @@ class EntityProperties:
     @property
     def custom_atts(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("custom_atts"))
+    
+    
+
+
+class EntityForMatchingAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("EntityForMatching")
+        self._properties: typing.Set[str] = set([  "id",  "type",  "description",  "attributes",  ])
+        self._props = EntityForMatchingProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EntityForMatchingProperties":
+        return self._props
+
+
+class EntityForMatchingViewer(EntityForMatchingAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EntityForMatchingProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("id"))
+    
+    @property
+    def type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("type"))
+    
+    @property
+    def description(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
+    
+    @property
+    def attributes(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("attributes"))
+    
+    
+
+
+class EntityMatchAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("EntityMatch")
+        self._properties: typing.Set[str] = set([  "entity1_id",  "entity2_id",  "is_duplicate",  "confidence_level",  "reasoning",  ])
+        self._props = EntityMatchProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EntityMatchProperties":
+        return self._props
+
+
+class EntityMatchViewer(EntityMatchAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EntityMatchProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def entity1_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("entity1_id"))
+    
+    @property
+    def entity2_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("entity2_id"))
+    
+    @property
+    def is_duplicate(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("is_duplicate"))
+    
+    @property
+    def confidence_level(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("confidence_level"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
+class EntityMatchingResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("EntityMatchingResult")
+        self._properties: typing.Set[str] = set([  "matches",  "reasoning",  ])
+        self._props = EntityMatchingResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "EntityMatchingResultProperties":
+        return self._props
+
+
+class EntityMatchingResultViewer(EntityMatchingResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class EntityMatchingResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def matches(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("matches"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
     
     
 

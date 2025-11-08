@@ -25,8 +25,26 @@ type_map = {
     "types.CharacterSpan": types.CharacterSpan,
     "stream_types.CharacterSpan": stream_types.CharacterSpan,
 
+    "types.EdgeForMatching": types.EdgeForMatching,
+    "stream_types.EdgeForMatching": stream_types.EdgeForMatching,
+
+    "types.EdgeMatch": types.EdgeMatch,
+    "stream_types.EdgeMatch": stream_types.EdgeMatch,
+
+    "types.EdgeMatchingResult": types.EdgeMatchingResult,
+    "stream_types.EdgeMatchingResult": stream_types.EdgeMatchingResult,
+
     "types.Entity": types.Entity,
     "stream_types.Entity": stream_types.Entity,
+
+    "types.EntityForMatching": types.EntityForMatching,
+    "stream_types.EntityForMatching": stream_types.EntityForMatching,
+
+    "types.EntityMatch": types.EntityMatch,
+    "stream_types.EntityMatch": stream_types.EntityMatch,
+
+    "types.EntityMatchingResult": types.EntityMatchingResult,
+    "stream_types.EntityMatchingResult": stream_types.EntityMatchingResult,
 
     "types.EntityType": types.EntityType,
     "stream_types.EntityType": stream_types.EntityType,

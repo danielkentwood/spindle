@@ -63,6 +63,46 @@ except ImportError:
     get_default_embedding_function = None
     _VECTOR_STORE_AVAILABLE = False
 
+# Import Entity Resolution classes and functions
+try:
+    from spindle.entity_resolution import (
+        EntityResolver,
+        SemanticBlocker,
+        SemanticMatcher,
+        ResolutionConfig,
+        ResolutionResult,
+        EntityMatch,
+        EdgeMatch,
+        resolve_entities,
+        create_same_as_edges,
+        create_same_as_edges_for_edges,
+        get_duplicate_clusters,
+        find_connected_components,
+        serialize_node_for_embedding,
+        serialize_edge_for_embedding,
+        merge_node_metadata,
+        merge_edge_metadata,
+    )
+    _ENTITY_RESOLUTION_AVAILABLE = True
+except ImportError:
+    EntityResolver = None
+    SemanticBlocker = None
+    SemanticMatcher = None
+    ResolutionConfig = None
+    ResolutionResult = None
+    EntityMatch = None
+    EdgeMatch = None
+    resolve_entities = None
+    create_same_as_edges = None
+    create_same_as_edges_for_edges = None
+    get_duplicate_clusters = None
+    find_connected_components = None
+    serialize_node_for_embedding = None
+    serialize_edge_for_embedding = None
+    merge_node_metadata = None
+    merge_edge_metadata = None
+    _ENTITY_RESOLUTION_AVAILABLE = False
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -72,6 +112,14 @@ __all__ = [
     "GraphStore",
     "VectorStore",
     "ChromaVectorStore",
+    # Entity Resolution classes
+    "EntityResolver",
+    "SemanticBlocker",
+    "SemanticMatcher",
+    "ResolutionConfig",
+    "ResolutionResult",
+    "EntityMatch",
+    "EdgeMatch",
     # Factory functions
     "create_ontology",
     "create_source_metadata",
@@ -90,6 +138,16 @@ __all__ = [
     "filter_triples_by_source",
     "parse_extraction_datetime",
     "filter_triples_by_date_range",
+    # Entity Resolution functions
+    "resolve_entities",
+    "create_same_as_edges",
+    "create_same_as_edges_for_edges",
+    "get_duplicate_clusters",
+    "find_connected_components",
+    "serialize_node_for_embedding",
+    "serialize_edge_for_embedding",
+    "merge_node_metadata",
+    "merge_edge_metadata",
     # Internal (for testing)
     "_find_span_indices",
 ]

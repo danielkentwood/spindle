@@ -133,6 +133,34 @@ class BamlSyncClient:
                 "text": text,"ontology": ontology,"source_metadata": source_metadata,"existing_triples": existing_triples,
             })
             return typing.cast(types.ExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def MatchEdges(self, edges: typing.List["types.EdgeForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.EdgeMatchingResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.MatchEdges(edges=edges,context=context,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="MatchEdges", args={
+                "edges": edges,"context": context,
+            })
+            return typing.cast(types.EdgeMatchingResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def MatchEntities(self, entities: typing.List["types.EntityForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.EntityMatchingResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.MatchEntities(entities=entities,context=context,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="MatchEntities", args={
+                "entities": entities,"context": context,
+            })
+            return typing.cast(types.EntityMatchingResult, result.cast_to(types, types, stream_types, False, __runtime__))
     def RecommendOntology(self, text: str,scope: str,
         baml_options: BamlCallOptions = {},
     ) -> types.OntologyRecommendation:
@@ -192,6 +220,30 @@ class BamlStreamClient:
           lambda x: typing.cast(types.ExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
           ctx,
         )
+    def MatchEdges(self, edges: typing.List["types.EdgeForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.EdgeMatchingResult, types.EdgeMatchingResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="MatchEdges", args={
+            "edges": edges,"context": context,
+        })
+        return baml_py.BamlSyncStream[stream_types.EdgeMatchingResult, types.EdgeMatchingResult](
+          result,
+          lambda x: typing.cast(stream_types.EdgeMatchingResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.EdgeMatchingResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
+    def MatchEntities(self, entities: typing.List["types.EntityForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.EntityMatchingResult, types.EntityMatchingResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="MatchEntities", args={
+            "entities": entities,"context": context,
+        })
+        return baml_py.BamlSyncStream[stream_types.EntityMatchingResult, types.EntityMatchingResult](
+          result,
+          lambda x: typing.cast(stream_types.EntityMatchingResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.EntityMatchingResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
     def RecommendOntology(self, text: str,scope: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[stream_types.OntologyRecommendation, types.OntologyRecommendation]:
@@ -233,6 +285,20 @@ class BamlHttpRequestClient:
             "text": text,"ontology": ontology,"source_metadata": source_metadata,"existing_triples": existing_triples,
         }, mode="request")
         return result
+    def MatchEdges(self, edges: typing.List["types.EdgeForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="MatchEdges", args={
+            "edges": edges,"context": context,
+        }, mode="request")
+        return result
+    def MatchEntities(self, entities: typing.List["types.EntityForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="MatchEntities", args={
+            "entities": entities,"context": context,
+        }, mode="request")
+        return result
     def RecommendOntology(self, text: str,scope: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -267,6 +333,20 @@ class BamlHttpStreamRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractTriples", args={
             "text": text,"ontology": ontology,"source_metadata": source_metadata,"existing_triples": existing_triples,
+        }, mode="stream")
+        return result
+    def MatchEdges(self, edges: typing.List["types.EdgeForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="MatchEdges", args={
+            "edges": edges,"context": context,
+        }, mode="stream")
+        return result
+    def MatchEntities(self, entities: typing.List["types.EntityForMatching"],context: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="MatchEntities", args={
+            "entities": entities,"context": context,
         }, mode="stream")
         return result
     def RecommendOntology(self, text: str,scope: str,

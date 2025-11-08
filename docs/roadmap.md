@@ -6,7 +6,7 @@
 - [ ] Add support for more graph storage providers
 - [ ] Add support for more graph query languages
 - [ ] Add support for graph visualization
-- [ ] Add dedicated module for semantic entity resolution
+- [x] Add dedicated module for semantic entity resolution
 - [ ] Add support for cross-modal retrieval (graph + text)
 
 ## API

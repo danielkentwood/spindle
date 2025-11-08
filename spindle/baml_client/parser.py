@@ -42,6 +42,18 @@ class LlmResponseParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTriples", llm_response=llm_response, mode="request")
         return typing.cast(types.ExtractionResult, result)
 
+    def MatchEdges(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.EdgeMatchingResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="MatchEdges", llm_response=llm_response, mode="request")
+        return typing.cast(types.EdgeMatchingResult, result)
+
+    def MatchEntities(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.EntityMatchingResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="MatchEntities", llm_response=llm_response, mode="request")
+        return typing.cast(types.EntityMatchingResult, result)
+
     def RecommendOntology(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.OntologyRecommendation:
@@ -73,6 +85,18 @@ class LlmStreamParser:
     ) -> stream_types.ExtractionResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTriples", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.ExtractionResult, result)
+
+    def MatchEdges(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.EdgeMatchingResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="MatchEdges", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.EdgeMatchingResult, result)
+
+    def MatchEntities(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.EntityMatchingResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="MatchEntities", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.EntityMatchingResult, result)
 
     def RecommendOntology(
         self, llm_response: str, baml_options: BamlCallOptions = {},

@@ -48,7 +48,7 @@ class ProcessStepType(str, Enum):
     SUBPROCESS = "SUBPROCESS"
 
 # #########################################################################
-# Generated classes (18)
+# Generated classes (24)
 # #########################################################################
 
 class AttributeDefinition(BaseModel):
@@ -65,11 +65,46 @@ class CharacterSpan(BaseModel):
     start: typing.Optional[int] = None
     end: typing.Optional[int] = None
 
+class EdgeForMatching(BaseModel):
+    id: str
+    subject: str
+    predicate: str
+    object: str
+    evidence_summary: str
+
+class EdgeMatch(BaseModel):
+    edge1_id: str
+    edge2_id: str
+    is_duplicate: bool
+    confidence_level: str
+    reasoning: str
+
+class EdgeMatchingResult(BaseModel):
+    matches: typing.List["EdgeMatch"]
+    reasoning: str
+
 class Entity(BaseModel):
     name: str
     type: str
     description: str
     custom_atts: typing.Dict[str, "AttributeValue"]
+
+class EntityForMatching(BaseModel):
+    id: str
+    type: str
+    description: str
+    attributes: str
+
+class EntityMatch(BaseModel):
+    entity1_id: str
+    entity2_id: str
+    is_duplicate: bool
+    confidence_level: str
+    reasoning: str
+
+class EntityMatchingResult(BaseModel):
+    matches: typing.List["EntityMatch"]
+    reasoning: str
 
 class EntityType(BaseModel):
     name: str

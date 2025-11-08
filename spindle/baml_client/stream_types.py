@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (18)
+# Generated classes (24)
 # #########################################################################
 
 class AttributeDefinition(BaseModel):
@@ -40,11 +40,46 @@ class CharacterSpan(BaseModel):
     start: typing.Optional[int] = None
     end: typing.Optional[int] = None
 
+class EdgeForMatching(BaseModel):
+    id: typing.Optional[str] = None
+    subject: typing.Optional[str] = None
+    predicate: typing.Optional[str] = None
+    object: typing.Optional[str] = None
+    evidence_summary: typing.Optional[str] = None
+
+class EdgeMatch(BaseModel):
+    edge1_id: typing.Optional[str] = None
+    edge2_id: typing.Optional[str] = None
+    is_duplicate: typing.Optional[bool] = None
+    confidence_level: typing.Optional[str] = None
+    reasoning: typing.Optional[str] = None
+
+class EdgeMatchingResult(BaseModel):
+    matches: typing.List["EdgeMatch"]
+    reasoning: typing.Optional[str] = None
+
 class Entity(BaseModel):
     name: typing.Optional[str] = None
     type: typing.Optional[str] = None
     description: typing.Optional[str] = None
     custom_atts: typing.Dict[str, "AttributeValue"]
+
+class EntityForMatching(BaseModel):
+    id: typing.Optional[str] = None
+    type: typing.Optional[str] = None
+    description: typing.Optional[str] = None
+    attributes: typing.Optional[str] = None
+
+class EntityMatch(BaseModel):
+    entity1_id: typing.Optional[str] = None
+    entity2_id: typing.Optional[str] = None
+    is_duplicate: typing.Optional[bool] = None
+    confidence_level: typing.Optional[str] = None
+    reasoning: typing.Optional[str] = None
+
+class EntityMatchingResult(BaseModel):
+    matches: typing.List["EntityMatch"]
+    reasoning: typing.Optional[str] = None
 
 class EntityType(BaseModel):
     name: typing.Optional[str] = None

@@ -1,4 +1,4 @@
-baml-py==0.211.2
+baml-py==0.213.0
 python-dotenv==1.0.0
 kuzu>=0.7.0
 chromadb>=0.4.0
