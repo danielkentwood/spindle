@@ -14,9 +14,9 @@ Key Features:
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Callable, TYPE_CHECKING
-import uuid
 import os
+import uuid
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -73,6 +73,14 @@ except ImportError:
 
 if TYPE_CHECKING:
     from spindle.graph_store import GraphStore
+
+from spindle.observability import get_event_recorder
+
+VECTOR_STORE_RECORDER = get_event_recorder("vector_store")
+
+
+def _record_vector_event(name: str, payload: Dict[str, Any]) -> None:
+    VECTOR_STORE_RECORDER.record(name=name, payload=payload)
 
 
 def create_openai_embedding_function(
@@ -436,51 +444,97 @@ class ChromaVectorStore(VectorStore):
             ImportError: If chromadb is not installed
             ValueError: If no embedding method is available
         """
+        self._persist_directory = persist_directory
+        _record_vector_event(
+            "chroma.init.start",
+            {
+                "collection_name": collection_name,
+                "persist_directory": persist_directory,
+                "embedding_model": embedding_model,
+                "embedding_function_provided": embedding_function is not None,
+                "use_api_fallback": use_api_fallback,
+            },
+        )
         if not _CHROMA_AVAILABLE:
-            raise ImportError(
+            err = ImportError(
                 "ChromaDB is required for ChromaVectorStore. "
                 "Install it with: pip install chromadb>=0.4.0"
             )
-        
-        # Initialize embedding function
-        if embedding_function is not None:
-            self._embedding_function = embedding_function
-        elif _SENTENCE_TRANSFORMERS_AVAILABLE:
-            # Use local sentence-transformers
-            model_name = embedding_model or "all-MiniLM-L6-v2"
-            self._embedding_model = SentenceTransformer(model_name)
-            self._embedding_function = lambda text: self._embedding_model.encode(text).tolist()
-        elif use_api_fallback:
-            # Try to get API fallback
-            api_func = get_default_embedding_function(prefer_local=False)
-            if api_func:
-                self._embedding_function = api_func
-            else:
-                raise ValueError(
-                    "No embedding method available. Options:\n"
-                    "1. Install sentence-transformers: pip install sentence-transformers\n"
-                    "2. Set OPENAI_API_KEY environment variable for OpenAI embeddings\n"
-                    "3. Set HF_API_KEY environment variable for Hugging Face embeddings\n"
-                    "4. Provide a custom embedding_function"
-                )
-        else:
-            raise ImportError(
-                "sentence-transformers is required for ChromaVectorStore. "
-                "Install it with: pip install sentence-transformers>=2.2.0\n"
-                "Or set use_api_fallback=True to use API embeddings."
+            _record_vector_event(
+                "chroma.init.error",
+                {
+                    "collection_name": collection_name,
+                    "error": str(err),
+                },
             )
-        
-        # Initialize Chroma client
-        if persist_directory:
-            self.client = chromadb.PersistentClient(path=persist_directory)
-        else:
-            self.client = chromadb.Client()
-        
-        # Get or create collection
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"}
+            raise err
+
+        try:
+            # Initialize embedding function
+            if embedding_function is not None:
+                self._embedding_function = embedding_function
+            elif _SENTENCE_TRANSFORMERS_AVAILABLE:
+                # Use local sentence-transformers
+                model_name = embedding_model or "all-MiniLM-L6-v2"
+                self._embedding_model = SentenceTransformer(model_name)
+                self._embedding_function = lambda text: self._embedding_model.encode(text).tolist()
+            elif use_api_fallback:
+                # Try to get API fallback
+                api_func = get_default_embedding_function(prefer_local=False)
+                if api_func:
+                    self._embedding_function = api_func
+                else:
+                    raise ValueError(
+                        "No embedding method available. Options:\n"
+                        "1. Install sentence-transformers: pip install sentence-transformers\n"
+                        "2. Set OPENAI_API_KEY environment variable for OpenAI embeddings\n"
+                        "3. Set HF_API_KEY environment variable for Hugging Face embeddings\n"
+                        "4. Provide a custom embedding_function"
+                    )
+            else:
+                raise ImportError(
+                    "sentence-transformers is required for ChromaVectorStore. "
+                    "Install it with: pip install sentence-transformers>=2.2.0\n"
+                    "Or set use_api_fallback=True to use API embeddings."
+                )
+
+            # Initialize Chroma client
+            if persist_directory:
+                self.client = chromadb.PersistentClient(path=persist_directory)
+            else:
+                self.client = chromadb.Client()
+
+            # Get or create collection
+            self.collection = self.client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+        except Exception as exc:
+            _record_vector_event(
+                "chroma.init.error",
+                {
+                    "collection_name": collection_name,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        self._emit_event(
+            "chroma.init.complete",
+            {
+                "collection_name": collection_name,
+                "persist_directory": persist_directory,
+            },
         )
+
+    def _emit_event(self, name: str, payload: Optional[Dict[str, Any]] = None) -> None:
+        base_payload: Dict[str, Any] = {
+            "collection_name": getattr(getattr(self, "collection", None), "name", None),
+            "persist_directory": self._persist_directory,
+        }
+        if payload:
+            base_payload.update(payload)
+        _record_vector_event(name, base_payload)
     
     def _generate_embedding(self, text: str) -> List[float]:
         """
@@ -505,24 +559,45 @@ class ChromaVectorStore(VectorStore):
         Returns:
             UID (string) of the stored embedding
         """
+        self._emit_event(
+            "add.start",
+            {
+                "has_metadata": bool(metadata),
+            },
+        )
         # Generate unique ID
         uid = str(uuid.uuid4())
-        
-        # Generate embedding
-        embedding = self._generate_embedding(text)
-        
-        # Prepare metadata
-        if metadata is None:
-            metadata = {}
-        
-        # Add to Chroma collection
-        self.collection.add(
-            ids=[uid],
-            embeddings=[embedding],
-            documents=[text],
-            metadatas=[metadata]
+
+        try:
+            # Generate embedding
+            embedding = self._generate_embedding(text)
+
+            # Prepare metadata
+            if metadata is None:
+                metadata = {}
+
+            # Add to Chroma collection
+            self.collection.add(
+                ids=[uid],
+                embeddings=[embedding],
+                documents=[text],
+                metadatas=[metadata]
+            )
+        except Exception as exc:
+            self._emit_event(
+                "add.error",
+                {
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        self._emit_event(
+            "add.complete",
+            {
+                "has_metadata": bool(metadata),
+            },
         )
-        
         return uid
     
     def add_embedding(
@@ -545,24 +620,47 @@ class ChromaVectorStore(VectorStore):
         Returns:
             UID (string) of the stored embedding
         """
+        self._emit_event(
+            "add_embedding.start",
+            {
+                "has_metadata": bool(metadata),
+                "text_provided": text is not None,
+            },
+        )
         # Generate unique ID
         uid = str(uuid.uuid4())
-        
-        # Prepare metadata
-        if metadata is None:
-            metadata = {}
-        
-        # Use text if provided, otherwise use placeholder
-        text_repr = text or f"embedding_{uid[:8]}"
-        
-        # Add to Chroma collection
-        self.collection.add(
-            ids=[uid],
-            embeddings=[embedding],
-            documents=[text_repr],
-            metadatas=[metadata]
+
+        try:
+            # Prepare metadata
+            if metadata is None:
+                metadata = {}
+
+            # Use text if provided, otherwise use placeholder
+            text_repr = text or f"embedding_{uid[:8]}"
+
+            # Add to Chroma collection
+            self.collection.add(
+                ids=[uid],
+                embeddings=[embedding],
+                documents=[text_repr],
+                metadatas=[metadata]
+            )
+        except Exception as exc:
+            self._emit_event(
+                "add_embedding.error",
+                {
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        self._emit_event(
+            "add_embedding.complete",
+            {
+                "has_metadata": bool(metadata),
+                "text_provided": text is not None,
+            },
         )
-        
         return uid
     
     def get(self, uid: str) -> Optional[Dict[str, Any]]:
@@ -575,19 +673,46 @@ class ChromaVectorStore(VectorStore):
         Returns:
             Dictionary with 'text', 'embedding', and 'metadata' keys, or None if not found
         """
+        self._emit_event(
+            "get.start",
+            {
+                "uid": uid,
+            },
+        )
         try:
             results = self.collection.get(ids=[uid], include=["embeddings", "documents", "metadatas"])
-            
+
             if not results["ids"]:
+                self._emit_event(
+                    "get.miss",
+                    {
+                        "uid": uid,
+                    },
+                )
                 return None
-            
-            return {
+
+            record = {
                 "text": results["documents"][0],
                 "embedding": results["embeddings"][0],
                 "metadata": results["metadatas"][0] if results["metadatas"] else {}
             }
-        except Exception:
+        except Exception as exc:
+            self._emit_event(
+                "get.error",
+                {
+                    "uid": uid,
+                    "error": str(exc),
+                },
+            )
             return None
+
+        self._emit_event(
+            "get.complete",
+            {
+                "uid": uid,
+            },
+        )
+        return record
     
     def query(self, text: str, top_k: int = 10, metadata_filter: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
@@ -601,28 +726,53 @@ class ChromaVectorStore(VectorStore):
         Returns:
             List of dictionaries with 'uid', 'text', 'metadata', and 'distance' keys
         """
-        # Generate query embedding
-        query_embedding = self._generate_embedding(text)
-        
-        # Query Chroma collection
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            where=metadata_filter,
-            include=["documents", "metadatas", "distances"]
+        self._emit_event(
+            "query.start",
+            {
+                "top_k": top_k,
+                "has_filter": metadata_filter is not None,
+            },
         )
-        
-        # Format results
-        formatted_results = []
-        if results["ids"] and len(results["ids"][0]) > 0:
-            for i in range(len(results["ids"][0])):
-                formatted_results.append({
-                    "uid": results["ids"][0][i],
-                    "text": results["documents"][0][i],
-                    "metadata": results["metadatas"][0][i] if results["metadatas"] and results["metadatas"][0] else {},
-                    "distance": results["distances"][0][i] if results["distances"] else None
-                })
-        
+        try:
+            # Generate query embedding
+            query_embedding = self._generate_embedding(text)
+
+            # Query Chroma collection
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                where=metadata_filter,
+                include=["documents", "metadatas", "distances"]
+            )
+
+            # Format results
+            formatted_results = []
+            if results["ids"] and len(results["ids"][0]) > 0:
+                for i in range(len(results["ids"][0])):
+                    formatted_results.append({
+                        "uid": results["ids"][0][i],
+                        "text": results["documents"][0][i],
+                        "metadata": results["metadatas"][0][i] if results["metadatas"] and results["metadatas"][0] else {},
+                        "distance": results["distances"][0][i] if results["distances"] else None
+                    })
+        except Exception as exc:
+            self._emit_event(
+                "query.error",
+                {
+                    "top_k": top_k,
+                    "has_filter": metadata_filter is not None,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        self._emit_event(
+            "query.complete",
+            {
+                "top_k": top_k,
+                "result_count": len(formatted_results),
+            },
+        )
         return formatted_results
     
     def delete(self, uid: str) -> bool:
@@ -635,17 +785,39 @@ class ChromaVectorStore(VectorStore):
         Returns:
             True if deleted, False if not found
         """
+        self._emit_event(
+            "delete.start",
+            {
+                "uid": uid,
+            },
+        )
         try:
             self.collection.delete(ids=[uid])
-            return True
-        except Exception:
+        except Exception as exc:
+            self._emit_event(
+                "delete.error",
+                {
+                    "uid": uid,
+                    "error": str(exc),
+                },
+            )
             return False
+
+        self._emit_event(
+            "delete.complete",
+            {
+                "uid": uid,
+            },
+        )
+        return True
     
     def close(self):
         """Close the vector store connection."""
+        self._emit_event("close.start", {})
         # Chroma client doesn't require explicit close, but we can clear references
         self.client = None
         self.collection = None
+        self._emit_event("close.complete", {})
 
 
 class GraphEmbeddingGenerator:

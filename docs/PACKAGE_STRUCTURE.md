@@ -13,6 +13,7 @@ spindle/
 │   ├── extractor.py                 # Extraction + ontology workflows
 │   ├── graph_store.py               # Embedded Kùzu persistence layer
 │   ├── vector_store.py              # Embedding + vector DB integrations
+│   ├── observability/               # Service event primitives + persistence helpers
 │   ├── baml_src/                    # Authoritative BAML schemas
 │   │   ├── clients.baml             # LLM client configurations
 │   │   ├── generators.baml          # Code generation settings
@@ -110,6 +111,12 @@ Vector embeddings and similarity search utilities (optional extras):
 - Embedding helpers (`create_openai_embedding_function`, `create_huggingface_embedding_function`, `create_gemini_embedding_function`)
 - Convenience factory `get_default_embedding_function`
 - Optional integration with `GraphStore.compute_graph_embeddings`
+
+#### `spindle/observability/`
+Service-wide event logging support:
+- `events.py`: `ServiceEvent` dataclass, `EventRecorder`, and global recorder helpers
+- `storage.py`: `EventLogStore` (SQLite persistence), replay helpers, and observer attachment utilities
+- `__init__.py`: Public exports for recorder, observers, and storage helpers
 
 ### `spindle/baml_src/` BAML Schemas
 

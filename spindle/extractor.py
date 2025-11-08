@@ -36,6 +36,19 @@ from spindle.baml_client.types import (
     SourceMetadata,
     Triple,
 )
+from spindle.observability import get_event_recorder
+
+
+EXTRACTOR_RECORDER = get_event_recorder("extractor")
+ONTOLOGY_RECORDER = get_event_recorder("ontology.recommender")
+
+
+def _record_extractor_event(name: str, payload: Dict[str, Any]) -> None:
+    EXTRACTOR_RECORDER.record(name=name, payload=payload)
+
+
+def _record_ontology_event(name: str, payload: Dict[str, Any]) -> None:
+    ONTOLOGY_RECORDER.record(name=name, payload=payload)
 
 
 def _normalize_ws(text: str) -> str:
@@ -561,38 +574,64 @@ class SpindleExtractor:
         """
         if existing_triples is None:
             existing_triples = []
-        
-        # Auto-recommend ontology if not provided
-        if self.ontology is None:
-            scope = ontology_scope or self.ontology_scope
-            recommendation = self._ontology_recommender.recommend(
-                text=text,
-                scope=scope
+
+        _record_extractor_event(
+            "extract.start",
+            {
+                "source_name": source_name,
+                "source_url": source_url,
+                "existing_triples": len(existing_triples),
+            },
+        )
+
+        try:
+            # Auto-recommend ontology if not provided
+            if self.ontology is None:
+                scope = ontology_scope or self.ontology_scope
+                recommendation = self._ontology_recommender.recommend(
+                    text=text,
+                    scope=scope
+                )
+                self.ontology = recommendation.ontology
+
+            # Create source metadata
+            source_metadata = SourceMetadata(
+                source_name=source_name,
+                source_url=source_url
             )
-            self.ontology = recommendation.ontology
-        
-        # Create source metadata
-        source_metadata = SourceMetadata(
-            source_name=source_name,
-            source_url=source_url
+
+            # Call the BAML extraction function
+            result = b.ExtractTriples(
+                text=text,
+                ontology=self.ontology,
+                source_metadata=source_metadata,
+                existing_triples=existing_triples
+            )
+
+            # Post-processing: Set extraction datetime for all triples
+            extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            for triple in result.triples:
+                triple.extraction_datetime = extraction_time
+
+                # Post-processing: Compute character indices for supporting spans using batch processing
+                triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
+        except Exception as exc:
+            _record_extractor_event(
+                "extract.error",
+                {
+                    "source_name": source_name,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        _record_extractor_event(
+            "extract.complete",
+            {
+                "source_name": source_name,
+                "triple_count": len(result.triples),
+            },
         )
-        
-        # Call the BAML extraction function
-        result = b.ExtractTriples(
-            text=text,
-            ontology=self.ontology,
-            source_metadata=source_metadata,
-            existing_triples=existing_triples
-        )
-        
-        # Post-processing: Set extraction datetime for all triples
-        extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        for triple in result.triples:
-            triple.extraction_datetime = extraction_time
-            
-            # Post-processing: Compute character indices for supporting spans using batch processing
-            triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
-        
         return result
     
     async def extract_async(
@@ -629,38 +668,64 @@ class SpindleExtractor:
         """
         if existing_triples is None:
             existing_triples = []
-        
-        # Auto-recommend ontology if not provided
-        if self.ontology is None:
-            scope = ontology_scope or self.ontology_scope
-            recommendation = self._ontology_recommender.recommend(
-                text=text,
-                scope=scope
+
+        _record_extractor_event(
+            "extract_async.start",
+            {
+                "source_name": source_name,
+                "source_url": source_url,
+                "existing_triples": len(existing_triples),
+            },
+        )
+
+        try:
+            # Auto-recommend ontology if not provided
+            if self.ontology is None:
+                scope = ontology_scope or self.ontology_scope
+                recommendation = self._ontology_recommender.recommend(
+                    text=text,
+                    scope=scope
+                )
+                self.ontology = recommendation.ontology
+
+            # Create source metadata
+            source_metadata = SourceMetadata(
+                source_name=source_name,
+                source_url=source_url
             )
-            self.ontology = recommendation.ontology
-        
-        # Create source metadata
-        source_metadata = SourceMetadata(
-            source_name=source_name,
-            source_url=source_url
+
+            # Call the async BAML extraction function
+            result = await async_b.ExtractTriples(
+                text=text,
+                ontology=self.ontology,
+                source_metadata=source_metadata,
+                existing_triples=existing_triples
+            )
+
+            # Post-processing: Set extraction datetime for all triples
+            extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            for triple in result.triples:
+                triple.extraction_datetime = extraction_time
+
+                # Post-processing: Compute character indices for supporting spans using batch processing
+                triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
+        except Exception as exc:
+            _record_extractor_event(
+                "extract_async.error",
+                {
+                    "source_name": source_name,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        _record_extractor_event(
+            "extract_async.complete",
+            {
+                "source_name": source_name,
+                "triple_count": len(result.triples),
+            },
         )
-        
-        # Call the async BAML extraction function
-        result = await async_b.ExtractTriples(
-            text=text,
-            ontology=self.ontology,
-            source_metadata=source_metadata,
-            existing_triples=existing_triples
-        )
-        
-        # Post-processing: Set extraction datetime for all triples
-        extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        for triple in result.triples:
-            triple.extraction_datetime = extraction_time
-            
-            # Post-processing: Compute character indices for supporting spans using batch processing
-            triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
-        
         return result
     
     async def extract_batch(
@@ -694,24 +759,49 @@ class SpindleExtractor:
         """
         if existing_triples is None:
             existing_triples = []
-        
+
+        _record_extractor_event(
+            "extract_batch.start",
+            {
+                "item_count": len(texts),
+                "existing_triples": len(existing_triples),
+            },
+        )
+
         results = []
         accumulated_triples = list(existing_triples)
-        
-        # Process texts sequentially but asynchronously to maintain consistency
-        for text, source_name, source_url in texts:
-            # Pass a copy of accumulated_triples to avoid reference issues
-            result = await self.extract_async(
-                text=text,
-                source_name=source_name,
-                source_url=source_url,
-                existing_triples=list(accumulated_triples),
-                ontology_scope=ontology_scope
+
+        try:
+            # Process texts sequentially but asynchronously to maintain consistency
+            for text, source_name, source_url in texts:
+                # Pass a copy of accumulated_triples to avoid reference issues
+                result = await self.extract_async(
+                    text=text,
+                    source_name=source_name,
+                    source_url=source_url,
+                    existing_triples=list(accumulated_triples),
+                    ontology_scope=ontology_scope
+                )
+                results.append(result)
+                # Accumulate triples from this extraction for next texts
+                accumulated_triples.extend(result.triples)
+        except Exception as exc:
+            _record_extractor_event(
+                "extract_batch.error",
+                {
+                    "item_count": len(texts),
+                    "error": str(exc),
+                },
             )
-            results.append(result)
-            # Accumulate triples from this extraction for next texts
-            accumulated_triples.extend(result.triples)
-        
+            raise
+
+        _record_extractor_event(
+            "extract_batch.complete",
+            {
+                "item_count": len(results),
+                "total_triples": sum(len(res.triples) for res in results),
+            },
+        )
         return results
     
     async def extract_batch_stream(
@@ -756,21 +846,52 @@ class SpindleExtractor:
             existing_triples = []
         
         accumulated_triples = list(existing_triples)
-        
-        # Process texts sequentially but asynchronously to maintain consistency
-        for text, source_name, source_url in texts:
-            # Pass a copy of accumulated_triples to avoid reference issues
-            result = await self.extract_async(
-                text=text,
-                source_name=source_name,
-                source_url=source_url,
-                existing_triples=list(accumulated_triples),
-                ontology_scope=ontology_scope
+        _record_extractor_event(
+            "extract_batch_stream.start",
+            {
+                "item_count": len(texts),
+                "existing_triples": len(existing_triples),
+            },
+        )
+
+        try:
+            # Process texts sequentially but asynchronously to maintain consistency
+            for text, source_name, source_url in texts:
+                # Pass a copy of accumulated_triples to avoid reference issues
+                result = await self.extract_async(
+                    text=text,
+                    source_name=source_name,
+                    source_url=source_url,
+                    existing_triples=list(accumulated_triples),
+                    ontology_scope=ontology_scope
+                )
+                _record_extractor_event(
+                    "extract_batch_stream.item",
+                    {
+                        "source_name": source_name,
+                        "triple_count": len(result.triples),
+                    },
+                )
+                # Yield result as soon as it completes
+                yield result
+                # Accumulate triples from this extraction for next texts
+                accumulated_triples.extend(result.triples)
+        except Exception as exc:
+            _record_extractor_event(
+                "extract_batch_stream.error",
+                {
+                    "item_count": len(texts),
+                    "error": str(exc),
+                },
             )
-            # Yield result as soon as it completes
-            yield result
-            # Accumulate triples from this extraction for next texts
-            accumulated_triples.extend(result.triples)
+            raise
+
+        _record_extractor_event(
+            "extract_batch_stream.complete",
+            {
+                "item_count": len(texts),
+            },
+        )
 
 
 def create_ontology(
@@ -1168,11 +1289,36 @@ class OntologyRecommender:
             >>> print(recommendation.text_purpose)
             >>> extractor = SpindleExtractor(recommendation.ontology)
         """
-        result = b.RecommendOntology(
-            text=text,
-            scope=scope
+        _record_ontology_event(
+            "recommend.start",
+            {
+                "scope": scope,
+                "text_length": len(text),
+            },
         )
-        
+        try:
+            result = b.RecommendOntology(
+                text=text,
+                scope=scope
+            )
+        except Exception as exc:
+            _record_ontology_event(
+                "recommend.error",
+                {
+                    "scope": scope,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        _record_ontology_event(
+            "recommend.complete",
+            {
+                "scope": scope,
+                "entity_type_count": len(result.ontology.entity_types),
+                "relation_type_count": len(result.ontology.relation_types),
+            },
+        )
         return result
     
     def recommend_and_extract(
@@ -1224,21 +1370,47 @@ class OntologyRecommender:
             >>> print(f"Purpose: {recommendation.text_purpose}")
             >>> print(f"Extracted {len(extraction.triples)} triples")
         """
-        # First, recommend the ontology
-        recommendation = self.recommend(
-            text=text,
-            scope=scope
+        _record_ontology_event(
+            "recommend_and_extract.start",
+            {
+                "scope": scope,
+                "text_length": len(text),
+            },
         )
-        
-        # Then, use the recommended ontology to extract triples
-        extractor = SpindleExtractor(recommendation.ontology)
-        extraction_result = extractor.extract(
-            text=text,
-            source_name=source_name,
-            source_url=source_url,
-            existing_triples=existing_triples
+        try:
+            # First, recommend the ontology
+            recommendation = self.recommend(
+                text=text,
+                scope=scope
+            )
+
+            # Then, use the recommended ontology to extract triples
+            extractor = SpindleExtractor(recommendation.ontology)
+            extraction_result = extractor.extract(
+                text=text,
+                source_name=source_name,
+                source_url=source_url,
+                existing_triples=existing_triples
+            )
+        except Exception as exc:
+            _record_ontology_event(
+                "recommend_and_extract.error",
+                {
+                    "scope": scope,
+                    "source_name": source_name,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        _record_ontology_event(
+            "recommend_and_extract.complete",
+            {
+                "scope": scope,
+                "source_name": source_name,
+                "triple_count": len(extraction_result.triples),
+            },
         )
-        
         return recommendation, extraction_result
     
     def analyze_extension(

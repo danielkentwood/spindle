@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 from spindle.ingestion.service import build_config, run_ingestion
+from spindle.observability import attach_persistent_observer, get_event_recorder
+from spindle.observability.storage import EventLogStore
+
+RECORDER = get_event_recorder("ingestion.cli")
 
 
 def _expand_paths(inputs: Iterable[str], recursive: bool) -> Iterator[Path]:
@@ -64,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable SQLite catalog persistence",
     )
+    parser.add_argument(
+        "--event-log",
+        default=None,
+        help="SQLAlchemy database URL for persisting service events",
+    )
     return parser
 
 
@@ -80,8 +89,41 @@ def main(argv: list[str] | None = None) -> int:
         catalog_url=catalog_url,
         vector_store_uri=vector_store,
     )
-
-    result = run_ingestion(_expand_paths(args.inputs, args.recursive), config)
+    detach_observer = None
+    if args.event_log:
+        store = EventLogStore(args.event_log)
+        detach_observer = attach_persistent_observer(get_event_recorder(), store)
+    RECORDER.record(
+        name="run.start",
+        payload={
+            "input_count": len(args.inputs),
+            "recursive": args.recursive,
+            "catalog_url": catalog_url,
+            "vector_store": vector_store,
+        },
+    )
+    try:
+        result = run_ingestion(_expand_paths(args.inputs, args.recursive), config)
+    except Exception as exc:
+        RECORDER.record(
+            name="run.error",
+            payload={
+                "input_count": len(args.inputs),
+                "error": str(exc),
+            },
+        )
+        raise
+    finally:
+        if detach_observer:
+            detach_observer()
+    RECORDER.record(
+        name="run.complete",
+        payload={
+            "processed_documents": result.metrics.processed_documents,
+            "processed_chunks": result.metrics.processed_chunks,
+            "error_count": len(result.metrics.errors),
+        },
+    )
 
     print(
         f"Ingested {result.metrics.processed_documents} documents "

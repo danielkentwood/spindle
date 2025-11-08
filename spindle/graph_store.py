@@ -14,13 +14,13 @@ Key Features:
 - Seamless Triple import/export
 """
 
-import os
 import json
+import os
 import shutil
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import kuzu
@@ -39,6 +39,14 @@ try:
 except ImportError:
     VectorStore = None
     _VECTOR_STORE_AVAILABLE = False
+
+from spindle.observability import get_event_recorder
+
+GRAPH_STORE_RECORDER = get_event_recorder("graph_store")
+
+
+def _record_graph_event(name: str, payload: Dict[str, Any]) -> None:
+    GRAPH_STORE_RECORDER.record(name=name, payload=payload)
 
 
 class GraphStore:
@@ -91,6 +99,22 @@ class GraphStore:
         
         # Initialize database and schema
         self._initialize_database()
+
+        self._emit_event(
+            "init.complete",
+            {
+                "db_path": self.db_path,
+                "vector_store_enabled": self.vector_store is not None,
+            },
+        )
+
+    def _emit_event(self, name: str, payload: Optional[Dict[str, Any]] = None) -> None:
+        event_payload: Dict[str, Any] = {
+            "db_path": self.db_path,
+        }
+        if payload:
+            event_payload.update(payload)
+        _record_graph_event(name, event_payload)
     
     def _resolve_graph_path(self, db_path: str) -> str:
         """
@@ -139,12 +163,23 @@ class GraphStore:
     
     def _initialize_database(self):
         """Initialize Kùzu database and create schema if needed."""
-        # Create database
-        self.db = kuzu.Database(self.db_path)
-        self.conn = kuzu.Connection(self.db)
-        
-        # Create schema (if tables don't exist, they'll be created)
-        self._create_schema()
+        self._emit_event("database.initialize.start", {})
+        try:
+            # Create database
+            self.db = kuzu.Database(self.db_path)
+            self.conn = kuzu.Connection(self.db)
+
+            # Create schema (if tables don't exist, they'll be created)
+            self._create_schema()
+        except Exception as exc:
+            self._emit_event(
+                "database.initialize.error",
+                {
+                    "error": str(exc),
+                },
+            )
+            raise
+        self._emit_event("database.initialize.complete", {})
     
     def _create_schema(self):
         """Create node and relationship tables with proper schema."""
@@ -213,6 +248,7 @@ class GraphStore:
         This removes the database file and its parent directory (if empty).
         WARNING: This operation is irreversible!
         """
+        self._emit_event("delete_graph.start", {})
         # Close connection
         if self.conn:
             self.conn = None
@@ -234,6 +270,7 @@ class GraphStore:
             except OSError:
                 # Directory not empty or other error, that's fine
                 pass
+        self._emit_event("delete_graph.complete", {})
     
     # ========== Node Operations ==========
     
@@ -981,10 +1018,34 @@ class GraphStore:
         Returns:
             Number of triples successfully added
         """
+        self._emit_event(
+            "add_triples.start",
+            {
+                "requested": len(triples),
+            },
+        )
         count = 0
-        for triple in triples:
-            if self.add_edge_from_triple(triple):
-                count += 1
+        try:
+            for triple in triples:
+                if self.add_edge_from_triple(triple):
+                    count += 1
+        except Exception as exc:
+            self._emit_event(
+                "add_triples.error",
+                {
+                    "requested": len(triples),
+                    "added": count,
+                    "error": str(exc),
+                },
+            )
+            raise
+        self._emit_event(
+            "add_triples.complete",
+            {
+                "requested": len(triples),
+                "added": count,
+            },
+        )
         return count
     
     def get_triples(self) -> List[Triple]:
@@ -1092,6 +1153,15 @@ class GraphStore:
         Returns:
             List of matching edge dictionaries with nested evidence structure
         """
+        self._emit_event(
+            "query_by_pattern.start",
+            {
+                "subject": subject,
+                "predicate": predicate,
+                "object": obj,
+            },
+        )
+
         # Convert parameters to uppercase if provided
         if subject is not None:
             subject = subject.upper()
@@ -1127,7 +1197,7 @@ class GraphStore:
         try:
             result = self.conn.execute(query, parameters=params)
             rows = result.get_as_df()
-            
+
             edges = []
             for _, row in rows.iterrows():
                 edges.append({
@@ -1139,10 +1209,28 @@ class GraphStore:
                     "id": row.get("r.id") if "r.id" in row else None,
                     "vector_index": row.get("r.vector_index") if "r.vector_index" in row else None
                 })
-            
-            return edges
         except Exception as e:
+            self._emit_event(
+                "query_by_pattern.error",
+                {
+                    "subject": subject,
+                    "predicate": predicate,
+                    "object": obj,
+                    "error": str(e),
+                },
+            )
             return []
+
+        self._emit_event(
+            "query_by_pattern.complete",
+            {
+                "subject": subject,
+                "predicate": predicate,
+                "object": obj,
+                "result_count": len(edges),
+            },
+        )
+        return edges
     
     def query_by_source(self, source_name: str) -> List[Dict[str, Any]]:
         """

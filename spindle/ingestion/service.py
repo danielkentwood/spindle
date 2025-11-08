@@ -5,7 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from spindle.ingestion.observers import PerformanceTracker, logging_observer
+from spindle.ingestion.observers import (
+    PerformanceTracker,
+    logging_observer,
+    observability_observer,
+)
 from spindle.ingestion.pipeline import build_ingestion_pipeline
 from spindle.ingestion.storage import create_storage_backends
 from spindle.ingestion.templates import (
@@ -15,6 +19,9 @@ from spindle.ingestion.templates import (
     merge_template_sequences,
 )
 from spindle.ingestion.types import IngestionConfig, IngestionResult
+from spindle.observability import get_event_recorder
+
+RECORDER = get_event_recorder("ingestion.service")
 
 
 def build_config(
@@ -38,14 +45,42 @@ def run_ingestion(paths: Iterable[Path], config: IngestionConfig) -> IngestionRe
     registry = TemplateRegistry(config.template_specs)
     catalog, vector = create_storage_backends(config)
     tracker = PerformanceTracker()
+    resolved_paths = tuple(Path(p).resolve() for p in paths)
+    RECORDER.record(
+        name="run.start",
+        payload={
+            "path_count": len(resolved_paths),
+            "catalog_url": config.catalog_url,
+            "vector_store_uri": config.vector_store_uri,
+        },
+    )
     pipeline = build_ingestion_pipeline(
         config=config,
         registry=registry,
-        observers=[logging_observer, tracker],
+        observers=[logging_observer, tracker, observability_observer],
         document_catalog=catalog,
         vector_store=vector,
     )
-    result = pipeline.ingest(tuple(Path(p).resolve() for p in paths))
+    try:
+        result = pipeline.ingest(resolved_paths)
+    except Exception as exc:
+        RECORDER.record(
+            name="run.error",
+            payload={
+                "error": str(exc),
+                "path_count": len(resolved_paths),
+            },
+        )
+        raise
     result.metrics.extra.setdefault("stage_summary", tracker.summary())
+    RECORDER.record(
+        name="run.complete",
+        payload={
+            "path_count": len(resolved_paths),
+            "processed_documents": result.metrics.processed_documents,
+            "processed_chunks": result.metrics.processed_chunks,
+            "errors": list(result.metrics.errors),
+        },
+    )
     return result
 

@@ -13,6 +13,7 @@ LLM-powered ontology-first extraction of knowledge graph triples from text.
 - Extracts triples with source metadata, evidence spans, and timestamps
 - Keeps entities consistent across documents and merges duplicate facts
 - Persists results in an embedded Kùzu-backed `GraphStore`
+- Emits structured service events across ingestion, extraction, and storage with optional persistence (see `docs/OBSERVABILITY.md`)
 - Ships with example workflows and a test suite covering API and persistence layers
 
 ## Quick Start
@@ -54,7 +55,7 @@ for triple in result.triples:
 spindle/
 ├── spindle/          # Package code (extractor, GraphStore, BAML client)
 ├── demos/            # Example scripts covering core workflows
-├── docs/             # Additional guides (graph store, testing, uv setup)
+├── docs/             # Additional guides (graph store, observability, testing, uv setup)
 ├── tests/            # Unit + integration tests
 └── README.md
 ```
