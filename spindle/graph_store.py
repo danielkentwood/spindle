@@ -31,6 +31,7 @@ except ImportError:
     )
 
 from spindle.baml_client.types import Triple, Entity, SourceMetadata, CharacterSpan, AttributeValue
+from spindle.configuration import SpindleConfig
 
 # Import VectorStore with optional dependency handling
 try:
@@ -40,6 +41,7 @@ except ImportError:
     VectorStore = None
     _VECTOR_STORE_AVAILABLE = False
 
+from spindle.configuration import SpindleConfig
 from spindle.observability import get_event_recorder
 
 GRAPH_STORE_RECORDER = get_event_recorder("graph_store")
@@ -79,7 +81,13 @@ class GraphStore:
         ...     store.add_triples(triples)
     """
     
-    def __init__(self, db_path: str = "spindle_graph", vector_store: Optional['VectorStore'] = None):
+    def __init__(
+        self,
+        db_path: str = "spindle_graph",
+        vector_store: Optional['VectorStore'] = None,
+        *,
+        config: Optional[SpindleConfig] = None,
+    ):
         """
         Initialize GraphStore with Kùzu database.
         
@@ -90,7 +98,16 @@ class GraphStore:
             vector_store: Optional VectorStore instance for storing embeddings.
                          Required for compute_graph_embeddings() method.
                          Embeddings are computed on-demand, not automatically.
+            config: Optional SpindleConfig that supplies default storage paths.
+                    When provided and ``db_path`` is left as default, the
+                    database will be persisted to ``config.storage.graph_store_path``.
         """
+        self._spindle_config = config
+        if self._spindle_config:
+            self._spindle_config.storage.ensure_directories()
+            if db_path == "spindle_graph":
+                db_path = str(self._spindle_config.storage.graph_store_path)
+
         # Convert to absolute path in /graphs directory structure
         self.db_path = self._resolve_graph_path(db_path)
         self.db = None

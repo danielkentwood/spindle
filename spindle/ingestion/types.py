@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
+from spindle.configuration import SpindleConfig
+
 
 Metadata = Dict[str, Any]
 
@@ -45,6 +47,7 @@ class IngestionConfig:
     vector_store_uri: Optional[str] = None
     cache_dir: Optional[Path] = None
     allow_network_requests: bool = False
+    spindle_config: Optional[SpindleConfig] = None
 
 
 @dataclass(slots=True)

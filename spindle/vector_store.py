@@ -16,6 +16,7 @@ Key Features:
 from abc import ABC, abstractmethod
 import os
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import numpy as np
@@ -74,6 +75,7 @@ except ImportError:
 if TYPE_CHECKING:
     from spindle.graph_store import GraphStore
 
+from spindle.configuration import SpindleConfig
 from spindle.observability import get_event_recorder
 
 VECTOR_STORE_RECORDER = get_event_recorder("vector_store")
@@ -437,7 +439,8 @@ class ChromaVectorStore(VectorStore):
         persist_directory: Optional[str] = None,
         embedding_model: Optional[str] = None,
         embedding_function: Optional[Callable[[str], List[float]]] = None,
-        use_api_fallback: bool = True
+        use_api_fallback: bool = True,
+        config: Optional[SpindleConfig] = None,
     ):
         """
         Initialize ChromaVectorStore.
@@ -448,17 +451,31 @@ class ChromaVectorStore(VectorStore):
             embedding_model: Name of sentence-transformers model (default: "all-MiniLM-L6-v2")
             embedding_function: Optional custom embedding function
             use_api_fallback: If True, try API fallback when sentence-transformers unavailable
+            config: Optional SpindleConfig providing default storage paths
         
         Raises:
             ImportError: If chromadb is not installed
             ValueError: If no embedding method is available
         """
-        self._persist_directory = persist_directory
+        self._spindle_config = config
+        self._persist_directory = (
+            Path(persist_directory).expanduser()
+            if persist_directory is not None
+            else None
+        )
+        if self._spindle_config:
+            self._spindle_config.storage.ensure_directories()
+            if self._persist_directory is None:
+                self._persist_directory = self._spindle_config.storage.vector_store_dir
+
+        persist_directory_str = (
+            str(self._persist_directory) if self._persist_directory is not None else None
+        )
         _record_vector_event(
             "chroma.init.start",
             {
                 "collection_name": collection_name,
-                "persist_directory": persist_directory,
+                "persist_directory": persist_directory_str,
                 "embedding_model": embedding_model,
                 "embedding_function_provided": embedding_function is not None,
                 "use_api_fallback": use_api_fallback,
@@ -508,8 +525,8 @@ class ChromaVectorStore(VectorStore):
                 )
 
             # Initialize Chroma client
-            if persist_directory:
-                self.client = chromadb.PersistentClient(path=persist_directory)
+            if persist_directory_str:
+                self.client = chromadb.PersistentClient(path=persist_directory_str)
             else:
                 self.client = chromadb.Client()
 
@@ -532,7 +549,7 @@ class ChromaVectorStore(VectorStore):
             "chroma.init.complete",
             {
                 "collection_name": collection_name,
-                "persist_directory": persist_directory,
+                "persist_directory": persist_directory_str,
             },
         )
 

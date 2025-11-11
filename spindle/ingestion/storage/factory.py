@@ -17,6 +17,9 @@ def create_storage_backends(
     catalog: DocumentCatalog | None = None
     vector: ChromaVectorStoreAdapter | None = None
 
+    if config.spindle_config:
+        config.spindle_config.storage.ensure_directories()
+
     if config.catalog_url:
         catalog = DocumentCatalog(config.catalog_url)
 
