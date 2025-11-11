@@ -19,6 +19,8 @@ def create_storage_backends(
 
     if config.spindle_config:
         config.spindle_config.storage.ensure_directories()
+    if config.cache_dir:
+        config.cache_dir.mkdir(parents=True, exist_ok=True)
 
     if config.catalog_url:
         catalog = DocumentCatalog(config.catalog_url)

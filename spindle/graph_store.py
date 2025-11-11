@@ -31,7 +31,7 @@ except ImportError:
     )
 
 from spindle.baml_client.types import Triple, Entity, SourceMetadata, CharacterSpan, AttributeValue
-from spindle.configuration import SpindleConfig
+from spindle.configuration import GraphStoreSettings, SpindleConfig
 
 # Import VectorStore with optional dependency handling
 try:
@@ -41,7 +41,6 @@ except ImportError:
     VectorStore = None
     _VECTOR_STORE_AVAILABLE = False
 
-from spindle.configuration import SpindleConfig
 from spindle.observability import get_event_recorder
 
 GRAPH_STORE_RECORDER = get_event_recorder("graph_store")
@@ -103,10 +102,21 @@ class GraphStore:
                     database will be persisted to ``config.storage.graph_store_path``.
         """
         self._spindle_config = config
+        graph_settings = GraphStoreSettings()
         if self._spindle_config:
             self._spindle_config.storage.ensure_directories()
+            graph_settings = self._spindle_config.graph_store
+            default_path = (
+                graph_settings.db_path_override
+                or self._spindle_config.storage.graph_store_path
+            )
             if db_path == "spindle_graph":
-                db_path = str(self._spindle_config.storage.graph_store_path)
+                db_path = str(default_path)
+            elif graph_settings.db_path_override is not None:
+                db_path = str(graph_settings.db_path_override)
+            if graph_settings.snapshot_dir and graph_settings.auto_snapshot:
+                graph_settings.snapshot_dir.mkdir(parents=True, exist_ok=True)
+        self._graph_settings = graph_settings
 
         # Convert to absolute path in /graphs directory structure
         self.db_path = self._resolve_graph_path(db_path)

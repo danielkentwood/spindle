@@ -29,7 +29,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import textwrap
 from types import MappingProxyType
-from typing import Any, Iterable, Mapping, MutableMapping, Sequence
+from typing import Any, Iterable, Mapping, MutableMapping, Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle guard
+    from spindle.llm_config import LLMConfig
 
 
 DEFAULT_STORAGE_ROOT_NAME = "spindle_storage"
@@ -98,12 +101,68 @@ class TemplateSettings:
 
 
 @dataclass(slots=True)
+class ObservabilitySettings:
+    """Global observability and logging configuration."""
+
+    event_log_url: str | None = None
+    log_level: str = "INFO"
+    enable_pipeline_events: bool = True
+
+
+@dataclass(slots=True)
+class IngestionSettings:
+    """Defaults that influence ingestion runs."""
+
+    catalog_url: str | None = None
+    vector_store_uri: str | None = None
+    cache_dir: Path | None = None
+    allow_network_requests: bool = False
+    recursive: bool = False
+
+    def __post_init__(self) -> None:
+        if self.cache_dir is not None:
+            self.cache_dir = _ensure_path(self.cache_dir)
+
+
+@dataclass(slots=True)
+class VectorStoreSettings:
+    """Settings that influence vector store creation."""
+
+    collection_name: str = "spindle_embeddings"
+    embedding_model: str | None = None
+    use_api_fallback: bool = True
+    prefer_local_embeddings: bool = True
+
+
+@dataclass(slots=True)
+class GraphStoreSettings:
+    """Defaults for graph store persistence."""
+
+    db_path_override: Path | None = None
+    auto_snapshot: bool = False
+    snapshot_dir: Path | None = None
+    embedding_dimensions: int = 128
+    auto_compute_embeddings: bool = False
+
+    def __post_init__(self) -> None:
+        if self.db_path_override is not None:
+            self.db_path_override = _ensure_path(self.db_path_override)
+        if self.snapshot_dir is not None:
+            self.snapshot_dir = _ensure_path(self.snapshot_dir)
+
+
+@dataclass(slots=True)
 class SpindleConfig:
     """Root configuration structure for Spindle storage and templates."""
 
     storage: StoragePaths
     templates: TemplateSettings = field(default_factory=TemplateSettings)
     extras: Mapping[str, Any] = field(default_factory=dict)
+    observability: ObservabilitySettings = field(default_factory=ObservabilitySettings)
+    ingestion: IngestionSettings = field(default_factory=IngestionSettings)
+    vector_store: VectorStoreSettings = field(default_factory=VectorStoreSettings)
+    graph_store: GraphStoreSettings = field(default_factory=GraphStoreSettings)
+    llm: "LLMConfig | None" = None
 
     @classmethod
     def with_root(
@@ -112,6 +171,11 @@ class SpindleConfig:
         *,
         template_paths: Sequence[Path | str] | None = None,
         extras: Mapping[str, Any] | None = None,
+        observability: ObservabilitySettings | None = None,
+        ingestion: IngestionSettings | None = None,
+        vector_store: VectorStoreSettings | None = None,
+        graph_store: GraphStoreSettings | None = None,
+        llm: "LLMConfig | None" = None,
     ) -> "SpindleConfig":
         root_path = _ensure_path(root)
         storage = StoragePaths(
@@ -131,7 +195,16 @@ class SpindleConfig:
             resolved_extras = MappingProxyType(dict(extras))
         else:
             resolved_extras = MappingProxyType({})
-        return cls(storage=storage, templates=templates, extras=resolved_extras)
+        return cls(
+            storage=storage,
+            templates=templates,
+            extras=resolved_extras,
+            observability=observability or ObservabilitySettings(),
+            ingestion=ingestion or IngestionSettings(),
+            vector_store=vector_store or VectorStoreSettings(),
+            graph_store=graph_store or GraphStoreSettings(),
+            llm=llm,
+        )
 
 
 def default_config(root: Path | None = None) -> SpindleConfig:
@@ -186,7 +259,14 @@ def render_default_config(root: Path | None = None) -> str:
         from pathlib import Path
         from typing import Any
 
-        from spindle.configuration import SpindleConfig
+        from spindle.configuration import (
+            GraphStoreSettings,
+            IngestionSettings,
+            ObservabilitySettings,
+            SpindleConfig,
+            VectorStoreSettings,
+        )
+        # Optional: from spindle.llm_config import LLMConfig
 
 
         storage_root = Path({config.storage.root!r})
@@ -198,10 +278,47 @@ def render_default_config(root: Path | None = None) -> str:
         {template_block}
         )
 
+        observability = ObservabilitySettings(
+            event_log_url=None,
+            log_level="INFO",
+            enable_pipeline_events=True,
+        )
+
+        ingestion = IngestionSettings(
+            catalog_url=None,
+            vector_store_uri=None,
+            cache_dir=None,
+            allow_network_requests=False,
+            recursive=False,
+        )
+
+        vector_store = VectorStoreSettings(
+            collection_name="spindle_embeddings",
+            embedding_model=None,
+            use_api_fallback=True,
+            prefer_local_embeddings=True,
+        )
+
+        graph_store = GraphStoreSettings(
+            db_path_override=None,
+            auto_snapshot=False,
+            snapshot_dir=None,
+            embedding_dimensions=128,
+            auto_compute_embeddings=False,
+        )
+
+        # Example: llm = LLMConfig()
+        llm = None
+
         SPINDLE_CONFIG = SpindleConfig.with_root(
             storage_root,
             template_paths=template_paths,
             extras=extras,
+            observability=observability,
+            ingestion=ingestion,
+            vector_store=vector_store,
+            graph_store=graph_store,
+            llm=llm,
         )
         """
     )
@@ -242,9 +359,13 @@ __all__ = [
     "CONFIG_SYMBOL_NAME",
     "ConfigurationError",
     "DEFAULT_STORAGE_ROOT_NAME",
+    "GraphStoreSettings",
+    "IngestionSettings",
+    "ObservabilitySettings",
     "SpindleConfig",
     "StoragePaths",
     "TemplateSettings",
+    "VectorStoreSettings",
     "default_config",
     "load_config_from_file",
     "render_default_config",

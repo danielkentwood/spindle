@@ -24,7 +24,11 @@ recorder.record("stage.start", {"step": "load"})
 
 ## Persistence and replay
 
-The `EventLogStore` persists events to the existing SQLite persistence layer:
+The `EventLogStore` persists events to the existing SQLite persistence layer.
+You can wire this up declaratively by setting
+`SpindleConfig.observability.event_log_url`; the ingestion CLI and service will
+attach persistent observers automatically when that URL is present. Manual
+attachment is still available for ad-hoc runs:
 
 ```python
 from spindle.observability import attach_persistent_observer, get_event_recorder

@@ -72,6 +72,7 @@ Repository = "https://github.com/danielkentwood/spindle"
 
 [project.scripts]
 spindle-ingest = "spindle.ingestion.cli:main"
+spindle-dashboard = "spindle.dashboard.app:main"
 
 [tool.setuptools]
 packages = [

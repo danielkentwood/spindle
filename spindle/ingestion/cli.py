@@ -148,9 +148,24 @@ def _run_ingest(argv: list[str]) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    vector_store = None if args.no_vector_store else args.vector_store
-    catalog_url = None if args.no_catalog else args.catalog_url
     spindle_cfg = _load_spindle_config(args.config)
+    ingestion_settings = spindle_cfg.ingestion
+    observability_settings = spindle_cfg.observability
+
+    effective_recursive = args.recursive or ingestion_settings.recursive
+
+    vector_store = None
+    if not args.no_vector_store:
+        if args.vector_store:
+            vector_store = str(Path(args.vector_store).expanduser())
+        else:
+            vector_store = ingestion_settings.vector_store_uri
+
+    catalog_url = None
+    if not args.no_catalog:
+        catalog_url = args.catalog_url or ingestion_settings.catalog_url
+
+    event_log_url = args.event_log or observability_settings.event_log_url
     template_paths = (
         [Path(p).expanduser() for p in args.templates] if args.templates else None
     )
@@ -159,23 +174,25 @@ def _run_ingest(argv: list[str]) -> int:
         template_paths=template_paths,
         catalog_url=catalog_url,
         vector_store_uri=vector_store,
+        cache_dir=ingestion_settings.cache_dir,
+        allow_network_requests=ingestion_settings.allow_network_requests,
         spindle_config=spindle_cfg,
     )
     detach_observer = None
-    if args.event_log:
-        store = EventLogStore(args.event_log)
+    if event_log_url:
+        store = EventLogStore(event_log_url)
         detach_observer = attach_persistent_observer(get_event_recorder(), store)
     RECORDER.record(
         name="run.start",
         payload={
             "input_count": len(args.inputs),
-            "recursive": args.recursive,
+            "recursive": effective_recursive,
             "catalog_url": catalog_url,
             "vector_store": vector_store,
         },
     )
     try:
-        result = run_ingestion(_expand_paths(args.inputs, args.recursive), config)
+        result = run_ingestion(_expand_paths(args.inputs, effective_recursive), config)
     except Exception as exc:
         RECORDER.record(
             name="run.error",

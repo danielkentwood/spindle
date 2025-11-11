@@ -463,10 +463,24 @@ class ChromaVectorStore(VectorStore):
             if persist_directory is not None
             else None
         )
+        prefer_local_embeddings = True
         if self._spindle_config:
             self._spindle_config.storage.ensure_directories()
+            vector_settings = self._spindle_config.vector_store
+            prefer_local_embeddings = vector_settings.prefer_local_embeddings
             if self._persist_directory is None:
                 self._persist_directory = self._spindle_config.storage.vector_store_dir
+            if (
+                collection_name == "spindle_embeddings"
+                and vector_settings.collection_name
+            ):
+                collection_name = vector_settings.collection_name
+            if embedding_model is None:
+                embedding_model = vector_settings.embedding_model
+            if not vector_settings.use_api_fallback:
+                use_api_fallback = False
+        else:
+            vector_settings = None
 
         persist_directory_str = (
             str(self._persist_directory) if self._persist_directory is not None else None
@@ -495,6 +509,8 @@ class ChromaVectorStore(VectorStore):
             )
             raise err
 
+        self._vector_settings = vector_settings
+
         try:
             # Initialize embedding function
             if embedding_function is not None:
@@ -506,7 +522,9 @@ class ChromaVectorStore(VectorStore):
                 self._embedding_function = lambda text: self._embedding_model.encode(text).tolist()
             elif use_api_fallback:
                 # Try to get API fallback
-                api_func = get_default_embedding_function(prefer_local=False)
+                api_func = get_default_embedding_function(
+                    prefer_local=prefer_local_embeddings
+                )
                 if api_func:
                     self._embedding_function = api_func
                 else:

@@ -50,6 +50,51 @@ spindle/
 > to generate `config.py` and point Spindle at a custom root. See
 > `docs/CONFIGURATION.md` for details.
 
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+    subgraph Services
+        ingestion[Ingestion CLI & Pipeline]
+        extractor[Extractor & Ontology Recommender]
+        entity[Entity Resolution]
+        vectorSvc[Vector Store API]
+        obs[Observability Recorder]
+        analyticsSvc[Ingestion Analytics]
+    end
+
+    subgraph Storage Solutions
+        graphDB[(GraphStore<br/>Kùzu DB)]
+        vectorDB[(Vector Store<br/>Chroma / Embeddings)]
+        catalogDB[(Document Catalog<br/>SQLite)]
+        docCache[(Document Cache Directory)]
+        eventLog[(Event Log Store<br/>SQLite)]
+        analyticsDB[(Analytics DB<br/>SQLite)]
+    end
+
+    ingestion --> extractor
+    ingestion --> analyticsSvc
+    ingestion --> obs
+    ingestion --> docCache
+    ingestion --> catalogDB
+
+    extractor --> entity
+    extractor --> graphDB
+    extractor --> vectorSvc
+    extractor --> obs
+
+    entity --> extractor
+    entity --> obs
+
+    vectorSvc --> vectorDB
+    vectorSvc --> obs
+
+    obs --> eventLog
+    obs --> analyticsDB
+
+    analyticsSvc --> analyticsDB
+```
+
 ## Module Organization
 
 ### `spindle/` Package
