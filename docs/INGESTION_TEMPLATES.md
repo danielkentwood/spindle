@@ -61,7 +61,9 @@ Two templates are bundled:
 
 You can extend or replace them by placing new template files inside a directory
 and pointing `spindle` to it using `template_search_paths` in your ingestion
-configuration.
+configuration. When you generate a `config.py`, add template directories to
+`SPINDLE_CONFIG.templates.search_paths` so every ingestion run (CLI or API) picks
+them up automatically.
 
 ## Process DAG Extraction
 

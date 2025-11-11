@@ -49,6 +49,13 @@ for triple in result.triples:
 - Use `OntologyRecommender` for explicit recommendations and conservative ontology extension
 - Persist extractions with `GraphStore()`; demos live in `demos/`
 
+### Unified Storage & Configuration
+
+- Scaffold a runtime config (defines storage root, catalog, graph DB, vector store, logs) with `uv run spindle-ingest config init`.
+- Edit the generated `config.py` to relocate storage or add template directories, then pass it to tooling via `--config /path/to/config.py`.
+- Programmatic consumers can load the same file with `from spindle.configuration import load_config_from_file`.
+- See `docs/CONFIGURATION.md` for the full schema and usage patterns.
+
 ## Project Layout
 
 ```

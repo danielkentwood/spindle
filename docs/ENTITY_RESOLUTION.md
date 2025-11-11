@@ -70,15 +70,19 @@ Tech Corp --[SAME_AS]--> TechCorp
 ### Basic Example
 
 ```python
+from spindle.configuration import load_config_from_file
 from spindle import GraphStore, VectorStore, ChromaVectorStore
 from spindle.entity_resolution import EntityResolver, ResolutionConfig
 from spindle.vector_store import get_default_embedding_function
 
 # Setup
-store = GraphStore("my_graph")
+config = load_config_from_file("config.py")
+
+store = GraphStore(config=config)
 vector_store = ChromaVectorStore(
     collection_name="my_embeddings",
-    embedding_function=get_default_embedding_function()
+    embedding_function=get_default_embedding_function(),
+    config=config,
 )
 
 # Configure resolution
@@ -103,6 +107,10 @@ result = resolver.resolve_entities(
 print(f"Created {result.same_as_edges_created} SAME_AS edges")
 print(f"Found {result.duplicate_clusters} duplicate clusters")
 ```
+
+> Tip: The unified `SpindleConfig` keeps the graph database, vector store, and
+> document catalog under a single root. See `docs/CONFIGURATION.md` for
+> details on customizing paths before running resolution jobs.
 
 ### Configuration Options
 

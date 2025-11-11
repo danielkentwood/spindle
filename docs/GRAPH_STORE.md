@@ -229,40 +229,31 @@ with GraphStore() as store:
 
 ## Configuration
 
-GraphStore automatically organizes all graph databases in a `/graphs` directory at the project root, with each graph in its own subdirectory.
+GraphStore participates in the unified storage framework driven by
+`SpindleConfig`. When you pass a config object, the default database path comes
+from `config.storage.graph_store_path` (created automatically by
+`StoragePaths.ensure_directories()` or the `spindle-ingest config init`
+generator).
 
-### Directory Structure
-
-All graphs are stored in the following structure:
-
-```
-/graphs/
-  ├── my_graph/
-  │   └── data
-  ├── test_db/
-  │   └── data
-  └── spindle_graph/
-      └── data
-```
-
-### Constructor Parameter
-
-Provide a graph name (not a full path):
+### Constructor Parameters
 
 ```python
-# Use default - creates /graphs/spindle_graph/
-store = GraphStore()
+from spindle.configuration import load_config_from_file
+from spindle import GraphStore
 
-# Specify custom name - creates /graphs/custom_graph/
-store = GraphStore(db_path="custom_graph")
+config = load_config_from_file("config.py")
 
-# .db extension is automatically removed
-store = GraphStore(db_path="custom_graph.db")  # Still creates /graphs/custom_graph/
+# Uses config.storage.graph_store_path
+store = GraphStore(config=config)
+
+# Override with an explicit path (absolute or relative)
+store = GraphStore(db_path="/tmp/my_graph.db", config=config)
 ```
 
-### Default Behavior
-
-If neither environment variable nor parameter is provided, defaults to `/graphs/spindle_graph/`.
+If you omit `config=`, GraphStore still accepts string paths. Relative names
+(`"custom_graph"`) resolve into a `graphs/` directory beneath the package root
+for backward compatibility, but new deployments should rely on
+`SpindleConfig.with_root(...)` so all storage lives under a single directory.
 
 ## Schema
 
@@ -587,11 +578,14 @@ This is particularly valuable for knowledge graphs where the structure contains 
 Embeddings are computed on-demand using the `compute_graph_embeddings()` method. You must first build your graph, then compute embeddings:
 
 ```python
+from spindle.configuration import load_config_from_file
 from spindle import GraphStore, ChromaVectorStore
 
-# Create graph store and vector store
-store = GraphStore(db_path="my_graph")
-vector_store = ChromaVectorStore(collection_name="my_embeddings")
+config = load_config_from_file("config.py")
+
+# Create graph store and vector store using unified storage paths
+store = GraphStore(config=config)
+vector_store = ChromaVectorStore(collection_name="my_embeddings", config=config)
 
 # Build your graph first
 store.add_node("Alice", "Person")

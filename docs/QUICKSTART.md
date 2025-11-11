@@ -40,7 +40,27 @@ EOF
 
 Keep the file out of version control (already covered by `.gitignore`).
 
-## 3. Run a Built-in Demo (≈2 min)
+## 3. Generate Unified Storage Config (≈1 min)
+
+Spindle persists its catalog, graph database, vector store, logs, and template
+artifacts relative to a single storage root. Scaffold the default layout with:
+
+```bash
+uv run spindle-ingest config init
+```
+
+This writes `config.py` in the current directory and creates the storage tree
+under `./spindle_storage/`. Customize the root or destination at any time:
+
+```bash
+uv run spindle-ingest config init my-config.py --root ~/projects/spindle_data --force
+```
+
+The `config.py` exports `SPINDLE_CONFIG`, which you can load with
+`from spindle.configuration import load_config_from_file`. See
+`docs/CONFIGURATION.md` for the full schema.
+
+## 4. Run a Built-in Demo (≈2 min)
 
 ```bash
 # Automatic ontology recommendation + extraction on the first call
@@ -62,7 +82,7 @@ Additional demos:
 - `uv run python demos/example_scope_comparison.py` — compare scope levels side-by-side
 - `uv run python demos/example_ontology_extension.py` — conservative ontology extension flow
 
-## 4. Create Your Own Script (≈3 min)
+## 5. Create Your Own Script (≈3 min)
 
 ```python
 from spindle import SpindleExtractor, create_ontology
@@ -125,7 +145,7 @@ uv run python my_example.py
 - Pass `existing_triples=result.triples` on subsequent extracts to maintain entity consistency across sources.
 - Use helpers such as `filter_triples_by_source`, `parse_extraction_datetime`, and `triples_to_dict` (all exported from `spindle`).
 
-## 5. Explore Graph Persistence & Embeddings
+## 6. Explore Graph Persistence & Embeddings
 
 - Read `docs/GRAPH_STORE.md` for storing triples in the embedded Kùzu database (`GraphStore`).
 - Check `spindle/vector_store.py` and the `embeddings`/`embeddings-api` extras for semantic search workflows.
