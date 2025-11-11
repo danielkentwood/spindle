@@ -379,6 +379,15 @@ class VectorStore(ABC):
             True if deleted, False if not found
         """
         pass
+
+    def compute_embedding(self, text: str) -> List[float]:
+        """
+        Compute an embedding vector for the provided text without storing it.
+
+        Implementations should override this if they support direct embedding
+        generation. By default this method is not implemented.
+        """
+        raise NotImplementedError("VectorStore implementations must define compute_embedding()")
     
     @abstractmethod
     def close(self):
@@ -547,6 +556,16 @@ class ChromaVectorStore(VectorStore):
             List of floats representing the embedding vector
         """
         return self._embedding_function(text)
+
+    # Public embedding helper for resolution workflows
+    def compute_embedding(self, text: str) -> List[float]:
+        """
+        Compute an embedding for the given text without persisting it.
+
+        Returns:
+            List[float]: embedding vector
+        """
+        return self._generate_embedding(text)
     
     def add(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """

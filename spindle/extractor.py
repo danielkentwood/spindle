@@ -38,6 +38,20 @@ from spindle.baml_client.types import (
 )
 from spindle.observability import get_event_recorder
 
+try:
+    from spindle.llm_config import (
+        LLMConfig,
+        detect_available_auth,
+        create_baml_env_overrides,
+    )
+
+    LLM_CONFIG_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency
+    LLMConfig = None
+    detect_available_auth = None
+    create_baml_env_overrides = None
+    LLM_CONFIG_AVAILABLE = False
+
 
 EXTRACTOR_RECORDER = get_event_recorder("extractor")
 ONTOLOGY_RECORDER = get_event_recorder("ontology.recommender")
@@ -517,6 +531,9 @@ class SpindleExtractor:
     Each extracted triple includes source metadata, supporting text spans,
     and an extraction datetime (set automatically in post-processing).
     
+    Supports multiple authentication methods for LLM access via optional LLM
+    configuration or automatic detection of available credentials.
+
     If no ontology is provided at initialization, the extractor will
     automatically recommend one based on the text when extract() is called.
     """
@@ -524,7 +541,9 @@ class SpindleExtractor:
     def __init__(
         self,
         ontology: Optional[Ontology] = None,
-        ontology_scope: str = "balanced"
+        ontology_scope: str = "balanced",
+        llm_config: Optional["LLMConfig"] = None,
+        auto_detect_auth: bool = True,
     ):
         """
         Initialize the extractor with an ontology.
@@ -538,10 +557,60 @@ class SpindleExtractor:
                           - "balanced": Standard analysis (6-12 entity types, 8-15 relations)
                           - "comprehensive": Detailed ontology (10-20 entity types, 12-25 relations)
                           Only used if ontology is None.
+            llm_config: Optional LLMConfig providing explicit authentication details
+                for LLM access. If None and auto_detect_auth is True, credentials
+                will be auto-detected from the environment.
+            auto_detect_auth: Whether to auto-detect authentication credentials when
+                llm_config is not provided. Defaults to True.
         """
         self.ontology = ontology
         self.ontology_scope = ontology_scope
-        self._ontology_recommender = None if ontology is not None else OntologyRecommender()
+        self.llm_config = llm_config
+        self.auto_detect_auth = auto_detect_auth
+        self._baml_env_overrides: Optional[Dict[str, str]] = None
+
+        self._configure_baml_client(self.llm_config, self.auto_detect_auth)
+        self._ontology_recommender = (
+            None
+            if ontology is not None
+            else OntologyRecommender(
+                llm_config=self.llm_config,
+                auto_detect_auth=self.auto_detect_auth,
+            )
+        )
+    
+    def _configure_baml_client(
+        self,
+        llm_config: Optional["LLMConfig"],
+        auto_detect_auth: bool,
+    ) -> None:
+        """Configure BAML client environment overrides based on LLM config."""
+        if not LLM_CONFIG_AVAILABLE:
+            self._baml_env_overrides = None
+            return
+
+        config = llm_config
+        if config is None and auto_detect_auth and detect_available_auth is not None:
+            config = detect_available_auth()
+
+        if config is None or create_baml_env_overrides is None:
+            self._baml_env_overrides = None
+            return
+
+        self.llm_config = config
+        self._baml_env_overrides = create_baml_env_overrides(config)
+
+    def _get_baml_client(self):
+        """Return the configured BAML sync client."""
+        if self._baml_env_overrides:
+            return b.with_options(env=self._baml_env_overrides)
+        return b
+
+    def _get_async_baml_client(self):
+        """Return the configured BAML async client."""
+        if self._baml_env_overrides:
+            return async_b.with_options(env=self._baml_env_overrides)
+        return async_b
     
     def extract(
         self,
@@ -601,7 +670,8 @@ class SpindleExtractor:
             )
 
             # Call the BAML extraction function
-            result = b.ExtractTriples(
+            baml_client = self._get_baml_client()
+            result = baml_client.ExtractTriples(
                 text=text,
                 ontology=self.ontology,
                 source_metadata=source_metadata,
@@ -695,7 +765,8 @@ class SpindleExtractor:
             )
 
             # Call the async BAML extraction function
-            result = await async_b.ExtractTriples(
+            async_baml_client = self._get_async_baml_client()
+            result = await async_baml_client.ExtractTriples(
                 text=text,
                 ontology=self.ontology,
                 source_metadata=source_metadata,
@@ -1238,7 +1309,56 @@ class OntologyRecommender:
     
     Uses principle-based ontology design with configurable scope levels
     instead of hard numerical limits.
+
+    Supports optional LLM configuration for authenticated access, with automatic
+    credential detection when explicit configuration is not supplied.
     """
+
+    def __init__(
+        self,
+        llm_config: Optional["LLMConfig"] = None,
+        auto_detect_auth: bool = True,
+    ):
+        """
+        Initialize the ontology recommender with optional LLM configuration.
+
+        Args:
+            llm_config: Optional LLMConfig providing authentication details. If None
+                and auto_detect_auth is True, credentials will be auto-detected.
+            auto_detect_auth: Whether to auto-detect authentication when llm_config
+                is not provided.
+        """
+        self.llm_config = llm_config
+        self.auto_detect_auth = auto_detect_auth
+        self._baml_env_overrides: Optional[Dict[str, str]] = None
+        self._configure_baml_client(self.llm_config, self.auto_detect_auth)
+
+    def _configure_baml_client(
+        self,
+        llm_config: Optional["LLMConfig"],
+        auto_detect_auth: bool,
+    ) -> None:
+        """Configure BAML client environment overrides based on LLM config."""
+        if not LLM_CONFIG_AVAILABLE:
+            self._baml_env_overrides = None
+            return
+
+        config = llm_config
+        if config is None and auto_detect_auth and detect_available_auth is not None:
+            config = detect_available_auth()
+
+        if config is None or create_baml_env_overrides is None:
+            self._baml_env_overrides = None
+            return
+
+        self.llm_config = config
+        self._baml_env_overrides = create_baml_env_overrides(config)
+
+    def _get_baml_client(self):
+        """Return the configured BAML client."""
+        if self._baml_env_overrides:
+            return b.with_options(env=self._baml_env_overrides)
+        return b
     
     def recommend(
         self,
@@ -1297,7 +1417,8 @@ class OntologyRecommender:
             },
         )
         try:
-            result = b.RecommendOntology(
+            client = self._get_baml_client()
+            result = client.RecommendOntology(
                 text=text,
                 scope=scope
             )
@@ -1385,7 +1506,11 @@ class OntologyRecommender:
             )
 
             # Then, use the recommended ontology to extract triples
-            extractor = SpindleExtractor(recommendation.ontology)
+            extractor = SpindleExtractor(
+                recommendation.ontology,
+                llm_config=self.llm_config,
+                auto_detect_auth=self.auto_detect_auth,
+            )
             extraction_result = extractor.extract(
                 text=text,
                 source_name=source_name,
@@ -1462,7 +1587,8 @@ class OntologyRecommender:
             ... else:
             ...     print(f"No extension needed: {extension.reasoning}")
         """
-        result = b.AnalyzeOntologyExtension(
+        client = self._get_baml_client()
+        result = client.AnalyzeOntologyExtension(
             text=text,
             current_ontology=current_ontology,
             scope=scope

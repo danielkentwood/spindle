@@ -83,15 +83,46 @@ client<llm> CustomHaiku {
 //   }
 // }
 
-// Example Vertex AI client (uncomment to use)
-// client<llm> CustomVertex {
-//   provider vertex-ai
-//   options {
-//     model "gemini-2.5-pro"
-//     location "us-central1"
-//     // Uses Google Cloud Application Default Credentials
-//   }
-// }
+// Vertex AI client for Gemini models
+client<llm> CustomGemini {
+  provider vertex-ai
+  options {
+    model "gemini-2.0-flash-exp"
+    location env.GCP_REGION
+    // Uses Google Cloud Application Default Credentials
+    // Set GCP_PROJECT_ID and GCP_REGION in your environment
+  }
+}
+
+// Vertex AI client for Anthropic models via Vertex
+// Notes: BAML may not have native vertex-anthropic provider
+// This uses openai-generic provider to connect to Vertex AI endpoint
+client<llm> VertexSonnet4 {
+  provider openai-generic
+  options {
+    base_url env.VERTEX_ANTHROPIC_BASE_URL
+    model "claude-sonnet-4-20250514"
+    api_key env.VERTEX_ACCESS_TOKEN
+  }
+}
+
+client<llm> VertexOpus4 {
+  provider openai-generic
+  options {
+    base_url env.VERTEX_ANTHROPIC_BASE_URL
+    model "claude-opus-4-20250514"
+    api_key env.VERTEX_ACCESS_TOKEN
+  }
+}
+
+client<llm> VertexHaiku {
+  provider openai-generic
+  options {
+    base_url env.VERTEX_ANTHROPIC_BASE_URL
+    model "claude-3-5-haiku-20241022"
+    api_key env.VERTEX_ACCESS_TOKEN
+  }
+}
 
 // Example Ollama client for local models (uncomment to use)
 // client<llm> CustomOllama {

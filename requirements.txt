@@ -7,3 +7,6 @@ numpy
 ipywidgets>=8.0.0
 node2vec>=0.4.5
 networkx>=3.0
+anthropic[vertex]>=0.68.0
+google-auth>=2.0.0
+google-cloud-aiplatform>=1.40.0
