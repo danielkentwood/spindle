@@ -11,10 +11,20 @@ from tests.fixtures.sample_texts import SIMPLE_TEXT, MEDICAL_TEXT
 class TestOntologyRecommenderRecommend:
     """Tests for OntologyRecommender.recommend method."""
     
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_basic(self, mock_baml_recommend, mock_ontology_recommendation):
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_basic(self, mock_baml, mock_ontology_recommendation):
         """Test basic ontology recommendation."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        # First with_options() might be called in _get_baml_client() if env overrides exist
+        # Second with_options() is called in recommend() with collector
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         
         recommender = OntologyRecommender()
         result = recommender.recommend(text=SIMPLE_TEXT)
@@ -26,35 +36,51 @@ class TestOntologyRecommenderRecommend:
         assert result.reasoning is not None
         
         # Verify BAML was called
-        mock_baml_recommend.assert_called_once_with(
+        mock_final_client.RecommendOntology.assert_called_once_with(
             text=SIMPLE_TEXT,
             scope="balanced"
         )
     
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_with_minimal_scope(self, mock_baml_recommend, mock_ontology_recommendation):
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_with_minimal_scope(self, mock_baml, mock_ontology_recommendation):
         """Test recommendation with minimal scope."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         
         recommender = OntologyRecommender()
         result = recommender.recommend(text=SIMPLE_TEXT, scope="minimal")
         
         # Verify BAML was called with correct scope
-        mock_baml_recommend.assert_called_once_with(
+        mock_final_client.RecommendOntology.assert_called_once_with(
             text=SIMPLE_TEXT,
             scope="minimal"
         )
     
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_with_comprehensive_scope(self, mock_baml_recommend, mock_ontology_recommendation):
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_with_comprehensive_scope(self, mock_baml, mock_ontology_recommendation):
         """Test recommendation with comprehensive scope."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         
         recommender = OntologyRecommender()
         result = recommender.recommend(text=SIMPLE_TEXT, scope="comprehensive")
         
         # Verify BAML was called with correct scope
-        mock_baml_recommend.assert_called_once_with(
+        mock_final_client.RecommendOntology.assert_called_once_with(
             text=SIMPLE_TEXT,
             scope="comprehensive"
         )
@@ -64,11 +90,19 @@ class TestOntologyRecommenderRecommendAndExtract:
     """Tests for OntologyRecommender.recommend_and_extract method."""
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_and_extract_basic(self, mock_baml_recommend, mock_extract, 
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_and_extract_basic(self, mock_baml, mock_extract, 
                                          mock_ontology_recommendation, mock_extraction_result):
         """Test combined recommendation and extraction."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         mock_extract.return_value = mock_extraction_result
         
         recommender = OntologyRecommender()
@@ -82,15 +116,23 @@ class TestOntologyRecommenderRecommendAndExtract:
         assert extraction == mock_extraction_result
         
         # Verify calls
-        mock_baml_recommend.assert_called_once()
+        mock_final_client.RecommendOntology.assert_called_once()
         mock_extract.assert_called_once()
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_and_extract_with_url(self, mock_baml_recommend, mock_extract,
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_and_extract_with_url(self, mock_baml, mock_extract,
                                             mock_ontology_recommendation, mock_extraction_result):
         """Test recommend and extract with source URL."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         mock_extract.return_value = mock_extraction_result
         
         recommender = OntologyRecommender()
@@ -105,12 +147,20 @@ class TestOntologyRecommenderRecommendAndExtract:
         assert call_args[1]["source_url"] == "https://example.com/test"
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_and_extract_with_existing_triples(self, mock_baml_recommend, mock_extract,
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_and_extract_with_existing_triples(self, mock_baml, mock_extract,
                                                           mock_ontology_recommendation, 
                                                           mock_extraction_result, sample_triples):
         """Test recommend and extract with existing triples."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         mock_extract.return_value = mock_extraction_result
         
         recommender = OntologyRecommender()
@@ -125,12 +175,20 @@ class TestOntologyRecommenderRecommendAndExtract:
         assert call_args[1]["existing_triples"] == sample_triples
     
     @patch('spindle.SpindleExtractor.extract')
-    @patch('spindle.extractor.b.RecommendOntology')
-    def test_recommend_and_extract_uses_recommended_ontology(self, mock_baml_recommend, mock_extract,
+    @patch('spindle.extraction.recommender.b')
+    def test_recommend_and_extract_uses_recommended_ontology(self, mock_baml, mock_extract,
                                                               mock_ontology_recommendation, 
                                                               mock_extraction_result):
         """Test that extraction uses the recommended ontology."""
-        mock_baml_recommend.return_value = mock_ontology_recommendation
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.RecommendOntology.return_value = mock_ontology_recommendation
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.RecommendOntology = mock_final_client.RecommendOntology
         mock_extract.return_value = mock_extraction_result
         
         recommender = OntologyRecommender()
@@ -141,13 +199,13 @@ class TestOntologyRecommenderRecommendAndExtract:
         )
         
         # Verify recommend was called with correct scope
-        mock_baml_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="comprehensive")
+        mock_final_client.RecommendOntology.assert_called_once_with(text=SIMPLE_TEXT, scope="comprehensive")
 
 
 class TestOntologyRecommenderAnalyzeExtension:
     """Tests for OntologyRecommender.analyze_extension method."""
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_extension_needed(self, mock_baml_analyze, mock_ontology_extension_needed, simple_ontology):
         """Test analyzing when extension is needed."""
         mock_baml_analyze.return_value = mock_ontology_extension_needed
@@ -171,7 +229,7 @@ class TestOntologyRecommenderAnalyzeExtension:
             scope="balanced"
         )
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_extension_not_needed(self, mock_baml_analyze, mock_ontology_extension_not_needed, simple_ontology):
         """Test analyzing when extension is not needed."""
         mock_baml_analyze.return_value = mock_ontology_extension_not_needed
@@ -187,7 +245,7 @@ class TestOntologyRecommenderAnalyzeExtension:
         assert len(result.new_entity_types) == 0
         assert len(result.new_relation_types) == 0
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_extension_with_scope(self, mock_baml_analyze, mock_ontology_extension_needed, simple_ontology):
         """Test analyzing with custom scope."""
         mock_baml_analyze.return_value = mock_ontology_extension_needed
@@ -258,7 +316,7 @@ class TestOntologyRecommenderExtendOntology:
 class TestOntologyRecommenderAnalyzeAndExtend:
     """Tests for OntologyRecommender.analyze_and_extend method."""
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_with_auto_apply(self, mock_baml_analyze, 
                                                  mock_ontology_extension_needed, simple_ontology):
         """Test analyze and extend with auto_apply=True."""
@@ -276,7 +334,7 @@ class TestOntologyRecommenderAnalyzeAndExtend:
         assert extended_ontology is not None
         assert len(extended_ontology.entity_types) > len(simple_ontology.entity_types)
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_without_auto_apply(self, mock_baml_analyze,
                                                     mock_ontology_extension_needed, simple_ontology):
         """Test analyze and extend with auto_apply=False."""
@@ -293,7 +351,7 @@ class TestOntologyRecommenderAnalyzeAndExtend:
         assert extension.needs_extension is True
         assert extended_ontology is None  # Not applied
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_no_extension_needed(self, mock_baml_analyze,
                                                      mock_ontology_extension_not_needed, simple_ontology):
         """Test analyze and extend when no extension is needed."""
@@ -310,7 +368,7 @@ class TestOntologyRecommenderAnalyzeAndExtend:
         assert extension.needs_extension is False
         assert extended_ontology is None  # No extension applied
     
-    @patch('spindle.extractor.b.AnalyzeOntologyExtension')
+    @patch('spindle.baml_client.b.AnalyzeOntologyExtension')
     def test_analyze_and_extend_with_scope(self, mock_baml_analyze,
                                            mock_ontology_extension_needed, simple_ontology):
         """Test analyze and extend with custom scope."""

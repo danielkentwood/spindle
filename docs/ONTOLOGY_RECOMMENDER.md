@@ -190,7 +190,7 @@ function RecommendOntology(
 
 ### Python Wrapper
 
-The `OntologyRecommender` class in `spindle/extractor.py` provides a clean interface:
+The `OntologyRecommender` class in `spindle/extraction/recommender.py` provides a clean interface:
 - Wraps the BAML function for easy use
 - Provides the convenience `recommend_and_extract()` method
 - Handles integration with `SpindleExtractor`
@@ -241,7 +241,7 @@ The ontology is returned in the exact same format as manually created ontologies
 ## Files
 
 - `spindle/baml_src/spindle.baml`: BAML schema with ontology + extension functions
-- `spindle/extractor.py`: Python implementation of `OntologyRecommender`
+- `spindle/extraction/recommender.py`: Python implementation of `OntologyRecommender`
 - `demos/example_auto_ontology.py`: Automatic recommendation inside `SpindleExtractor`
 - `demos/example_scope_comparison.py`: Demonstrates scope levels
 - `demos/example_ontology_extension.py`: Conservative extension workflow

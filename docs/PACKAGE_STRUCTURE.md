@@ -10,9 +10,20 @@ Spindle is organized as a proper Python package for better maintainability and d
 spindle/
 ├── spindle/                         # Main package
 │   ├── __init__.py                  # Public API exports
-│   ├── extractor.py                 # Extraction + ontology workflows
+│   ├── extraction/                  # Extraction package
+│   │   ├── __init__.py             # Public API exports
+│   │   ├── extractor.py            # SpindleExtractor class
+│   │   ├── recommender.py           # OntologyRecommender class
+│   │   ├── process.py               # Process extraction functions
+│   │   ├── utils.py                # Public utility functions
+│   │   └── helpers.py              # Internal helper functions
 │   ├── graph_store.py               # Embedded Kùzu persistence layer
-│   ├── vector_store.py              # Embedding + vector DB integrations
+│   ├── vector_store/                # Embedding + vector DB integrations
+│   │   ├── __init__.py              # Public API exports
+│   │   ├── base.py                  # VectorStore abstract base class
+│   │   ├── chroma.py                # ChromaVectorStore implementation
+│   │   ├── embeddings.py            # Embedding function factories
+│   │   └── graph_embeddings.py     # GraphEmbeddingGenerator class
 │   ├── observability/               # Service event primitives + persistence helpers
 │   ├── baml_src/                    # Authoritative BAML schemas
 │   │   ├── clients.baml             # LLM client configurations
@@ -138,13 +149,14 @@ create_huggingface_embedding_function
 get_default_embedding_function
 ```
 
-#### `spindle/extractor.py`
-Core extraction functionality:
-- `SpindleExtractor`: Main extraction class
-- `OntologyRecommender`: Automatic ontology recommendation
-- Helper functions for ontology creation and manipulation
-- Serialization utilities
-- Filter and query functions
+#### `spindle/extraction/` Package
+Core extraction functionality organized into modules:
+- `extractor.py`: `SpindleExtractor` class for triple extraction
+- `recommender.py`: `OntologyRecommender` class for ontology recommendation
+- `process.py`: Process graph extraction functions
+- `utils.py`: Public utility functions (ontology creation, serialization, filtering)
+- `helpers.py`: Internal helper functions (span processing, event recording)
+- `__init__.py`: Public API exports maintaining backward compatibility
 
 #### `spindle/graph_store.py`
 Graph database persistence (optional, requires kuzu):
@@ -153,12 +165,13 @@ Graph database persistence (optional, requires kuzu):
 - Query operations (pattern matching, source filtering, date ranges)
 - Cypher query support
 
-#### `spindle/vector_store.py`
+#### `spindle/vector_store/`
 Vector embeddings and similarity search utilities (optional extras):
-- `VectorStore` abstract base class for embedding backends
-- `ChromaVectorStore` implementation for local retrieval
-- Embedding helpers (`create_openai_embedding_function`, `create_huggingface_embedding_function`, `create_gemini_embedding_function`)
-- Convenience factory `get_default_embedding_function`
+- `base.py`: `VectorStore` abstract base class for embedding backends
+- `chroma.py`: `ChromaVectorStore` implementation for local retrieval
+- `embeddings.py`: Embedding function factories (`create_openai_embedding_function`, `create_huggingface_embedding_function`, `create_gemini_embedding_function`, `get_default_embedding_function`)
+- `graph_embeddings.py`: `GraphEmbeddingGenerator` class for Node2Vec-based graph embeddings
+- `__init__.py`: Public API exports maintaining backward compatibility
 - Optional integration with `GraphStore.compute_graph_embeddings`
 
 #### `spindle/observability/`
@@ -262,7 +275,7 @@ from spindle import (
 
 ### Adding a New Function
 
-1. Add function to appropriate module (`extractor.py` or `graph_store.py`)
+1. Add function to appropriate module (`extraction/` package or `graph_store.py`)
 2. Export from `spindle/__init__.py` if public
 3. Add to `__all__` list if public
 4. Write tests
@@ -336,7 +349,7 @@ uv run python -c "import spindle; print(spindle.__version__)"
 
 The old structure had `spindle.py` and `graph_store.py` at the root. These have been moved to the `spindle/` package directory:
 
-- `spindle.py` → `spindle/extractor.py`
+- `spindle.py` → `spindle/extraction/` package
 - `graph_store.py` → `spindle/graph_store.py`
 
 All imports remain the same thanks to the package structure!

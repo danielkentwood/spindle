@@ -6,7 +6,10 @@ from spindle.analytics.views import (
     chunk_window_risk,
     corpus_overview,
     document_size_table,
+    entity_resolution_metrics,
     observability_events,
+    ontology_recommendation_metrics,
+    triple_extraction_metrics,
 )
 from spindle.analytics.schema import (
     ChunkWindowSummary,
@@ -33,6 +36,9 @@ __all__ = [
     "chunk_window_risk",
     "corpus_overview",
     "document_size_table",
+    "entity_resolution_metrics",
     "observability_events",
+    "ontology_recommendation_metrics",
+    "triple_extraction_metrics",
 ]
 

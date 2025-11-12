@@ -6,7 +6,7 @@ from typing import Callable
 
 import pytest
 
-from spindle import extractor
+from spindle import extraction as extractor
 from spindle.baml_client.types import (
     EvidenceSpan,
     ProcessDependency,
@@ -67,8 +67,9 @@ def _fake_result(graph: ProcessGraph) -> ProcessExtractionResult:
 
 
 def _patch_extractor(monkeypatch: pytest.MonkeyPatch, factory: Callable[[], ProcessExtractionResult]) -> None:
+    from spindle.baml_client import b
     monkeypatch.setattr(
-        extractor.b,
+        b,
         "ExtractProcessGraph",
         lambda **_: factory(),
     )

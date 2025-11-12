@@ -84,7 +84,10 @@ class TestOpenAIEmbeddings:
         self, skip_if_no_openai_key, openai_api_key
     ):
         """Test basic OpenAI embeddings generation."""
-        import openai
+        try:
+            import openai
+        except ImportError:
+            pytest.skip("openai module not installed")
 
         client = openai.OpenAI(api_key=openai_api_key)
         model = "text-embedding-3-small"
@@ -105,7 +108,10 @@ class TestOpenAIEmbeddings:
         self, skip_if_no_openai_key, openai_api_key
     ):
         """Test OpenAI embeddings for multiple texts."""
-        import openai
+        try:
+            import openai
+        except ImportError:
+            pytest.skip("openai module not installed")
 
         client = openai.OpenAI(api_key=openai_api_key)
         model = "text-embedding-3-small"
@@ -133,7 +139,10 @@ class TestOpenAIEmbeddings:
         self, skip_if_no_openai_key, openai_api_key
     ):
         """Test similarity calculation between embeddings."""
-        import openai
+        try:
+            import openai
+        except ImportError:
+            pytest.skip("openai module not installed")
 
         client = openai.OpenAI(api_key=openai_api_key)
         model = "text-embedding-3-small"
@@ -164,7 +173,10 @@ class TestGeminiEmbeddings:
         self, skip_if_no_gemini_key, gemini_api_key
     ):
         """Test basic Gemini embeddings generation."""
-        import google.generativeai as genai
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            pytest.skip("google.generativeai module not installed")
 
         genai.configure(api_key=gemini_api_key)
         model = "models/embedding-001"
@@ -185,7 +197,10 @@ class TestGeminiEmbeddings:
         self, skip_if_no_gemini_key, gemini_api_key
     ):
         """Test Gemini embeddings for multiple texts."""
-        import google.generativeai as genai
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            pytest.skip("google.generativeai module not installed")
 
         genai.configure(api_key=gemini_api_key)
         model = "models/embedding-001"
@@ -214,7 +229,10 @@ class TestGeminiEmbeddings:
         self, skip_if_no_gemini_key, gemini_api_key
     ):
         """Test similarity calculation between Gemini embeddings."""
-        import google.generativeai as genai
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            pytest.skip("google.generativeai module not installed")
 
         genai.configure(api_key=gemini_api_key)
         model = "models/embedding-001"

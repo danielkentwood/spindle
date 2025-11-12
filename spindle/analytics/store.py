@@ -153,29 +153,46 @@ class AnalyticsStore:
         service: str | None = None,
         limit: int | None = None,
     ) -> list[ServiceEventRecord]:
-        """Fetch persisted service events tied to observations."""
+        """Fetch persisted service events.
+        
+        If document_id is provided, queries observation-linked events.
+        Otherwise, queries from EventLogStore (general service events).
+        """
 
-        stmt = select(ObservationServiceEventRow).order_by(
-            ObservationServiceEventRow.timestamp.desc()
-        )
+        # If document_id is specified, query observation-linked events
         if document_id:
+            stmt = select(ObservationServiceEventRow).order_by(
+                ObservationServiceEventRow.timestamp.desc()
+            )
             stmt = stmt.join(ObservationServiceEventRow.observation).where(
                 IngestionObservationRow.document_id == document_id
             )
-        if service:
-            stmt = stmt.where(ObservationServiceEventRow.service == service)
-        if limit:
-            stmt = stmt.limit(limit)
-        with self.session() as session:
-            rows = session.execute(stmt).scalars().all()
+            if service:
+                stmt = stmt.where(ObservationServiceEventRow.service == service)
+            if limit:
+                stmt = stmt.limit(limit)
+            with self.session() as session:
+                rows = session.execute(stmt).scalars().all()
+            return [
+                ServiceEventRecord(
+                    timestamp=row.timestamp,
+                    service=row.service,
+                    name=row.name,
+                    payload=dict(row.payload or {}),
+                )
+                for row in rows
+            ]
+        
+        # Otherwise, query from EventLogStore (general service events)
+        events = self._event_store.fetch_events(service=service, limit=limit)
         return [
             ServiceEventRecord(
-                timestamp=row.timestamp,
-                service=row.service,
-                name=row.name,
-                payload=dict(row.payload or {}),
+                timestamp=event.timestamp,
+                service=event.service,
+                name=event.name,
+                payload=dict(event.payload or {}),
             )
-            for row in rows
+            for event in events
         ]
 
     @staticmethod

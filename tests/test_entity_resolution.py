@@ -230,7 +230,7 @@ class TestSemanticBlocker:
 
     def test_create_blocks_without_sklearn(self, monkeypatch):
         """Test fallback clustering when sklearn is unavailable."""
-        monkeypatch.setattr("spindle.entity_resolution._SKLEARN_AVAILABLE", False, raising=False)
+        monkeypatch.setattr("spindle.entity_resolution.blocking._SKLEARN_AVAILABLE", False, raising=False)
         config = ResolutionConfig(
             clustering_method='hierarchical',
             blocking_threshold=0.8,
@@ -259,7 +259,7 @@ class TestSemanticBlocker:
 class TestSemanticMatcher:
     """Test SemanticMatcher LLM-based matching."""
     
-    @patch('spindle.entity_resolution.b')
+    @patch('spindle.entity_resolution.matching.b')
     def test_match_entities_success(self, mock_baml):
         """Test entity matching with mocked BAML."""
         config = ResolutionConfig(matching_threshold=0.8)
@@ -276,7 +276,11 @@ class TestSemanticMatcher:
                 reasoning='Name variation of the same company'
             )
         ]
-        mock_baml.MatchEntities.return_value = mock_result
+        
+        # Mock the with_options() call chain
+        mock_with_options = Mock()
+        mock_with_options.MatchEntities.return_value = mock_result
+        mock_baml.with_options.return_value = mock_with_options
         
         block = [
             {'name': 'TechCorp', 'type': 'Organization', 'description': 'Tech company', 'custom_atts': {}},
@@ -291,7 +295,7 @@ class TestSemanticMatcher:
         assert matches[0].is_duplicate is True
         assert matches[0].confidence >= 0.8
     
-    @patch('spindle.entity_resolution.b')
+    @patch('spindle.entity_resolution.matching.b')
     def test_match_edges_success(self, mock_baml):
         """Test edge matching with mocked BAML."""
         config = ResolutionConfig(matching_threshold=0.8)
@@ -308,7 +312,11 @@ class TestSemanticMatcher:
                 reasoning='Same relationship, different predicate'
             )
         ]
-        mock_baml.MatchEdges.return_value = mock_result
+        
+        # Mock the with_options() call chain
+        mock_with_options = Mock()
+        mock_with_options.MatchEdges.return_value = mock_result
+        mock_baml.with_options.return_value = mock_with_options
         
         block = [
             {
@@ -413,8 +421,8 @@ class TestEntityResolver:
         assert resolver.config.blocking_threshold == 0.85
         assert resolver.config.matching_threshold == 0.8
     
-    @patch('spindle.entity_resolution.create_same_as_edges')
-    @patch('spindle.entity_resolution.get_duplicate_clusters')
+    @patch('spindle.entity_resolution.merging.create_same_as_edges')
+    @patch('spindle.entity_resolution.merging.get_duplicate_clusters')
     def test_resolve_entities_nodes_only(self, mock_clusters, mock_create_edges):
         """Test resolution with nodes only."""
         mock_clusters.return_value = []

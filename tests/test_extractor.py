@@ -59,9 +59,9 @@ class TestSpindleExtractorInit:
 class TestSpindleExtractorExtract:
     """Tests for SpindleExtractor.extract method."""
     
-    @patch('spindle.extractor.b.ExtractTriples')
+    @patch('spindle.extraction.extractor.b')
     @freeze_time("2024-01-15 10:30:00")
-    def test_extract_basic(self, mock_baml_extract, simple_ontology):
+    def test_extract_basic(self, mock_baml, simple_ontology):
         """Test basic extraction with mocked BAML call."""
         # Setup mock with Entity objects
         mock_result = ExtractionResult(
@@ -79,7 +79,20 @@ class TestSpindleExtractorExtract:
             ],
             reasoning="Extracted based on ontology."
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        # First with_options() might be called in _get_baml_client() if env overrides exist
+        # Second with_options() is called in extract() with collector
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        # Handle both direct b and b.with_options() calls
+        mock_baml.with_options.return_value = mock_intermediate_client
+        # Also set up direct access in case _get_baml_client() returns b directly
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         # Execute
         extractor = SpindleExtractor(simple_ontology)
@@ -100,20 +113,29 @@ class TestSpindleExtractorExtract:
         assert result.triples[0].extraction_datetime == "2024-01-15T10:30:00Z"
         
         # Check that BAML was called correctly
-        mock_baml_extract.assert_called_once()
-        call_args = mock_baml_extract.call_args
+        mock_final_client.ExtractTriples.assert_called_once()
+        call_args = mock_final_client.ExtractTriples.call_args
         assert call_args[1]["text"] == SIMPLE_TEXT
         assert call_args[1]["ontology"] == simple_ontology
         assert call_args[1]["source_metadata"].source_name == "Test Document"
     
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_with_existing_triples(self, mock_baml_extract, simple_ontology, sample_triples):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_with_existing_triples(self, mock_baml, simple_ontology, sample_triples):
         """Test extraction with existing triples for entity consistency."""
         mock_result = ExtractionResult(
             triples=[],
             reasoning="No new triples."
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = extractor.extract(
@@ -123,11 +145,12 @@ class TestSpindleExtractorExtract:
         )
         
         # Check that existing triples were passed to BAML
-        call_args = mock_baml_extract.call_args
+        mock_final_client.ExtractTriples.assert_called_once()
+        call_args = mock_final_client.ExtractTriples.call_args
         assert call_args[1]["existing_triples"] == sample_triples
     
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_computes_span_indices(self, mock_baml_extract, simple_ontology):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_computes_span_indices(self, mock_baml, simple_ontology):
         """Test that extraction computes character span indices."""
         # Mock BAML to return triple with None indices
         mock_result = ExtractionResult(
@@ -145,7 +168,16 @@ class TestSpindleExtractorExtract:
             ],
             reasoning="Test"
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = extractor.extract(
@@ -160,8 +192,8 @@ class TestSpindleExtractorExtract:
         assert span.start >= 0
         assert span.end > span.start
     
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_handles_unfound_spans(self, mock_baml_extract, simple_ontology):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_handles_unfound_spans(self, mock_baml, simple_ontology):
         """Test that extraction handles spans that can't be found."""
         # Mock BAML to return triple with span not in text
         mock_result = ExtractionResult(
@@ -179,7 +211,16 @@ class TestSpindleExtractorExtract:
             ],
             reasoning="Test"
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = extractor.extract(
@@ -193,13 +234,22 @@ class TestSpindleExtractorExtract:
         assert span.end == -1
     
     @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_auto_recommends_ontology(self, mock_baml_extract, mock_recommend, mock_ontology_recommendation):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_auto_recommends_ontology(self, mock_baml, mock_recommend, mock_ontology_recommendation):
         """Test that extraction auto-recommends ontology when not provided."""
         # Setup mocks
         mock_recommend.return_value = mock_ontology_recommendation
         mock_result = ExtractionResult(triples=[], reasoning="Test")
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         # Execute
         extractor = SpindleExtractor()  # No ontology provided
@@ -215,12 +265,21 @@ class TestSpindleExtractorExtract:
         assert extractor.ontology == mock_ontology_recommendation.ontology
     
     @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_uses_custom_scope_for_auto_ontology(self, mock_baml_extract, mock_recommend, mock_ontology_recommendation):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_uses_custom_scope_for_auto_ontology(self, mock_baml, mock_recommend, mock_ontology_recommendation):
         """Test that custom scope is used for auto-recommendation."""
         mock_recommend.return_value = mock_ontology_recommendation
         mock_result = ExtractionResult(triples=[], reasoning="Test")
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(ontology_scope="comprehensive")
         result = extractor.extract(
@@ -232,12 +291,21 @@ class TestSpindleExtractorExtract:
         mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="comprehensive")
     
     @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_ontology_scope_override(self, mock_baml_extract, mock_recommend, mock_ontology_recommendation):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_ontology_scope_override(self, mock_baml, mock_recommend, mock_ontology_recommendation):
         """Test that ontology_scope parameter overrides default."""
         mock_recommend.return_value = mock_ontology_recommendation
         mock_result = ExtractionResult(triples=[], reasoning="Test")
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(ontology_scope="balanced")
         result = extractor.extract(
@@ -249,8 +317,8 @@ class TestSpindleExtractorExtract:
         # Verify that recommend was called with overridden scope
         mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="minimal")
     
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_preserves_existing_indices(self, mock_baml_extract, simple_ontology):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_preserves_existing_indices(self, mock_baml, simple_ontology):
         """Test that extraction preserves already-set span indices."""
         # Mock BAML to return triple with indices already set
         mock_result = ExtractionResult(
@@ -268,7 +336,16 @@ class TestSpindleExtractorExtract:
             ],
             reasoning="Test"
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = extractor.extract(
@@ -281,9 +358,9 @@ class TestSpindleExtractorExtract:
         assert span.start == 0
         assert span.end == 23
     
-    @patch('spindle.extractor.b.ExtractTriples')
+    @patch('spindle.extraction.extractor.b')
     @freeze_time("2024-01-15 10:30:00")
-    def test_extract_sets_datetime_for_all_triples(self, mock_baml_extract, simple_ontology):
+    def test_extract_sets_datetime_for_all_triples(self, mock_baml, simple_ontology):
         """Test that extraction sets datetime for all returned triples."""
         # Mock BAML to return multiple triples
         mock_result = ExtractionResult(
@@ -307,7 +384,16 @@ class TestSpindleExtractorExtract:
             ],
             reasoning="Test"
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = extractor.extract(
@@ -318,11 +404,20 @@ class TestSpindleExtractorExtract:
         # Check that all triples have datetime set
         assert all(t.extraction_datetime == "2024-01-15T10:30:00Z" for t in result.triples)
     
-    @patch('spindle.extractor.b.ExtractTriples')
-    def test_extract_with_no_source_url(self, mock_baml_extract, simple_ontology):
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_with_no_source_url(self, mock_baml, simple_ontology):
         """Test extraction without providing source URL."""
         mock_result = ExtractionResult(triples=[], reasoning="Test")
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining
+        mock_final_client = MagicMock()
+        mock_final_client.ExtractTriples.return_value = mock_result
+        
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = extractor.extract(
@@ -332,17 +427,17 @@ class TestSpindleExtractorExtract:
         )
         
         # Check that source_url is None in metadata passed to BAML
-        call_args = mock_baml_extract.call_args
+        call_args = mock_final_client.ExtractTriples.call_args
         assert call_args[1]["source_metadata"].source_url is None
 
 
 class TestSpindleExtractorExtractAsync:
     """Tests for SpindleExtractor.extract_async method."""
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @freeze_time("2024-01-15 10:30:00")
     @pytest.mark.asyncio
-    async def test_extract_async_basic(self, mock_baml_extract, simple_ontology):
+    async def test_extract_async_basic(self, mock_baml, simple_ontology):
         """Test basic async extraction with mocked BAML call."""
         # Setup mock with Entity objects
         mock_result = ExtractionResult(
@@ -360,7 +455,18 @@ class TestSpindleExtractorExtractAsync:
             ],
             reasoning="Extracted based on ontology."
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        # Note: with_options() is synchronous, but ExtractTriples() is async
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = AsyncMock(return_value=mock_result)
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         # Execute
         extractor = SpindleExtractor(simple_ontology)
@@ -376,14 +482,14 @@ class TestSpindleExtractorExtractAsync:
         assert result.triples[0].extraction_datetime == "2024-01-15T10:30:00Z"
         
         # Check that async BAML was called correctly
-        mock_baml_extract.assert_called_once()
-        call_args = mock_baml_extract.call_args
+        mock_final_client.ExtractTriples.assert_called_once()
+        call_args = mock_final_client.ExtractTriples.call_args
         assert call_args[1]["text"] == SIMPLE_TEXT
         assert call_args[1]["ontology"] == simple_ontology
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_async_computes_span_indices(self, mock_baml_extract, simple_ontology):
+    async def test_extract_async_computes_span_indices(self, mock_baml, simple_ontology):
         """Test that async extraction computes character span indices."""
         mock_result = ExtractionResult(
             triples=[
@@ -400,7 +506,18 @@ class TestSpindleExtractorExtractAsync:
             ],
             reasoning="Test"
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        # Note: with_options() is synchronous, but ExtractTriples() is async
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = AsyncMock(return_value=mock_result)
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         result = await extractor.extract_async(
@@ -419,10 +536,10 @@ class TestSpindleExtractorExtractAsync:
 class TestSpindleExtractorExtractBatch:
     """Tests for SpindleExtractor.extract_batch method."""
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @freeze_time("2024-01-15 10:30:00")
     @pytest.mark.asyncio
-    async def test_extract_batch_basic(self, mock_baml_extract, simple_ontology):
+    async def test_extract_batch_basic(self, mock_baml, simple_ontology):
         """Test basic batch extraction."""
         # Setup mocks for two texts
         mock_result_1 = ExtractionResult(
@@ -451,7 +568,25 @@ class TestSpindleExtractorExtractBatch:
             ],
             reasoning="Second extraction"
         )
-        mock_baml_extract.side_effect = [mock_result_1, mock_result_2]
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        async def extract_side_effect(*args, **kwargs):
+            if not hasattr(extract_side_effect, 'call_count'):
+                extract_side_effect.call_count = 0
+            extract_side_effect.call_count += 1
+            if extract_side_effect.call_count == 1:
+                return mock_result_1
+            return mock_result_2
+        
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = extract_side_effect
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [
@@ -468,11 +603,11 @@ class TestSpindleExtractorExtractBatch:
         assert results[1].triples[0].subject.name == "Bob"
         
         # Verify BAML was called twice
-        assert mock_baml_extract.call_count == 2
+        assert mock_final_client.ExtractTriples.call_count == 2
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_batch_sequential_consistency(self, mock_baml_extract, simple_ontology):
+    async def test_extract_batch_sequential_consistency(self, mock_baml, simple_ontology):
         """Test that batch extraction maintains sequential consistency."""
         # First extraction returns a triple
         mock_result_1 = ExtractionResult(
@@ -502,7 +637,19 @@ class TestSpindleExtractorExtractBatch:
             ],
             reasoning="Second"
         )
-        mock_baml_extract.side_effect = [mock_result_1, mock_result_2]
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        # Note: with_options() is synchronous, but ExtractTriples() is async
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = AsyncMock(side_effect=[mock_result_1, mock_result_2])
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        # mock_baml itself should also be MagicMock since with_options() is sync
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [
@@ -512,10 +659,10 @@ class TestSpindleExtractorExtractBatch:
         results = await extractor.extract_batch(texts)
         
         # Verify second call received first triple as existing_triples
-        assert mock_baml_extract.call_count == 2
+        assert mock_final_client.ExtractTriples.call_count == 2
         
         # Get the second call's arguments (index 1)
-        second_call = mock_baml_extract.call_args_list[1]
+        second_call = mock_final_client.ExtractTriples.call_args_list[1]
         # call_args is a tuple of (args, kwargs), so [1] is kwargs
         second_call_kwargs = second_call[1]
         existing_triples = second_call_kwargs["existing_triples"]
@@ -526,27 +673,38 @@ class TestSpindleExtractorExtractBatch:
         assert existing_triples[0].subject.name == "Alice"
         assert existing_triples[0].source.source_name == "doc1"
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_batch_with_initial_triples(self, mock_baml_extract, simple_ontology, sample_triples):
+    async def test_extract_batch_with_initial_triples(self, mock_baml, simple_ontology, sample_triples):
         """Test batch extraction with initial existing triples."""
         mock_result = ExtractionResult(
             triples=[],
             reasoning="No new triples"
         )
-        mock_baml_extract.return_value = mock_result
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        # Note: with_options() is synchronous, but ExtractTriples() is async
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = AsyncMock(return_value=mock_result)
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [("Additional text", "doc1", None)]
         results = await extractor.extract_batch(texts, existing_triples=sample_triples)
         
         # Verify initial triples were passed
-        call_args = mock_baml_extract.call_args
+        call_args = mock_final_client.ExtractTriples.call_args
         assert len(call_args[1]["existing_triples"]) == len(sample_triples)
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_batch_maintains_order(self, mock_baml_extract, simple_ontology):
+    async def test_extract_batch_maintains_order(self, mock_baml, simple_ontology):
         """Test that batch extraction maintains input order."""
         # Create results in reverse order to test ordering
         results_list = []
@@ -564,7 +722,23 @@ class TestSpindleExtractorExtractBatch:
                 ],
                 reasoning=f"Extraction {i}"
             ))
-        mock_baml_extract.side_effect = results_list
+        
+        # Mock the with_options() call chain
+        async def extract_side_effect(*args, **kwargs):
+            if not hasattr(extract_side_effect, 'call_count'):
+                extract_side_effect.call_count = 0
+            extract_side_effect.call_count += 1
+            return results_list[extract_side_effect.call_count - 1]
+        
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = extract_side_effect
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [
@@ -584,9 +758,9 @@ class TestSpindleExtractorExtractBatch:
 class TestSpindleExtractorExtractBatchStream:
     """Tests for SpindleExtractor.extract_batch_stream method."""
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_batch_stream_yields_results(self, mock_baml_extract, simple_ontology):
+    async def test_extract_batch_stream_yields_results(self, mock_baml, simple_ontology):
         """Test that streaming batch extraction yields results as they complete."""
         mock_result_1 = ExtractionResult(
             triples=[
@@ -614,7 +788,19 @@ class TestSpindleExtractorExtractBatchStream:
             ],
             reasoning="Second"
         )
-        mock_baml_extract.side_effect = [mock_result_1, mock_result_2]
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        # Note: with_options() is synchronous, but ExtractTriples() is async
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = AsyncMock(side_effect=[mock_result_1, mock_result_2])
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        # mock_baml itself should also be MagicMock since with_options() is sync
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [
@@ -632,9 +818,9 @@ class TestSpindleExtractorExtractBatchStream:
         assert results[0].triples[0].subject.name == "Alice"
         assert results[1].triples[0].subject.name == "Bob"
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_batch_stream_sequential_consistency(self, mock_baml_extract, simple_ontology):
+    async def test_extract_batch_stream_sequential_consistency(self, mock_baml, simple_ontology):
         """Test that streaming batch extraction maintains sequential consistency."""
         mock_result_1 = ExtractionResult(
             triples=[
@@ -653,7 +839,19 @@ class TestSpindleExtractorExtractBatchStream:
             triples=[],
             reasoning="Second"
         )
-        mock_baml_extract.side_effect = [mock_result_1, mock_result_2]
+        
+        # Mock the with_options() call chain - handle double chaining for async
+        # Note: with_options() is synchronous, but ExtractTriples() is async
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = AsyncMock(side_effect=[mock_result_1, mock_result_2])
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        # mock_baml itself should also be MagicMock since with_options() is sync
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [
@@ -667,14 +865,14 @@ class TestSpindleExtractorExtractBatchStream:
             results.append(result)
         
         # Verify second call received first triple as existing_triples
-        second_call_args = mock_baml_extract.call_args_list[1]
+        second_call_args = mock_final_client.ExtractTriples.call_args_list[1]
         existing_triples = second_call_args[1]["existing_triples"]
         assert len(existing_triples) == 1
         assert existing_triples[0].subject.name == "Alice"
     
-    @patch('spindle.extractor.async_b.ExtractTriples')
+    @patch('spindle.extraction.extractor.async_b', new_callable=MagicMock)
     @pytest.mark.asyncio
-    async def test_extract_batch_stream_maintains_order(self, mock_baml_extract, simple_ontology):
+    async def test_extract_batch_stream_maintains_order(self, mock_baml, simple_ontology):
         """Test that streaming batch extraction yields results in order."""
         results_list = []
         for i in range(3):
@@ -691,7 +889,23 @@ class TestSpindleExtractorExtractBatchStream:
                 ],
                 reasoning=f"Extraction {i}"
             ))
-        mock_baml_extract.side_effect = results_list
+        
+        # Mock the with_options() call chain
+        async def extract_side_effect(*args, **kwargs):
+            if not hasattr(extract_side_effect, 'call_count'):
+                extract_side_effect.call_count = 0
+            extract_side_effect.call_count += 1
+            return results_list[extract_side_effect.call_count - 1]
+        
+        mock_final_client = AsyncMock()
+        mock_final_client.ExtractTriples = extract_side_effect
+        
+        # with_options() is sync, so use MagicMock, not AsyncMock
+        mock_intermediate_client = MagicMock()
+        mock_intermediate_client.with_options.return_value = mock_final_client
+        
+        mock_baml.with_options.return_value = mock_intermediate_client
+        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
         
         extractor = SpindleExtractor(simple_ontology)
         texts = [
@@ -717,7 +931,7 @@ class TestSpanComputationOptimization:
     
     def test_compute_all_span_indices_batch_processing(self):
         """Test that batch span computation processes all spans efficiently."""
-        from spindle.extractor import _compute_all_span_indices
+        from spindle.extraction import _compute_all_span_indices
         
         source_text = "Alice Johnson works at TechCorp. Bob Smith works at Google."
         spans = [
@@ -747,7 +961,7 @@ class TestSpanComputationOptimization:
     
     def test_compute_all_span_indices_handles_unfound_spans(self):
         """Test that batch span computation handles spans that can't be found."""
-        from spindle.extractor import _compute_all_span_indices
+        from spindle.extraction import _compute_all_span_indices
         
         source_text = "Alice works at TechCorp."
         spans = [
@@ -763,7 +977,7 @@ class TestSpanComputationOptimization:
     
     def test_compute_all_span_indices_empty_list(self):
         """Test that batch span computation handles empty span list."""
-        from spindle.extractor import _compute_all_span_indices
+        from spindle.extraction import _compute_all_span_indices
         
         source_text = "Some text"
         spans = []
@@ -776,7 +990,7 @@ class TestSpanComputationOptimization:
     
     def test_compute_all_span_indices_preserves_text(self):
         """Test that batch span computation preserves span text."""
-        from spindle.extractor import _compute_all_span_indices
+        from spindle.extraction import _compute_all_span_indices
         
         source_text = "Alice Johnson works at TechCorp."
         spans = [

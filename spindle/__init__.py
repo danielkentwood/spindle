@@ -20,7 +20,7 @@ Example:
     >>> result = extractor.extract("Alice knows Bob", source_name="Test")
 """
 
-from spindle.extractor import (
+from spindle.extraction import (
     SpindleExtractor,
     OntologyRecommender,
     create_ontology,

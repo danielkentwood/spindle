@@ -10,3 +10,4 @@ networkx>=3.0
 anthropic[vertex]>=0.68.0
 google-auth>=2.0.0
 google-cloud-aiplatform>=1.40.0
+streamlit>=1.28.0
