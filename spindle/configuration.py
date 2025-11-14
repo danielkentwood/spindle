@@ -5,6 +5,10 @@ The `SpindleConfig` dataclass is the single entry point that downstream
 components use to determine storage locations (vector store, graph DB,
 document persistence, logging) and template search paths.
 
+LLM configuration can be integrated via the optional `llm` field, which accepts
+an :class:`~spindle.llm_config.LLMConfig` instance. See :mod:`spindle.llm_config`
+for details on LLM authentication and credential management.
+
 Example usage::
 
     from pathlib import Path
@@ -153,7 +157,20 @@ class GraphStoreSettings:
 
 @dataclass(slots=True)
 class SpindleConfig:
-    """Root configuration structure for Spindle storage and templates."""
+    """
+    Root configuration structure for Spindle storage and templates.
+
+    Attributes:
+        storage: Filesystem paths for storage backends.
+        templates: Template search paths configuration.
+        extras: User-defined metadata dictionary.
+        observability: Logging and event configuration.
+        ingestion: Defaults for ingestion operations.
+        vector_store: Vector store creation preferences.
+        graph_store: Graph database persistence settings.
+        llm: Optional LLM configuration for authentication. See
+            :class:`~spindle.llm_config.LLMConfig` for details.
+    """
 
     storage: StoragePaths
     templates: TemplateSettings = field(default_factory=TemplateSettings)
@@ -163,6 +180,128 @@ class SpindleConfig:
     vector_store: VectorStoreSettings = field(default_factory=VectorStoreSettings)
     graph_store: GraphStoreSettings = field(default_factory=GraphStoreSettings)
     llm: "LLMConfig | None" = None
+
+    def get_llm_config(self, auto_detect: bool = True) -> "LLMConfig | None":
+        """
+        Get LLM configuration, auto-detecting if not set.
+
+        Returns the configured LLM config if available, otherwise attempts
+        to auto-detect credentials from the environment if `auto_detect=True`.
+
+        Args:
+            auto_detect: Whether to auto-detect LLM credentials if not configured.
+                Defaults to True.
+
+        Returns:
+            LLMConfig instance if available, None otherwise.
+
+        Example::
+
+            config = SpindleConfig.with_root("/path/to/storage")
+            llm_config = config.get_llm_config()
+            if llm_config:
+                print(f"Using auth method: {llm_config.preferred_auth_method}")
+        """
+        if self.llm is not None:
+            return self.llm
+
+        if not auto_detect:
+            return None
+
+        try:
+            from spindle.llm_config import detect_available_auth
+
+            if detect_available_auth is not None:
+                return detect_available_auth()
+        except ImportError:
+            pass
+
+        return None
+
+    def create_extractor(
+        self,
+        ontology: Any = None,
+        ontology_scope: str = "balanced",
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Create a SpindleExtractor using this config's LLM settings.
+
+        This factory method creates a :class:`~spindle.extraction.extractor.SpindleExtractor`
+        instance, automatically using the LLM configuration from this SpindleConfig.
+
+        Args:
+            ontology: Optional ontology to use for extraction. If None, an ontology
+                will be auto-recommended when extraction is performed.
+            ontology_scope: Scope for auto-recommended ontologies. One of:
+                "minimal", "balanced", or "comprehensive". Defaults to "balanced".
+            **kwargs: Additional arguments passed to SpindleExtractor constructor.
+
+        Returns:
+            SpindleExtractor instance configured with this config's LLM settings.
+
+        Raises:
+            ImportError: If SpindleExtractor cannot be imported.
+
+        Example::
+
+            config = SpindleConfig.with_root("/path/to/storage")
+            extractor = config.create_extractor()
+            result = extractor.extract("Some text", "source.txt")
+        """
+        try:
+            from spindle.extraction.extractor import SpindleExtractor
+        except ImportError as exc:
+            raise ImportError(
+                "SpindleExtractor is not available. "
+                "Ensure spindle.extraction.extractor is importable."
+            ) from exc
+
+        llm_config = self.get_llm_config()
+        return SpindleExtractor(
+            ontology=ontology,
+            ontology_scope=ontology_scope,
+            llm_config=llm_config,
+            auto_detect_auth=llm_config is None,
+            **kwargs,
+        )
+
+    def create_recommender(self, **kwargs: Any) -> Any:
+        """
+        Create an OntologyRecommender using this config's LLM settings.
+
+        This factory method creates a :class:`~spindle.extraction.recommender.OntologyRecommender`
+        instance, automatically using the LLM configuration from this SpindleConfig.
+
+        Args:
+            **kwargs: Additional arguments passed to OntologyRecommender constructor.
+
+        Returns:
+            OntologyRecommender instance configured with this config's LLM settings.
+
+        Raises:
+            ImportError: If OntologyRecommender cannot be imported.
+
+        Example::
+
+            config = SpindleConfig.with_root("/path/to/storage")
+            recommender = config.create_recommender()
+            ontology = recommender.recommend("Some text", scope="balanced")
+        """
+        try:
+            from spindle.extraction.recommender import OntologyRecommender
+        except ImportError as exc:
+            raise ImportError(
+                "OntologyRecommender is not available. "
+                "Ensure spindle.extraction.recommender is importable."
+            ) from exc
+
+        llm_config = self.get_llm_config()
+        return OntologyRecommender(
+            llm_config=llm_config,
+            auto_detect_auth=llm_config is None,
+            **kwargs,
+        )
 
     @classmethod
     def with_root(
@@ -176,7 +315,26 @@ class SpindleConfig:
         vector_store: VectorStoreSettings | None = None,
         graph_store: GraphStoreSettings | None = None,
         llm: "LLMConfig | None" = None,
+        auto_detect_llm: bool = False,
     ) -> "SpindleConfig":
+        """
+        Create a SpindleConfig with storage paths derived from a root directory.
+
+        Args:
+            root: Root directory for all storage backends.
+            template_paths: Optional template search paths.
+            extras: Optional user-defined metadata.
+            observability: Optional observability settings.
+            ingestion: Optional ingestion defaults.
+            vector_store: Optional vector store settings.
+            graph_store: Optional graph store settings.
+            llm: Optional LLM configuration. See :class:`~spindle.llm_config.LLMConfig`.
+            auto_detect_llm: If True and llm is None, automatically detect LLM
+                credentials from the environment. Defaults to False.
+
+        Returns:
+            Configured SpindleConfig instance.
+        """
         root_path = _ensure_path(root)
         storage = StoragePaths(
             root=root_path,
@@ -195,6 +353,18 @@ class SpindleConfig:
             resolved_extras = MappingProxyType(dict(extras))
         else:
             resolved_extras = MappingProxyType({})
+
+        # Auto-detect LLM config if requested
+        resolved_llm = llm
+        if resolved_llm is None and auto_detect_llm:
+            try:
+                from spindle.llm_config import detect_available_auth
+
+                if detect_available_auth is not None:
+                    resolved_llm = detect_available_auth()
+            except ImportError:
+                pass
+
         return cls(
             storage=storage,
             templates=templates,
@@ -203,7 +373,56 @@ class SpindleConfig:
             ingestion=ingestion or IngestionSettings(),
             vector_store=vector_store or VectorStoreSettings(),
             graph_store=graph_store or GraphStoreSettings(),
-            llm=llm,
+            llm=resolved_llm,
+        )
+
+    @classmethod
+    def with_auto_detected_llm(
+        cls,
+        root: Path | str,
+        *,
+        template_paths: Sequence[Path | str] | None = None,
+        extras: Mapping[str, Any] | None = None,
+        observability: ObservabilitySettings | None = None,
+        ingestion: IngestionSettings | None = None,
+        vector_store: VectorStoreSettings | None = None,
+        graph_store: GraphStoreSettings | None = None,
+    ) -> "SpindleConfig":
+        """
+        Create a SpindleConfig with auto-detected LLM configuration.
+
+        This is a convenience method that calls :meth:`with_root` with
+        `auto_detect_llm=True`. LLM credentials will be automatically detected
+        from the environment if available.
+
+        Args:
+            root: Root directory for all storage backends.
+            template_paths: Optional template search paths.
+            extras: Optional user-defined metadata.
+            observability: Optional observability settings.
+            ingestion: Optional ingestion defaults.
+            vector_store: Optional vector store settings.
+            graph_store: Optional graph store settings.
+
+        Returns:
+            Configured SpindleConfig instance with auto-detected LLM config.
+
+        Example::
+
+            # Automatically detect LLM credentials from environment
+            config = SpindleConfig.with_auto_detected_llm("/path/to/storage")
+            if config.llm:
+                print("LLM credentials detected!")
+        """
+        return cls.with_root(
+            root,
+            template_paths=template_paths,
+            extras=extras,
+            observability=observability,
+            ingestion=ingestion,
+            vector_store=vector_store,
+            graph_store=graph_store,
+            auto_detect_llm=True,
         )
 
 
@@ -266,7 +485,8 @@ def render_default_config(root: Path | None = None) -> str:
             SpindleConfig,
             VectorStoreSettings,
         )
-        # Optional: from spindle.llm_config import LLMConfig
+        # Optional: Import LLMConfig for authentication configuration
+        # from spindle.llm_config import LLMConfig, detect_available_auth
 
 
         storage_root = Path({config.storage.root!r})
@@ -307,7 +527,18 @@ def render_default_config(root: Path | None = None) -> str:
             auto_compute_embeddings=False,
         )
 
-        # Example: llm = LLMConfig()
+        # LLM Configuration (optional)
+        # Configure LLM authentication for SpindleExtractor and OntologyRecommender.
+        # Options:
+        #   1. Auto-detect from environment: llm = detect_available_auth()
+        #   2. Explicit configuration:
+        #      llm = LLMConfig(
+        #          gcp_project_id="your-project",
+        #          gcp_region="us-east5",
+        #          anthropic_api_key="your-key",  # or set via ANTHROPIC_API_KEY env var
+        #      )
+        #   3. None (will auto-detect when needed): llm = None
+        # See spindle.llm_config for more details.
         llm = None
 
         SPINDLE_CONFIG = SpindleConfig.with_root(

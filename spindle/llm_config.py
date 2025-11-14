@@ -10,6 +10,11 @@ Supports:
 - Gemini models via Vertex AI
 - Automatic credential detection and preference
 - Both Anthropic Vertex SDK and MAAS API approaches
+
+Integration with SpindleConfig:
+    LLMConfig instances can be assigned to :class:`~spindle.configuration.SpindleConfig.llm`
+    to provide authentication for SpindleExtractor and OntologyRecommender. See
+    :mod:`spindle.configuration` for details on using LLM config with SpindleConfig.
 """
 
 import os
@@ -42,6 +47,11 @@ class LLMConfig:
     """
     Configuration for LLM access with support for multiple authentication methods.
 
+    This class can be used standalone or integrated with :class:`~spindle.configuration.SpindleConfig`
+    by assigning an instance to ``SpindleConfig.llm``. When used with SpindleConfig, the LLM
+    configuration will be automatically passed to SpindleExtractor and OntologyRecommender instances
+    created via the config's factory methods.
+
     Attributes:
         gcp_project_id: GCP project ID for Vertex AI
         gcp_region: GCP region for Vertex AI (e.g., 'us-east5')
@@ -51,6 +61,17 @@ class LLMConfig:
         preferred_auth_method: Preferred authentication method
         available_auth_methods: List of detected available authentication methods
         gcp_credentials_path: Path to GCP service account JSON (optional)
+
+    Example::
+
+        # Standalone usage
+        from spindle.llm_config import LLMConfig, detect_available_auth
+        config = detect_available_auth()
+
+        # Integration with SpindleConfig
+        from spindle.configuration import SpindleConfig
+        spindle_config = SpindleConfig.with_root("/path/to/storage", llm=config)
+        extractor = spindle_config.create_extractor()  # Uses LLM config automatically
     """
 
     gcp_project_id: Optional[str] = None
