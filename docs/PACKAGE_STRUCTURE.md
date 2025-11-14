@@ -17,7 +17,19 @@ spindle/
 │   │   ├── process.py               # Process extraction functions
 │   │   ├── utils.py                # Public utility functions
 │   │   └── helpers.py              # Internal helper functions
-│   ├── graph_store.py               # Embedded Kùzu persistence layer
+│   ├── graph_store/                 # Graph database abstraction
+│   │   ├── __init__.py              # Public API exports (GraphStore)
+│   │   ├── store.py                 # GraphStore facade class
+│   │   ├── base.py                  # GraphStoreBackend abstract base class
+│   │   ├── backends/                 # Backend implementations
+│   │   │   ├── __init__.py         # Backend exports
+│   │   │   └── kuzu.py             # Kùzu backend implementation
+│   │   ├── nodes.py                 # Node operation utilities
+│   │   ├── edges.py                 # Edge operation utilities
+│   │   ├── triples.py               # Triple integration utilities
+│   │   ├── resolution.py            # Entity resolution support
+│   │   ├── embeddings.py           # Graph embedding computation
+│   │   └── utils.py                 # Shared utilities
 │   ├── vector_store/                # Embedding + vector DB integrations
 │   │   ├── __init__.py              # Public API exports
 │   │   ├── base.py                  # VectorStore abstract base class
@@ -158,9 +170,18 @@ Core extraction functionality organized into modules:
 - `helpers.py`: Internal helper functions (span processing, event recording)
 - `__init__.py`: Public API exports maintaining backward compatibility
 
-#### `spindle/graph_store.py`
-Graph database persistence (optional, requires kuzu):
-- `GraphStore`: Main class for graph database operations
+#### `spindle/graph_store/`
+Graph database abstraction (optional, requires kuzu):
+- `store.py`: `GraphStore` facade class for graph database operations
+- `base.py`: `GraphStoreBackend` abstract base class for backend implementations
+- `backends/kuzu.py`: Kùzu backend implementation
+- `nodes.py`, `edges.py`: Node and edge operation utilities
+- `triples.py`: Triple integration utilities
+- `resolution.py`: Entity resolution support methods
+- `embeddings.py`: Graph embedding computation utilities
+- `utils.py`: Shared utilities (path resolution, event recording)
+- `__init__.py`: Public API exports maintaining backward compatibility
+- Supports multiple backends (Kùzu now, Neo4j/others in future)
 - CRUD operations for nodes and edges
 - Query operations (pattern matching, source filtering, date ranges)
 - Cypher query support

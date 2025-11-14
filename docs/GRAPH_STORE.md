@@ -2,7 +2,7 @@
 
 ## Overview
 
-GraphStore provides persistent storage and querying capabilities for Spindle knowledge graphs using the Kùzu embedded graph database. It enables you to store extracted triples, query them efficiently, and maintain provenance information across multiple sources.
+GraphStore provides persistent storage and querying capabilities for Spindle knowledge graphs using a backend abstraction pattern. The default backend is Kùzu (embedded graph database), but the architecture supports multiple backends (e.g., Neo4j, ArangoDB) for future extensibility. It enables you to store extracted triples, query them efficiently, and maintain provenance information across multiple sources.
 
 ## Key Features
 
