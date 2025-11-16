@@ -7,8 +7,12 @@ import numpy as np
 import baml_py
 
 from spindle.observability import get_event_recorder
+from spindle.extraction.helpers import _extract_metrics_from_collector
 
 ENTITY_RESOLUTION_RECORDER = get_event_recorder("entity_resolution")
+
+# Re-export for convenience
+_extract_metrics_from_collector = _extract_metrics_from_collector
 
 
 def _record_resolution_event(name: str, payload: Dict[str, Any]) -> None:
@@ -17,35 +21,53 @@ def _record_resolution_event(name: str, payload: Dict[str, Any]) -> None:
 
 
 def _extract_model_from_collector(collector: baml_py.baml_py.Collector) -> Optional[str]:
-    """Extract model/client name from BAML collector logs.
+    """Extract actual model name from BAML collector logs.
     
-    Returns the model identifier if available, otherwise None.
+    Extracts the real provider model (e.g., 'claude-sonnet-4-20250514') from the
+    HTTP response, not the BAML client name (e.g., 'CustomSonnet4').
+    
+    Returns:
+        Model identifier string, or None if not found
     """
     if not hasattr(collector, 'logs') or not collector.logs:
         return None
     
-    # Try to get model from logs
     for log in collector.logs:
-        # Check for common model/client attributes
-        if hasattr(log, 'client_name'):
-            return getattr(log, 'client_name')
-        if hasattr(log, 'model'):
-            return getattr(log, 'model')
-        if hasattr(log, 'client'):
-            client = getattr(log, 'client')
-            if isinstance(client, str):
-                return client
-            if hasattr(client, 'name'):
-                return getattr(client, 'name')
-        # Check for model in metadata or options
-        if hasattr(log, 'metadata') and isinstance(log.metadata, dict):
-            model = log.metadata.get('model') or log.metadata.get('client_name')
-            if model:
-                return model
-        if hasattr(log, 'options') and isinstance(log.options, dict):
-            model = log.options.get('model') or log.options.get('client_name')
-            if model:
-                return model
+        if not hasattr(log, 'selected_call'):
+            continue
+        
+        selected_call = log.selected_call
+        
+        # Extract model from HTTP response body (provider's actual response)
+        if hasattr(selected_call, 'http_response') and hasattr(selected_call.http_response, 'body'):
+            body = selected_call.http_response.body
+            
+            # Try body.text() method (most common)
+            if hasattr(body, 'text'):
+                text_val = body.text
+                try:
+                    text_content = text_val() if callable(text_val) else text_val
+                    if isinstance(text_content, str):
+                        body_dict = json.loads(text_content)
+                        if 'model' in body_dict:
+                            model = body_dict['model']
+                            if model and not str(model).startswith('Custom'):
+                                return model
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    pass
+            
+            # Try body.json() method as fallback
+            if hasattr(body, 'json'):
+                json_val = body.json
+                if callable(json_val):
+                    try:
+                        parsed = json_val()
+                        if isinstance(parsed, dict) and 'model' in parsed:
+                            model = parsed['model']
+                            if model and not str(model).startswith('Custom'):
+                                return model
+                    except (json.JSONDecodeError, TypeError, AttributeError):
+                        pass
     
     return None
 

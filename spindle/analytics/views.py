@@ -185,31 +185,27 @@ def ontology_recommendation_metrics(
         scope = payload.get("scope", "unknown")
         model = payload.get("model") or "unknown"
         
-        tokens = payload.get("total_tokens", 0)
+        input_tokens = payload.get("input_tokens") or 0
+        output_tokens = payload.get("output_tokens") or 0
+        tokens = input_tokens + output_tokens
         cost = payload.get("cost", 0.0)
         latency = payload.get("latency_ms", 0.0)
         
         # Aggregate by scope
         by_scope[scope]["calls"] += 1
         by_scope[scope]["total_tokens"] += tokens
+        by_scope[scope]["input_tokens"] += input_tokens
+        by_scope[scope]["output_tokens"] += output_tokens
         by_scope[scope]["total_cost"] += cost
         by_scope[scope]["latencies_ms"].append(latency)
-        
-        if payload.get("input_tokens") is not None:
-            by_scope[scope]["input_tokens"] += payload.get("input_tokens", 0)
-        if payload.get("output_tokens") is not None:
-            by_scope[scope]["output_tokens"] += payload.get("output_tokens", 0)
         
         # Aggregate by model
         by_model[model]["calls"] += 1
         by_model[model]["total_tokens"] += tokens
+        by_model[model]["input_tokens"] += input_tokens
+        by_model[model]["output_tokens"] += output_tokens
         by_model[model]["total_cost"] += cost
         by_model[model]["latencies_ms"].append(latency)
-        
-        if payload.get("input_tokens") is not None:
-            by_model[model]["input_tokens"] += payload.get("input_tokens", 0)
-        if payload.get("output_tokens") is not None:
-            by_model[model]["output_tokens"] += payload.get("output_tokens", 0)
         
         total_tokens += tokens
         total_cost += cost
@@ -294,7 +290,9 @@ def triple_extraction_metrics(
         scope = payload.get("ontology_scope", "unknown")
         model = payload.get("model") or "unknown"
         
-        tokens = payload.get("total_tokens", 0)
+        input_tokens = payload.get("input_tokens") or 0
+        output_tokens = payload.get("output_tokens") or 0
+        tokens = input_tokens + output_tokens
         cost = payload.get("cost", 0.0)
         latency = payload.get("latency_ms", 0.0)
         triple_count = payload.get("triple_count", 0)
@@ -302,26 +300,20 @@ def triple_extraction_metrics(
         # Aggregate by scope
         by_scope[scope]["calls"] += 1
         by_scope[scope]["total_tokens"] += tokens
+        by_scope[scope]["input_tokens"] += input_tokens
+        by_scope[scope]["output_tokens"] += output_tokens
         by_scope[scope]["total_cost"] += cost
         by_scope[scope]["latencies_ms"].append(latency)
         by_scope[scope]["triples"] += triple_count
         
-        if payload.get("input_tokens") is not None:
-            by_scope[scope]["input_tokens"] += payload.get("input_tokens", 0)
-        if payload.get("output_tokens") is not None:
-            by_scope[scope]["output_tokens"] += payload.get("output_tokens", 0)
-        
         # Aggregate by model
         by_model[model]["calls"] += 1
         by_model[model]["total_tokens"] += tokens
+        by_model[model]["input_tokens"] += input_tokens
+        by_model[model]["output_tokens"] += output_tokens
         by_model[model]["total_cost"] += cost
         by_model[model]["latencies_ms"].append(latency)
         by_model[model]["triples"] += triple_count
-        
-        if payload.get("input_tokens") is not None:
-            by_model[model]["input_tokens"] += payload.get("input_tokens", 0)
-        if payload.get("output_tokens") is not None:
-            by_model[model]["output_tokens"] += payload.get("output_tokens", 0)
         
         total_tokens += tokens
         total_cost += cost
@@ -384,6 +376,8 @@ def entity_resolution_metrics(
             return {
                 "calls": 0,
                 "total_tokens": 0,
+                "input_tokens": None,
+                "output_tokens": None,
                 "total_cost": 0.0,
                 "avg_latency_ms": 0.0,
                 "by_model": {},
@@ -392,11 +386,15 @@ def entity_resolution_metrics(
         by_model: dict[str, dict[str, Any]] = defaultdict(lambda: {
             "calls": 0,
             "total_tokens": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
             "total_cost": 0.0,
             "latencies_ms": [],
         })
         
         total_tokens = 0
+        total_input_tokens = 0
+        total_output_tokens = 0
         total_cost = 0.0
         latencies: list[float] = []
         
@@ -404,15 +402,21 @@ def entity_resolution_metrics(
             payload = event.payload
             model = payload.get("model") or "unknown"
             
-            tokens = payload.get("total_tokens", 0)
+            input_tokens = payload.get("input_tokens") or 0
+            output_tokens = payload.get("output_tokens") or 0
+            tokens = input_tokens + output_tokens
             cost = payload.get("cost", 0.0)
             latency = payload.get("latency_ms", 0.0)
             
             by_model[model]["calls"] += 1
             by_model[model]["total_tokens"] += tokens
+            by_model[model]["input_tokens"] += input_tokens
+            by_model[model]["output_tokens"] += output_tokens
             by_model[model]["total_cost"] += cost
             by_model[model]["latencies_ms"].append(latency)
             
+            total_input_tokens += input_tokens
+            total_output_tokens += output_tokens
             total_tokens += tokens
             total_cost += cost
             latencies.append(latency)
@@ -428,6 +432,8 @@ def entity_resolution_metrics(
         return {
             "calls": len(step_events),
             "total_tokens": total_tokens,
+            "input_tokens": total_input_tokens if total_input_tokens > 0 else None,
+            "output_tokens": total_output_tokens if total_output_tokens > 0 else None,
             "total_cost": total_cost,
             "avg_latency_ms": mean(latencies) if latencies else 0.0,
             "by_model": dict(by_model),
@@ -438,7 +444,7 @@ def entity_resolution_metrics(
         "edge_matching": aggregate_step_metrics(edge_matching_events, "edge_matching"),
         "total_calls": len(entity_matching_events) + len(edge_matching_events),
         "total_tokens": sum(
-            e.payload.get("total_tokens", 0)
+            (e.payload.get("input_tokens") or 0) + (e.payload.get("output_tokens") or 0)
             for e in entity_matching_events + edge_matching_events
         ),
         "total_cost": sum(

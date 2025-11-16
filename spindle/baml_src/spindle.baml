@@ -84,7 +84,7 @@ class OntologyExtension {
   needs_extension bool @description("Whether the ontology needs to be extended for this text")
   new_entity_types EntityType[] @description("New entity types to add (empty if none needed)")
   new_relation_types RelationType[] @description("New relation types to add (empty if none needed)")
-  critical_information_at_risk string @description("Description of what critical information would be lost without extension")
+  critical_information_at_risk string? @description("Description of what critical information would be lost without extension (null if needs_extension is false)")
   reasoning string @description("Detailed explanation of why extension is or isn't needed")
 }
 
@@ -506,12 +506,13 @@ function AnalyzeOntologyExtension(
     
     - If needs_extension = false:
       * Set new_entity_types and new_relation_types to empty arrays
+      * Set critical_information_at_risk to null (no critical information is at risk)
       * Explain in reasoning how existing types cover the text
       * Be specific about which existing types map to which concepts
     
     - If needs_extension = true:
       * Provide ONLY the new types needed (don't repeat existing ones)
-      * Describe in critical_information_at_risk what would be lost
+      * Describe in critical_information_at_risk what critical information would be lost without extension
       * Explain in reasoning why each new type is essential
       * Keep extensions minimal - only add what's absolutely necessary
     

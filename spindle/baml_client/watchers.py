@@ -43,3 +43,4 @@ class EventCollectorInternal(Protocol):
     def __handlers__(self) -> InternalEventBindings:
         ...
 
+

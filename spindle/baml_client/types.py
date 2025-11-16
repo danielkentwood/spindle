@@ -128,7 +128,7 @@ class OntologyExtension(BaseModel):
     needs_extension: bool
     new_entity_types: typing.List["EntityType"]
     new_relation_types: typing.List["RelationType"]
-    critical_information_at_risk: str
+    critical_information_at_risk: typing.Optional[str] = None
     reasoning: str
 
 class OntologyRecommendation(BaseModel):

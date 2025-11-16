@@ -34,37 +34,101 @@ def _record_ontology_event(name: str, payload: Dict[str, Any]) -> None:
 
 
 def _extract_model_from_collector(collector: baml_py.baml_py.Collector) -> Optional[str]:
-    """Extract model/client name from BAML collector logs.
+    """Extract actual model name from BAML collector logs.
     
-    Returns the model identifier if available, otherwise None.
+    Extracts the real provider model (e.g., 'gpt-5-mini-2025-08-07') from the
+    HTTP response, not the BAML client name (e.g., 'CustomFast').
+    
+    Returns:
+        Model identifier string, or None if not found
     """
+    import json
+    
     if not hasattr(collector, 'logs') or not collector.logs:
         return None
     
-    # Try to get model from logs
     for log in collector.logs:
-        # Check for common model/client attributes
-        if hasattr(log, 'client_name'):
-            return getattr(log, 'client_name')
-        if hasattr(log, 'model'):
-            return getattr(log, 'model')
-        if hasattr(log, 'client'):
-            client = getattr(log, 'client')
-            if isinstance(client, str):
-                return client
-            if hasattr(client, 'name'):
-                return client.name
-        # Check for model in metadata or options
-        if hasattr(log, 'metadata') and isinstance(log.metadata, dict):
-            model = log.metadata.get('model') or log.metadata.get('client_name')
-            if model:
-                return model
-        if hasattr(log, 'options') and isinstance(log.options, dict):
-            model = log.options.get('model') or log.options.get('client_name')
-            if model:
-                return model
+        if not hasattr(log, 'selected_call'):
+            continue
+        
+        selected_call = log.selected_call
+        
+        # Extract model from HTTP response body (provider's actual response)
+        if hasattr(selected_call, 'http_response') and hasattr(selected_call.http_response, 'body'):
+            body = selected_call.http_response.body
+            
+            # Try body.text() method (most common)
+            if hasattr(body, 'text'):
+                text_val = body.text
+                try:
+                    text_content = text_val() if callable(text_val) else text_val
+                    if isinstance(text_content, str):
+                        body_dict = json.loads(text_content)
+                        if 'model' in body_dict:
+                            model = body_dict['model']
+                            if model and not str(model).startswith('Custom'):
+                                return model
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    pass
+            
+            # Try body.json() method as fallback
+            if hasattr(body, 'json'):
+                json_val = body.json
+                if callable(json_val):
+                    try:
+                        parsed = json_val()
+                        if isinstance(parsed, dict) and 'model' in parsed:
+                            model = parsed['model']
+                            if model and not str(model).startswith('Custom'):
+                                return model
+                    except (json.JSONDecodeError, TypeError, AttributeError):
+                        pass
     
     return None
+
+
+def _extract_metrics_from_collector(collector: baml_py.baml_py.Collector) -> Dict[str, Any]:
+    """Extract token and cost metrics from BAML collector.
+    
+    Args:
+        collector: BAML collector instance
+        
+    Returns:
+        Dictionary with:
+        - total_tokens: int (input + output tokens)
+        - input_tokens: int | None
+        - output_tokens: int | None
+        - total_cost: float (always 0.0; computed by pricing fallback if needed)
+    """
+    agg_input_tokens = 0
+    agg_output_tokens = 0
+    agg_total_cost = 0.0
+    
+    if hasattr(collector, 'logs') and collector.logs:
+        for log in collector.logs:
+            # Extract from log.usage (BAML's aggregated usage object)
+            if hasattr(log, 'usage'):
+                usage = log.usage
+                if hasattr(usage, 'input_tokens'):
+                    agg_input_tokens += getattr(usage, 'input_tokens', 0) or 0
+                if hasattr(usage, 'output_tokens'):
+                    agg_output_tokens += getattr(usage, 'output_tokens', 0) or 0
+            
+            # Check for cost (rarely provided by provider SDKs)
+            if hasattr(log, 'total_cost'):
+                cost = getattr(log, 'total_cost', None)
+                if cost is not None:
+                    agg_total_cost += cost
+    
+    # Compute total from input + output
+    total_tokens = agg_input_tokens + agg_output_tokens
+    
+    return {
+        "total_tokens": total_tokens,
+        "input_tokens": agg_input_tokens if agg_input_tokens > 0 else None,
+        "output_tokens": agg_output_tokens if agg_output_tokens > 0 else None,
+        "total_cost": agg_total_cost,
+    }
 
 
 def _normalize_ws(text: str) -> str:

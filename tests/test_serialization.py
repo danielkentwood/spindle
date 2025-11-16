@@ -293,7 +293,7 @@ class TestExtensionSerialization:
         assert d["needs_extension"] is False
         assert len(d["new_entity_types"]) == 0
         assert len(d["new_relation_types"]) == 0
-        assert d["critical_information_at_risk"] == ""
+        assert d["critical_information_at_risk"] is None
     
     def test_extension_to_dict_entity_structure(self, mock_ontology_extension_needed):
         """Test new entity types structure in dict."""

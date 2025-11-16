@@ -184,7 +184,7 @@ def mock_ontology_extension_not_needed():
         needs_extension=False,
         new_entity_types=[],
         new_relation_types=[],
-        critical_information_at_risk="",
+        critical_information_at_risk=None,
         reasoning="All entities can be represented with existing Person and Organization types."
     )
 

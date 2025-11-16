@@ -23,6 +23,7 @@ from spindle.entity_resolution.models import EntityMatch, EdgeMatch
 from spindle.entity_resolution.utils import (
     _record_resolution_event,
     _extract_model_from_collector,
+    _extract_metrics_from_collector,
 )
 
 
@@ -88,6 +89,8 @@ class SemanticMatcher:
         
         total_tokens = 0
         total_cost = 0.0
+        total_input_tokens = 0
+        total_output_tokens = 0
         total_latency_ms = 0.0
         models_used = []  # Track models used across batches
         
@@ -109,15 +112,33 @@ class SemanticMatcher:
                 total_latency_ms += latency_ms
                 
                 # Extract metrics from collector
-                batch_tokens = getattr(collector, 'total_tokens', 0)
-                batch_cost = getattr(collector, 'total_cost', 0.0)
+                metrics = _extract_metrics_from_collector(collector)
+                batch_tokens = metrics["total_tokens"]
+                batch_cost = metrics["total_cost"]
+                batch_input_tokens = metrics.get("input_tokens") or 0
+                batch_output_tokens = metrics.get("output_tokens") or 0
                 total_tokens += batch_tokens
                 total_cost += batch_cost
+                if batch_input_tokens:
+                    total_input_tokens += batch_input_tokens
+                if batch_output_tokens:
+                    total_output_tokens += batch_output_tokens
                 
-                # Extract model information
-                model = _extract_model_from_collector(collector)
+                # Extract model information from collector
+                # Falls back to "CustomSonnet4" (the client configured for MatchEntities in BAML)
+                model = _extract_model_from_collector(collector) or "CustomSonnet4"
                 if model:
                     models_used.append(model)
+
+                # Fallback cost estimation if provider did not supply a cost
+                if batch_cost == 0.0:
+                    try:
+                        from spindle.llm_pricing import estimate_cost_usd
+                        est = estimate_cost_usd(model, batch_input_tokens, batch_output_tokens)
+                        if est is not None:
+                            total_cost += est
+                    except Exception:
+                        pass
                 
                 # Convert BAML matches to our EntityMatch format
                 # and filter by confidence threshold
@@ -157,7 +178,8 @@ class SemanticMatcher:
             {
                 "block_size": len(block),
                 "matches_found": len(all_matches),
-                "total_tokens": total_tokens,
+                "input_tokens": total_input_tokens if total_input_tokens > 0 else None,
+                "output_tokens": total_output_tokens if total_output_tokens > 0 else None,
                 "cost": total_cost,
                 "latency_ms": total_latency_ms,
                 "model": primary_model,
@@ -234,6 +256,8 @@ class SemanticMatcher:
         
         total_tokens = 0
         total_cost = 0.0
+        total_input_tokens = 0
+        total_output_tokens = 0
         total_latency_ms = 0.0
         models_used = []  # Track models used across batches
         
@@ -255,15 +279,33 @@ class SemanticMatcher:
                 total_latency_ms += latency_ms
                 
                 # Extract metrics from collector
-                batch_tokens = getattr(collector, 'total_tokens', 0)
-                batch_cost = getattr(collector, 'total_cost', 0.0)
+                metrics = _extract_metrics_from_collector(collector)
+                batch_tokens = metrics["total_tokens"]
+                batch_cost = metrics["total_cost"]
+                batch_input_tokens = metrics.get("input_tokens") or 0
+                batch_output_tokens = metrics.get("output_tokens") or 0
                 total_tokens += batch_tokens
                 total_cost += batch_cost
+                if batch_input_tokens:
+                    total_input_tokens += batch_input_tokens
+                if batch_output_tokens:
+                    total_output_tokens += batch_output_tokens
                 
-                # Extract model information
-                model = _extract_model_from_collector(collector)
+                # Extract model information from collector
+                # Falls back to "CustomSonnet4" (the client configured for MatchEdges in BAML)
+                model = _extract_model_from_collector(collector) or "CustomSonnet4"
                 if model:
                     models_used.append(model)
+
+                # Fallback cost estimation if provider did not supply a cost
+                if batch_cost == 0.0:
+                    try:
+                        from spindle.llm_pricing import estimate_cost_usd
+                        est = estimate_cost_usd(model, batch_input_tokens, batch_output_tokens)
+                        if est is not None:
+                            total_cost += est
+                    except Exception:
+                        pass
                 
                 # Convert BAML matches to our EdgeMatch format
                 # and filter by confidence threshold
@@ -303,7 +345,8 @@ class SemanticMatcher:
             {
                 "block_size": len(block),
                 "matches_found": len(all_matches),
-                "total_tokens": total_tokens,
+                "input_tokens": total_input_tokens if total_input_tokens > 0 else None,
+                "output_tokens": total_output_tokens if total_output_tokens > 0 else None,
                 "cost": total_cost,
                 "latency_ms": total_latency_ms,
                 "model": primary_model,

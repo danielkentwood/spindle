@@ -22,6 +22,7 @@ from spindle.baml_client.types import (
 from spindle.extraction.helpers import (
     _record_extractor_event,
     _extract_model_from_collector,
+    _extract_metrics_from_collector,
     _compute_all_span_indices,
 )
 from spindle.extraction.recommender import OntologyRecommender
@@ -204,22 +205,25 @@ class SpindleExtractor:
             latency_ms = (time.perf_counter() - start_time) * 1000
             
             # Extract metrics from collector
-            total_tokens = getattr(collector, 'total_tokens', 0)
-            total_cost = getattr(collector, 'total_cost', 0.0)
-            # Try to get input/output tokens if available
-            input_tokens = getattr(collector, 'input_tokens', None)
-            output_tokens = getattr(collector, 'output_tokens', None)
-            if input_tokens is None and output_tokens is None:
-                # Fallback: try to get from logs if available
-                if hasattr(collector, 'logs') and collector.logs:
-                    # Try to extract from last log entry
-                    last_log = collector.logs[-1] if collector.logs else None
-                    if last_log:
-                        input_tokens = getattr(last_log, 'input_tokens', None)
-                        output_tokens = getattr(last_log, 'output_tokens', None)
+            metrics = _extract_metrics_from_collector(collector)
+            total_tokens = metrics["total_tokens"]
+            total_cost = metrics["total_cost"]
+            input_tokens = metrics["input_tokens"]
+            output_tokens = metrics["output_tokens"]
             
-            # Extract model information
-            model = _extract_model_from_collector(collector)
+            # Extract model information from collector
+            # Falls back to "CustomFast" (the client configured for ExtractTriples in BAML)
+            model = _extract_model_from_collector(collector) or "CustomFast"
+
+            # Fallback cost estimation if provider did not supply a cost
+            if not total_cost or total_cost == 0.0:
+                try:
+                    from spindle.llm_pricing import estimate_cost_usd
+                    est = estimate_cost_usd(model, input_tokens, output_tokens)
+                    if est is not None:
+                        total_cost = est
+                except Exception:
+                    pass
 
             # Post-processing: Set extraction datetime for all triples
             extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -247,7 +251,6 @@ class SpindleExtractor:
                 "source_name": source_name,
                 "triple_count": len(result.triples),
                 "ontology_scope": used_scope,
-                "total_tokens": total_tokens,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "cost": total_cost,
@@ -333,19 +336,25 @@ class SpindleExtractor:
             latency_ms = (time.perf_counter() - start_time) * 1000
             
             # Extract metrics from collector
-            total_tokens = getattr(collector, 'total_tokens', 0)
-            total_cost = getattr(collector, 'total_cost', 0.0)
-            input_tokens = getattr(collector, 'input_tokens', None)
-            output_tokens = getattr(collector, 'output_tokens', None)
-            if input_tokens is None and output_tokens is None:
-                if hasattr(collector, 'logs') and collector.logs:
-                    last_log = collector.logs[-1] if collector.logs else None
-                    if last_log:
-                        input_tokens = getattr(last_log, 'input_tokens', None)
-                        output_tokens = getattr(last_log, 'output_tokens', None)
+            metrics = _extract_metrics_from_collector(collector)
+            total_tokens = metrics["total_tokens"]
+            total_cost = metrics["total_cost"]
+            input_tokens = metrics["input_tokens"]
+            output_tokens = metrics["output_tokens"]
             
-            # Extract model information
-            model = _extract_model_from_collector(collector)
+            # Extract model information from collector
+            # Falls back to "CustomFast" (the client configured for ExtractTriples in BAML)
+            model = _extract_model_from_collector(collector) or "CustomFast"
+
+            # Fallback cost estimation if provider did not supply a cost
+            if not total_cost or total_cost == 0.0:
+                try:
+                    from spindle.llm_pricing import estimate_cost_usd
+                    est = estimate_cost_usd(model, input_tokens, output_tokens)
+                    if est is not None:
+                        total_cost = est
+                except Exception:
+                    pass
 
             # Post-processing: Set extraction datetime for all triples
             extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -373,7 +382,6 @@ class SpindleExtractor:
                 "source_name": source_name,
                 "triple_count": len(result.triples),
                 "ontology_scope": used_scope,
-                "total_tokens": total_tokens,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "cost": total_cost,

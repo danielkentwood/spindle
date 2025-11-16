@@ -22,6 +22,7 @@ from spindle.baml_client.types import (
 from spindle.extraction.helpers import (
     _record_ontology_event,
     _extract_model_from_collector,
+    _extract_metrics_from_collector,
 )
 
 try:
@@ -170,19 +171,25 @@ class OntologyRecommender:
             latency_ms = (time.perf_counter() - start_time) * 1000
             
             # Extract metrics from collector
-            total_tokens = getattr(collector, 'total_tokens', 0)
-            total_cost = getattr(collector, 'total_cost', 0.0)
-            input_tokens = getattr(collector, 'input_tokens', None)
-            output_tokens = getattr(collector, 'output_tokens', None)
-            if input_tokens is None and output_tokens is None:
-                if hasattr(collector, 'logs') and collector.logs:
-                    last_log = collector.logs[-1] if collector.logs else None
-                    if last_log:
-                        input_tokens = getattr(last_log, 'input_tokens', None)
-                        output_tokens = getattr(last_log, 'output_tokens', None)
+            metrics = _extract_metrics_from_collector(collector)
+            total_tokens = metrics["total_tokens"]
+            total_cost = metrics["total_cost"]
+            input_tokens = metrics["input_tokens"]
+            output_tokens = metrics["output_tokens"]
             
-            # Extract model information
-            model = _extract_model_from_collector(collector)
+            # Extract model information from collector
+            # Falls back to "CustomFast" (the client configured for RecommendOntology in BAML)
+            model = _extract_model_from_collector(collector) or "CustomFast"
+
+            # Fallback cost estimation if provider did not supply a cost
+            if not total_cost or total_cost == 0.0:
+                try:
+                    from spindle.llm_pricing import estimate_cost_usd
+                    est = estimate_cost_usd(model, input_tokens, output_tokens)
+                    if est is not None:
+                        total_cost = est
+                except Exception:
+                    pass
         except Exception as exc:
             _record_ontology_event(
                 "recommend.error",
@@ -199,7 +206,6 @@ class OntologyRecommender:
                 "scope": scope,
                 "entity_type_count": len(result.ontology.entity_types),
                 "relation_type_count": len(result.ontology.relation_types),
-                "total_tokens": total_tokens,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "cost": total_cost,
@@ -357,13 +363,73 @@ class OntologyRecommender:
             ... else:
             ...     print(f"No extension needed: {extension.reasoning}")
         """
-        client = self._get_baml_client()
-        result = client.AnalyzeOntologyExtension(
-            text=text,
-            current_ontology=current_ontology,
-            scope=scope
+        _record_ontology_event(
+            "analyze_extension.start",
+            {
+                "scope": scope,
+                "text_length": len(text),
+                "current_entity_types": len(current_ontology.entity_types),
+                "current_relation_types": len(current_ontology.relation_types),
+            },
         )
-        
+        try:
+            # Track LLM metrics using BAML collector
+            collector = baml_py.baml_py.Collector("ontology-extension-analysis-collector")
+            start_time = time.perf_counter()
+            
+            client = self._get_baml_client()
+            result = client.with_options(collector=collector).AnalyzeOntologyExtension(
+                text=text,
+                current_ontology=current_ontology,
+                scope=scope
+            )
+            
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            
+            # Extract metrics from collector
+            metrics = _extract_metrics_from_collector(collector)
+            total_tokens = metrics["total_tokens"]
+            total_cost = metrics["total_cost"]
+            input_tokens = metrics["input_tokens"]
+            output_tokens = metrics["output_tokens"]
+            
+            # Extract model information from collector
+            # Falls back to "CustomFast" (the client configured for AnalyzeOntologyExtension in BAML)
+            model = _extract_model_from_collector(collector) or "CustomFast"
+
+            # Fallback cost estimation if provider did not supply a cost
+            if not total_cost or total_cost == 0.0:
+                try:
+                    from spindle.llm_pricing import estimate_cost_usd
+                    est = estimate_cost_usd(model, input_tokens, output_tokens)
+                    if est is not None:
+                        total_cost = est
+                except Exception:
+                    pass
+        except Exception as exc:
+            _record_ontology_event(
+                "analyze_extension.error",
+                {
+                    "scope": scope,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        _record_ontology_event(
+            "analyze_extension.complete",
+            {
+                "scope": scope,
+                "needs_extension": result.needs_extension,
+                "new_entity_type_count": len(result.new_entity_types),
+                "new_relation_type_count": len(result.new_relation_types),
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cost": total_cost,
+                "latency_ms": latency_ms,
+                "model": model,
+            },
+        )
         return result
     
     def extend_ontology(

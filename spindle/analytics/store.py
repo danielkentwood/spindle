@@ -76,6 +76,21 @@ class AnalyticsStore:
         AnalyticsBase.metadata.create_all(self._engine)
         self._event_store = event_store or EventLogStore(database_url)
 
+    def __enter__(self) -> "AnalyticsStore":
+        """Support context manager protocol."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Close connections when exiting context."""
+        self.close()
+
+    def close(self) -> None:
+        """Close all database connections and dispose of the engine."""
+        if hasattr(self, '_engine'):
+            self._engine.dispose()
+        if hasattr(self, '_event_store'):
+            self._event_store.close()
+
     @contextmanager
     def session(self) -> Iterator[Session]:
         session = self._session_factory()
