@@ -44,7 +44,10 @@ dependencies = [
     "anthropic[vertex]>=0.68.0",
     "google-auth>=2.0.0",
     "google-cloud-aiplatform>=1.40.0",
-    "streamlit>=1.28.0"
+    "streamlit>=1.28.0",
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6"
 ]
 
 [project.optional-dependencies]
@@ -74,11 +77,14 @@ Repository = "https://github.com/danielkentwood/spindle"
 [project.scripts]
 spindle-ingest = "spindle.ingestion.cli:main"
 spindle-dashboard = "spindle.dashboard.app:main"
+spindle-api = "spindle.api.main:main"
 
 [tool.setuptools]
 packages = [
     "spindle",
     "spindle.baml_client",
+    "spindle.api",
+    "spindle.api.routers",
     "spindle.ingestion",
     "spindle.ingestion.pipeline",
     "spindle.ingestion.loaders",
