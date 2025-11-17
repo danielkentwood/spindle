@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "spindle-kg"
 version = "0.1.0"
-description = "A tool for real-time extraction of knowledge graphs from multimodal data using BAML and LLMs"
+description = "A tool for iterative, ontology-aware extraction of knowledge graphs"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}

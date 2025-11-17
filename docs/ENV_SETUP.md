@@ -23,8 +23,8 @@ This guide explains how to configure your Spindle development environment, insta
 
 ## Prerequisites
 
-1. macOS or Linux shell (instructions assume macOS).
-2. Python 3.11 (managed via `.python-version`).
+1. macOS, Linux, or Windows shell (instructions assume Unix-like shell).
+2. Python 3.9+ (managed via `.python-version` if present).
 3. `uv` installed and available on your `PATH`.
 4. (Optional) Access to GCP with Vertex AI enabled if you plan to use managed models.
 
@@ -69,7 +69,7 @@ cd /Users/thalamus/Repos/spindle
 uv venv
 ```
 
-This creates `.venv/` with the environment pinned to Python 3.11.
+This creates `.venv/` with the environment using Python 3.9+ (or the version specified in `.python-version` if present).
 
 ### 2. Install Project Dependencies
 
@@ -429,8 +429,7 @@ uv pip install -e ".[dev]"
 
 ```bash
 # Verify Python version
-cat .python-version  # Should show 3.11
-python3.11 --version
+uv run python --version  # Should show 3.9 or higher
 ```
 
 ```bash

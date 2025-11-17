@@ -9,28 +9,45 @@ LLM-powered ontology-first extraction of knowledge graph triples from text.
 
 ## What It Does
 
-- Recommends ontologies (entities, relations, attributes) from raw text using BAML-driven LLM prompts
-- Extracts triples with source metadata, evidence spans, and timestamps
-- Keeps entities consistent across documents and merges duplicate facts
-- Persists results in an embedded Kùzu-backed `GraphStore`
-- Emits structured service events across ingestion, extraction, and storage with optional persistence (see `docs/OBSERVABILITY.md`)
-- Ships with example workflows and a test suite covering API and persistence layers
+Spindle is a comprehensive toolkit for building knowledge graphs from unstructured text. It combines LLM-powered extraction with graph storage, entity resolution, and observability features.
+
+### Core Features
+
+- **Ontology Recommendation**: Automatically recommends ontologies (entities, relations, attributes) from raw text using BAML-driven LLM prompts
+- **Triple Extraction**: Extracts knowledge graph triples with source metadata, evidence spans, and timestamps
+- **Entity Resolution**: Semantic entity deduplication using embeddings and LLM-based matching to keep entities consistent across documents
+- **Graph Storage**: Persistent graph database using embedded Kùzu with support for nodes, edges, and embeddings
+- **Vector Store Integration**: ChromaDB-based vector storage with support for multiple embedding providers (OpenAI, HuggingFace, Google)
+- **Document Ingestion Pipeline**: CLI-driven ingestion system with template-based document processing, chunking, and graph construction
+- **Analytics Dashboard**: Streamlit-based dashboard for visualizing ingestion metrics, extraction statistics, and entity resolution results
+- **Observability**: Structured event logging across ingestion, extraction, and storage with optional SQLite persistence
+- **Configuration Management**: Unified configuration system for storage paths, graph databases, vector stores, and observability settings
 
 ## Quick Start
 
-Prerequisites: Python 3.11+, Anthropic API key, and [`uv`](https://github.com/astral-sh/uv) (preferred installer).
+Prerequisites: Python 3.9+, Anthropic API key, and [`uv`](https://github.com/astral-sh/uv) (preferred installer).
 
 ```bash
 git clone <repository-url>
 cd spindle
 uv venv
 uv pip install -e ".[dev]"
-cp .env.example .env  # add ANTHROPIC_API_KEY
 ```
 
-See `docs/UV_SETUP.md` if you hit environment issues.
+Create a `.env` file with your API keys:
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+# Optional: for embeddings and other providers
+OPENAI_API_KEY=sk-...
+HF_API_KEY=hf_...
+GEMINI_API_KEY=AIza...
+```
+
+See `docs/QUICKSTART.md` for detailed setup instructions and `docs/ENV_SETUP.md` if you hit environment issues.
 
 ## Basic Usage
+
+### Simple Extraction
 
 ```python
 from spindle import SpindleExtractor
@@ -45,38 +62,124 @@ for triple in result.triples:
     print(triple.subject.name, triple.predicate, triple.object.name)
 ```
 
-- Control ontology scope with `ontology_scope="minimal" | "balanced" | "comprehensive"`
-- Use `OntologyRecommender` for explicit recommendations and conservative ontology extension
-- Persist extractions with `GraphStore()`; demos live in `demos/`
+### With Graph Storage
 
-### Unified Storage & Configuration
+```python
+from spindle import SpindleExtractor, GraphStore
 
-- Scaffold a runtime config (defines storage root, catalog, graph DB, vector store, logs) with `uv run spindle-ingest config init`.
-- Edit the generated `config.py` to relocate storage or add template directories, then pass it to tooling via `--config /path/to/config.py`.
-- Programmatic consumers can load the same file with `from spindle.configuration import load_config_from_file`.
-- See `docs/CONFIGURATION.md` for the full schema and usage patterns.
+extractor = SpindleExtractor()
+store = GraphStore("path/to/graph.db")
+
+result = extractor.extract(text="...", source_name="...")
+store.add_triples(result.triples)
+```
+
+### Entity Resolution
+
+```python
+from spindle import EntityResolver, ResolutionConfig
+
+resolver = EntityResolver(ResolutionConfig())
+result = resolver.resolve_entities(store.get_all_nodes())
+store.add_edges(result.same_as_edges)
+```
+
+### Document Ingestion Pipeline
+
+```bash
+# Initialize configuration
+uv run spindle-ingest config init
+
+# Ingest documents
+uv run spindle-ingest ingest --input documents/ --template default
+
+# View analytics dashboard
+uv run spindle-dashboard --database sqlite:///spindle_storage/analytics.db
+```
+
+### Key Features
+
+- **Ontology Scope Control**: Use `ontology_scope="minimal" | "balanced" | "comprehensive"` to control extraction granularity
+- **Ontology Recommender**: Use `OntologyRecommender` for explicit recommendations and conservative ontology extension
+- **Graph Persistence**: Store and query triples with `GraphStore()` backed by Kùzu
+- **Vector Search**: Use `ChromaVectorStore` for semantic search over extracted content
+- **Template-Based Ingestion**: Define custom document processing templates (see `docs/INGESTION_TEMPLATES.md`)
+
+### Configuration
+
+- Scaffold a runtime config with `uv run spindle-ingest config init`
+- Edit the generated `config.py` to customize storage paths, graph DB, vector store, and observability settings
+- Pass config to tooling via `--config /path/to/config.py`
+- Load programmatically: `from spindle.configuration import load_config_from_file`
+- See `docs/CONFIGURATION.md` for the full schema and usage patterns
 
 ## Project Layout
 
 ```
 spindle/
-├── spindle/          # Package code (extractor, GraphStore, BAML client)
-├── demos/            # Example scripts covering core workflows
-├── docs/             # Additional guides (graph store, observability, testing, uv setup)
-├── tests/            # Unit + integration tests
-└── README.md
+├── spindle/                    # Main package
+│   ├── extraction/             # Core extraction and ontology recommendation
+│   ├── graph_store/            # Kùzu-backed graph database
+│   ├── entity_resolution/      # Semantic entity deduplication
+│   ├── vector_store/           # Vector storage and embeddings
+│   ├── ingestion/              # Document ingestion pipeline
+│   │   ├── loaders/            # Document loaders
+│   │   ├── splitters/          # Text splitting strategies
+│   │   ├── templates/          # Ingestion templates
+│   │   └── observers/          # Observability hooks
+│   ├── analytics/              # Analytics and metrics
+│   ├── observability/          # Event logging and persistence
+│   ├── dashboard/              # Streamlit analytics dashboard
+│   ├── baml_client/            # BAML runtime client
+│   ├── baml_src/               # BAML function definitions
+│   ├── notebooks/              # Jupyter notebook examples 
+├── tests/                      # Test suite       
 ```
+
+## Documentation
+
+- **[Quick Start Guide](docs/QUICKSTART.md)**: Get up and running in minutes
+- **[Configuration](docs/CONFIGURATION.md)**: Unified configuration system
+- **[Graph Store](docs/GRAPH_STORE.md)**: Graph database operations and queries
+- **[Entity Resolution](docs/ENTITY_RESOLUTION.md)**: Semantic entity deduplication
+- **[Ingestion Templates](docs/INGESTION_TEMPLATES.md)**: Custom document processing
+- **[Ontology Recommender](docs/ONTOLOGY_RECOMMENDER.md)**: Automatic ontology generation
+- **[Observability](docs/OBSERVABILITY.md)**: Event logging and monitoring
+- **[Analytics](docs/INGESTION_ANALYTICS.md)**: Metrics and dashboard usage
 
 ## Testing
 
 ```bash
+# Unit tests (no API required)
 uv run pytest tests/ -m "not integration"
-uv run pytest tests/ -m integration  # requires API access
+
+# Integration tests (requires API access)
+uv run pytest tests/ -m integration
+
+# With coverage
+uv run pytest tests/ --cov=spindle --cov-report=html
 ```
 
-Coverage reports and further details: `docs/TESTING.md`.
+Coverage reports and further details: `docs/TESTING.md` and `docs/TESTING_QUICK_REF.md`.
+
+## Optional Dependencies
+
+Install additional features with extras:
+
+```bash
+# Embedding models (sentence-transformers)
+uv pip install -e ".[embeddings]"
+
+# Embedding API providers (OpenAI, HuggingFace, Google)
+uv pip install -e ".[embeddings-api]"
+
+# All extras
+uv pip install -e ".[dev,embeddings,embeddings-api]"
+```
 
 ## Contributing & License
 
 Contribution guidelines and license details are tracked in the `/docs` folder. PRs welcome.
+
+**License**: MIT
 

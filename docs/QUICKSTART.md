@@ -4,16 +4,16 @@ Spin up Spindle, extract your first triples, and explore the tooling in a few mi
 
 ## Prerequisites
 
-- Python 3.11 (managed automatically by `uv` via `.python-version`)
+- Python 3.9+ (managed automatically by `uv` via `.python-version` if present)
 - [uv](https://github.com/astral-sh/uv) installed and on your `PATH`
 - Anthropic API key (required) plus any optional embedding API keys you plan to use
 
 ## 1. Bootstrap the Environment (≈1 min)
 
 ```bash
-cd /Users/thalamus/Repos/spindle
+cd /path/to/spindle
 
-# Create the virtual environment defined in .python-version
+# Create the virtual environment (uses Python 3.9+)
 uv venv
 
 # Install project + dev dependencies in editable mode
@@ -63,24 +63,20 @@ The `config.py` exports `SPINDLE_CONFIG`, which you can load with
 ## 4. Run a Built-in Demo (≈2 min)
 
 ```bash
-# Automatic ontology recommendation + extraction on the first call
-uv run python demos/example_auto_ontology.py
-```
-
-What you get:
-- Detects the ontology scope automatically (`minimal`/`balanced`/`comprehensive`)
-- Reuses the recommended ontology on subsequent extracts
-- Shows entity consistency, supporting evidence, and reasoning strings
-
-Prefer to start from a hand-authored ontology? Try the classic example instead:
-
-```bash
+# Basic extraction example with manual ontology
 uv run python demos/example.py
 ```
 
+What you get:
+- Shows entity consistency, supporting evidence, and reasoning strings
+- Demonstrates triple extraction with source metadata
+
 Additional demos:
-- `uv run python demos/example_scope_comparison.py` — compare scope levels side-by-side
-- `uv run python demos/example_ontology_extension.py` — conservative ontology extension flow
+- `uv run python demos/example_entity_resolution.py` — semantic entity deduplication
+- `uv run python demos/example_analytics_dashboard.py` — analytics visualization
+- `uv run python demos/ingestion_benchmark.py` — ingestion pipeline performance
+
+> **Note**: `SpindleExtractor()` without an ontology automatically recommends one on the first `extract()` call, so you can start with just text!
 
 ## 5. Create Your Own Script (≈3 min)
 
@@ -161,7 +157,9 @@ uv run python my_example.py
 
 - Review `docs/ONTOLOGY_RECOMMENDER.md` for deeper control over recommendation + extension flows.
 - Consult `docs/TESTING.md` for the full testing strategy and `docs/TESTING_QUICK_REF.md` for everyday commands.
-- Pair this guide with `docs/UV_SETUP.md` if you need more detail on the uv workflow.
+- See `docs/ENV_SETUP.md` for detailed environment setup and Vertex AI configuration.
+- Explore `docs/GRAPH_STORE.md` for graph persistence and querying.
+- Check `docs/ENTITY_RESOLUTION.md` for semantic entity deduplication.
 
 Happy knowledge graph building! 🚀
 

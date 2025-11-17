@@ -242,24 +242,19 @@ The ontology is returned in the exact same format as manually created ontologies
 
 - `spindle/baml_src/spindle.baml`: BAML schema with ontology + extension functions
 - `spindle/extraction/recommender.py`: Python implementation of `OntologyRecommender`
-- `demos/example_auto_ontology.py`: Automatic recommendation inside `SpindleExtractor`
-- `demos/example_scope_comparison.py`: Demonstrates scope levels
-- `demos/example_ontology_extension.py`: Conservative extension workflow
+- `demos/example.py`: Basic extraction example (can use auto-recommendation)
+- `SpindleExtractor()`: Automatically recommends ontology on first `extract()` call if no ontology provided
 - `tests/test_recommender.py`: Unit tests covering the recommender API
 
 ## Testing
 
 Run the demos:
 ```bash
-# Auto-ontology workflow (recommender invoked inside SpindleExtractor)
-uv run python demos/example_auto_ontology.py
-
-# Scope comparison across minimal/balanced/comprehensive
-uv run python demos/example_scope_comparison.py
-
-# Conservative ontology extension flow
-uv run python demos/example_ontology_extension.py
+# Basic extraction example (auto-recommends ontology if none provided)
+uv run python demos/example.py
 ```
+
+> **Note**: `SpindleExtractor()` without an ontology will automatically recommend one on the first `extract()` call, so you can start extracting immediately without manual ontology creation.
 
 Run recommender-specific unit tests:
 ```bash

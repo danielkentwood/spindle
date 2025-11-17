@@ -56,11 +56,13 @@ The ingestion CLI records start/completion events and can persist them with a
 single flag:
 
 ```bash
-uv run python -m spindle.ingestion.cli docs/ --event-log sqlite:///spindle_events.db
+uv run spindle-ingest docs/ --event-log sqlite:///spindle_events.db
 ```
 
 When `--event-log` is supplied, the CLI attaches a persistent observer to the
-global recorder for the duration of the run.
+global recorder for the duration of the run. Alternatively, configure the event log
+URL in your `SpindleConfig.observability.event_log_url` and it will be used
+automatically.
 
 ## Service coverage
 

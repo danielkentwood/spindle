@@ -54,6 +54,7 @@ extras: dict[str, object] = {}
 observability = ObservabilitySettings(
     event_log_url="sqlite:///spindle_events.db",
     log_level="INFO",
+    enable_pipeline_events=True,
 )
 
 ingestion = IngestionSettings(
@@ -61,18 +62,22 @@ ingestion = IngestionSettings(
     vector_store_uri=str(storage_root / "vector_store"),
     cache_dir=storage_root / "cache",
     allow_network_requests=True,
+    recursive=False,
 )
 
 vector_store = VectorStoreSettings(
     collection_name="team_embeddings",
     embedding_model="sentence-transformers/all-mpnet-base-v2",
     use_api_fallback=False,
+    prefer_local_embeddings=True,
 )
 
 graph_store = GraphStoreSettings(
     db_path_override=storage_root / "graph" / "company_graph.db",
     auto_snapshot=True,
     snapshot_dir=storage_root / "graph" / "snapshots",
+    embedding_dimensions=128,
+    auto_compute_embeddings=False,
 )
 
 llm = None  # Replace with LLMConfig() if you want to bake in provider credentials
@@ -95,16 +100,21 @@ SPINDLE_CONFIG = SpindleConfig.with_root(
   config manually.
 - `templates`: a `TemplateSettings` object listing template search paths. The
   ingestion runtime merges these with the built-in defaults.
-- `observability`: settings for event logging and log levels. See
+- `observability`: settings for event logging and log levels. Includes
+  `event_log_url`, `log_level`, and `enable_pipeline_events`. See
   [`docs/OBSERVABILITY.md`](OBSERVABILITY.md) for the downstream consumers.
 - `ingestion`: defaults that influence CLI runs and programmatic ingestion
   (catalog URL, vector store URI, cache directory, recursion, network access).
 - `vector_store`: preferences for `ChromaVectorStore` creation such as collection
-  name, embedding model, and whether to fall back to API embeddings.
+  name, embedding model, whether to fall back to API embeddings, and preference
+  for local vs API embeddings.
 - `graph_store`: defaults used by `GraphStore`, including optional overrides for
-  the database path, snapshot locations, and embedding defaults.
+  the database path, snapshot locations, embedding dimensions, and auto-compute
+  settings.
 - `llm`: optional `LLMConfig` instance with authentication and provider
-  priorities for `SpindleExtractor` and the ontology recommender.
+  priorities for `SpindleExtractor` and the ontology recommender. Can also use
+  `config.get_llm_config()` or `config.create_extractor()` / `config.create_recommender()`
+  to automatically use the configured LLM settings.
 - `extras`: an immutable mapping for your own metadata (kept available for user
   hooks or downstream tools).
 
@@ -166,6 +176,8 @@ run_ingestion([Path("docs")], ingestion_config)
   utilities or integrations.
 - Higher-level clients like `GraphStore` accept the config via `GraphStore(config=SPINDLE_CONFIG)`
   to reuse snapshot and database settings.
+- Use `SPINDLE_CONFIG.create_extractor()` or `SPINDLE_CONFIG.create_recommender()` to
+  automatically create extractors/recommenders with the configured LLM settings.
 - Extras such as `analytics_database` remain available through
   `dict(SPINDLE_CONFIG.extras)`, letting you surface user-defined metadata in
   downstream pipelines.

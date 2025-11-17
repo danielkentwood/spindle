@@ -131,6 +131,6 @@ uv run pytest tests/ --log-cli-level=DEBUG
 ## More Info
 
 - Full Guide: `docs/TESTING.md`
-- UV Workflow Details: `docs/UV_SETUP.md`
+- Environment Setup: `docs/ENV_SETUP.md`
 - Project Overview: `README.md`
 
