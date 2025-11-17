@@ -376,7 +376,7 @@ def test_invalid_ontology_format(client):
     response = client.post("/api/extraction/extract", json=request)
     assert response.status_code == 400
     data = response.json()
-    assert "Invalid ontology format" in data["detail"]
+    assert "Invalid ontology format" in data["message"]
 
 
 # ============================================================================
