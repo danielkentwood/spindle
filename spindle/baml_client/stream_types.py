@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (24)
+# Generated classes (33)
 # #########################################################################
 
 class AttributeDefinition(BaseModel):
@@ -95,9 +95,27 @@ class ExtractionResult(BaseModel):
     triples: typing.List["Triple"]
     reasoning: typing.Optional[str] = None
 
+class MetadataElement(BaseModel):
+    element_id: typing.Optional[str] = None
+    name: typing.Optional[str] = None
+    element_type: typing.Optional[str] = None
+    description: typing.Optional[str] = None
+    data_type: typing.Optional[str] = None
+    required: typing.Optional[bool] = None
+    examples: typing.List[str]
+
+class MetadataExtractionResult(BaseModel):
+    elements: typing.List["MetadataElement"]
+    reasoning: typing.Optional[str] = None
+
 class Ontology(BaseModel):
     entity_types: typing.List["EntityType"]
     relation_types: typing.List["RelationType"]
+
+class OntologyEnhancementResult(BaseModel):
+    entity_types: typing.List["EntityType"]
+    relation_types: typing.List["RelationType"]
+    reasoning: typing.Optional[str] = None
 
 class OntologyExtension(BaseModel):
     needs_extension: typing.Optional[bool] = None
@@ -161,6 +179,31 @@ class SourceMetadata(BaseModel):
     source_name: typing.Optional[str] = None
     source_url: typing.Optional[str] = None
 
+class TaxonomyExtractionResult(BaseModel):
+    relations: typing.List["TaxonomyRelation"]
+    root_terms: typing.List[str]
+    reasoning: typing.Optional[str] = None
+
+class TaxonomyRelation(BaseModel):
+    parent_term: typing.Optional[str] = None
+    child_term: typing.Optional[str] = None
+    relation_type: typing.Optional[str] = None
+    confidence: typing.Optional[str] = None
+
+class ThesaurusEntry(BaseModel):
+    entry_id: typing.Optional[str] = None
+    term_id: typing.Optional[str] = None
+    preferred_label: typing.Optional[str] = None
+    use_for: typing.List[str]
+    broader_terms: typing.List[str]
+    narrower_terms: typing.List[str]
+    related_terms: typing.List[str]
+    scope_note: typing.Optional[str] = None
+
+class ThesaurusExtractionResult(BaseModel):
+    entries: typing.List["ThesaurusEntry"]
+    reasoning: typing.Optional[str] = None
+
 class Triple(BaseModel):
     subject: typing.Optional["Entity"] = None
     predicate: typing.Optional[str] = None
@@ -168,6 +211,18 @@ class Triple(BaseModel):
     source: typing.Optional["SourceMetadata"] = None
     supporting_spans: typing.List["CharacterSpan"]
     extraction_datetime: typing.Optional[str] = None
+
+class VocabularyExtractionResult(BaseModel):
+    terms: typing.List["VocabularyTerm"]
+    domain_summary: typing.Optional[str] = None
+    reasoning: typing.Optional[str] = None
+
+class VocabularyTerm(BaseModel):
+    term_id: typing.Optional[str] = None
+    preferred_label: typing.Optional[str] = None
+    definition: typing.Optional[str] = None
+    synonyms: typing.List[str]
+    domain: typing.Optional[str] = None
 
 # #########################################################################
 # Generated type aliases (0)

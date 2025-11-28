@@ -30,11 +30,47 @@ class LlmResponseParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="request")
         return typing.cast(types.OntologyExtension, result)
 
+    def ConsolidateVocabulary(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.VocabularyExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ConsolidateVocabulary", llm_response=llm_response, mode="request")
+        return typing.cast(types.VocabularyExtractionResult, result)
+
+    def EnhanceOntologyFromPipeline(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.OntologyEnhancementResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="EnhanceOntologyFromPipeline", llm_response=llm_response, mode="request")
+        return typing.cast(types.OntologyEnhancementResult, result)
+
+    def ExtractControlledVocabulary(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.VocabularyExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractControlledVocabulary", llm_response=llm_response, mode="request")
+        return typing.cast(types.VocabularyExtractionResult, result)
+
+    def ExtractMetadataSchema(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.MetadataExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMetadataSchema", llm_response=llm_response, mode="request")
+        return typing.cast(types.MetadataExtractionResult, result)
+
     def ExtractProcessGraph(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.ProcessExtractionResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractProcessGraph", llm_response=llm_response, mode="request")
         return typing.cast(types.ProcessExtractionResult, result)
+
+    def ExtractTaxonomy(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.TaxonomyExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTaxonomy", llm_response=llm_response, mode="request")
+        return typing.cast(types.TaxonomyExtractionResult, result)
+
+    def ExtractThesaurus(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.ThesaurusExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractThesaurus", llm_response=llm_response, mode="request")
+        return typing.cast(types.ThesaurusExtractionResult, result)
 
     def ExtractTriples(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -74,11 +110,47 @@ class LlmStreamParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.OntologyExtension, result)
 
+    def ConsolidateVocabulary(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.VocabularyExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ConsolidateVocabulary", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.VocabularyExtractionResult, result)
+
+    def EnhanceOntologyFromPipeline(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.OntologyEnhancementResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="EnhanceOntologyFromPipeline", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.OntologyEnhancementResult, result)
+
+    def ExtractControlledVocabulary(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.VocabularyExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractControlledVocabulary", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.VocabularyExtractionResult, result)
+
+    def ExtractMetadataSchema(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.MetadataExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMetadataSchema", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.MetadataExtractionResult, result)
+
     def ExtractProcessGraph(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> stream_types.ProcessExtractionResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractProcessGraph", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.ProcessExtractionResult, result)
+
+    def ExtractTaxonomy(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.TaxonomyExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTaxonomy", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.TaxonomyExtractionResult, result)
+
+    def ExtractThesaurus(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.ThesaurusExtractionResult:
+        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractThesaurus", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.ThesaurusExtractionResult, result)
 
     def ExtractTriples(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -104,4 +176,4 @@ class LlmStreamParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="RecommendOntology", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.OntologyRecommendation, result)
 
-    
+    

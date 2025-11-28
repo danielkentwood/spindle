@@ -105,6 +105,62 @@ class BamlSyncClient:
                 "text": text,"current_ontology": current_ontology,"scope": scope,
             })
             return typing.cast(types.OntologyExtension, result.cast_to(types, types, stream_types, False, __runtime__))
+    def ConsolidateVocabulary(self, term_sets: typing.List[typing.List["types.VocabularyTerm"]],
+        baml_options: BamlCallOptions = {},
+    ) -> types.VocabularyExtractionResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.ConsolidateVocabulary(term_sets=term_sets,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="ConsolidateVocabulary", args={
+                "term_sets": term_sets,
+            })
+            return typing.cast(types.VocabularyExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def EnhanceOntologyFromPipeline(self, text: str,vocabulary: typing.List["types.VocabularyTerm"],thesaurus_entries: typing.List["types.ThesaurusEntry"],scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.OntologyEnhancementResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.EnhanceOntologyFromPipeline(text=text,vocabulary=vocabulary,thesaurus_entries=thesaurus_entries,scope=scope,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="EnhanceOntologyFromPipeline", args={
+                "text": text,"vocabulary": vocabulary,"thesaurus_entries": thesaurus_entries,"scope": scope,
+            })
+            return typing.cast(types.OntologyEnhancementResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractControlledVocabulary(self, text: str,existing_terms: typing.List["types.VocabularyTerm"],document_id: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.VocabularyExtractionResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.ExtractControlledVocabulary(text=text,existing_terms=existing_terms,document_id=document_id,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractControlledVocabulary", args={
+                "text": text,"existing_terms": existing_terms,"document_id": document_id,
+            })
+            return typing.cast(types.VocabularyExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractMetadataSchema(self, text: str,document_metadata: str,existing_elements: typing.List["types.MetadataElement"],
+        baml_options: BamlCallOptions = {},
+    ) -> types.MetadataExtractionResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.ExtractMetadataSchema(text=text,document_metadata=document_metadata,existing_elements=existing_elements,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractMetadataSchema", args={
+                "text": text,"document_metadata": document_metadata,"existing_elements": existing_elements,
+            })
+            return typing.cast(types.MetadataExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
     def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
         baml_options: BamlCallOptions = {},
     ) -> types.ProcessExtractionResult:
@@ -119,6 +175,34 @@ class BamlSyncClient:
                 "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
             })
             return typing.cast(types.ProcessExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractTaxonomy(self, terms: typing.List["types.VocabularyTerm"],text: str,existing_relations: typing.List["types.TaxonomyRelation"],
+        baml_options: BamlCallOptions = {},
+    ) -> types.TaxonomyExtractionResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.ExtractTaxonomy(terms=terms,text=text,existing_relations=existing_relations,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractTaxonomy", args={
+                "terms": terms,"text": text,"existing_relations": existing_relations,
+            })
+            return typing.cast(types.TaxonomyExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractThesaurus(self, terms: typing.List["types.VocabularyTerm"],taxonomy_relations: typing.List["types.TaxonomyRelation"],text: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.ThesaurusExtractionResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            stream = self.stream.ExtractThesaurus(terms=terms,taxonomy_relations=taxonomy_relations,text=text,
+                baml_options=baml_options)
+            return stream.get_final_response()
+        else:
+            # Original non-streaming code
+            result = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractThesaurus", args={
+                "terms": terms,"taxonomy_relations": taxonomy_relations,"text": text,
+            })
+            return typing.cast(types.ThesaurusExtractionResult, result.cast_to(types, types, stream_types, False, __runtime__))
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
         baml_options: BamlCallOptions = {},
     ) -> types.ExtractionResult:
@@ -196,6 +280,54 @@ class BamlStreamClient:
           lambda x: typing.cast(types.OntologyExtension, x.cast_to(types, types, stream_types, False, __runtime__)),
           ctx,
         )
+    def ConsolidateVocabulary(self, term_sets: typing.List[typing.List["types.VocabularyTerm"]],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.VocabularyExtractionResult, types.VocabularyExtractionResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="ConsolidateVocabulary", args={
+            "term_sets": term_sets,
+        })
+        return baml_py.BamlSyncStream[stream_types.VocabularyExtractionResult, types.VocabularyExtractionResult](
+          result,
+          lambda x: typing.cast(stream_types.VocabularyExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.VocabularyExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
+    def EnhanceOntologyFromPipeline(self, text: str,vocabulary: typing.List["types.VocabularyTerm"],thesaurus_entries: typing.List["types.ThesaurusEntry"],scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.OntologyEnhancementResult, types.OntologyEnhancementResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="EnhanceOntologyFromPipeline", args={
+            "text": text,"vocabulary": vocabulary,"thesaurus_entries": thesaurus_entries,"scope": scope,
+        })
+        return baml_py.BamlSyncStream[stream_types.OntologyEnhancementResult, types.OntologyEnhancementResult](
+          result,
+          lambda x: typing.cast(stream_types.OntologyEnhancementResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.OntologyEnhancementResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
+    def ExtractControlledVocabulary(self, text: str,existing_terms: typing.List["types.VocabularyTerm"],document_id: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.VocabularyExtractionResult, types.VocabularyExtractionResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractControlledVocabulary", args={
+            "text": text,"existing_terms": existing_terms,"document_id": document_id,
+        })
+        return baml_py.BamlSyncStream[stream_types.VocabularyExtractionResult, types.VocabularyExtractionResult](
+          result,
+          lambda x: typing.cast(stream_types.VocabularyExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.VocabularyExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
+    def ExtractMetadataSchema(self, text: str,document_metadata: str,existing_elements: typing.List["types.MetadataElement"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.MetadataExtractionResult, types.MetadataExtractionResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractMetadataSchema", args={
+            "text": text,"document_metadata": document_metadata,"existing_elements": existing_elements,
+        })
+        return baml_py.BamlSyncStream[stream_types.MetadataExtractionResult, types.MetadataExtractionResult](
+          result,
+          lambda x: typing.cast(stream_types.MetadataExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.MetadataExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
     def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[stream_types.ProcessExtractionResult, types.ProcessExtractionResult]:
@@ -206,6 +338,30 @@ class BamlStreamClient:
           result,
           lambda x: typing.cast(stream_types.ProcessExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
           lambda x: typing.cast(types.ProcessExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
+    def ExtractTaxonomy(self, terms: typing.List["types.VocabularyTerm"],text: str,existing_relations: typing.List["types.TaxonomyRelation"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.TaxonomyExtractionResult, types.TaxonomyExtractionResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractTaxonomy", args={
+            "terms": terms,"text": text,"existing_relations": existing_relations,
+        })
+        return baml_py.BamlSyncStream[stream_types.TaxonomyExtractionResult, types.TaxonomyExtractionResult](
+          result,
+          lambda x: typing.cast(stream_types.TaxonomyExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.TaxonomyExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          ctx,
+        )
+    def ExtractThesaurus(self, terms: typing.List["types.VocabularyTerm"],taxonomy_relations: typing.List["types.TaxonomyRelation"],text: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.ThesaurusExtractionResult, types.ThesaurusExtractionResult]:
+        ctx, result = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractThesaurus", args={
+            "terms": terms,"taxonomy_relations": taxonomy_relations,"text": text,
+        })
+        return baml_py.BamlSyncStream[stream_types.ThesaurusExtractionResult, types.ThesaurusExtractionResult](
+          result,
+          lambda x: typing.cast(stream_types.ThesaurusExtractionResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.ThesaurusExtractionResult, x.cast_to(types, types, stream_types, False, __runtime__)),
           ctx,
         )
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
@@ -271,11 +427,53 @@ class BamlHttpRequestClient:
             "text": text,"current_ontology": current_ontology,"scope": scope,
         }, mode="request")
         return result
+    def ConsolidateVocabulary(self, term_sets: typing.List[typing.List["types.VocabularyTerm"]],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ConsolidateVocabulary", args={
+            "term_sets": term_sets,
+        }, mode="request")
+        return result
+    def EnhanceOntologyFromPipeline(self, text: str,vocabulary: typing.List["types.VocabularyTerm"],thesaurus_entries: typing.List["types.ThesaurusEntry"],scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="EnhanceOntologyFromPipeline", args={
+            "text": text,"vocabulary": vocabulary,"thesaurus_entries": thesaurus_entries,"scope": scope,
+        }, mode="request")
+        return result
+    def ExtractControlledVocabulary(self, text: str,existing_terms: typing.List["types.VocabularyTerm"],document_id: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractControlledVocabulary", args={
+            "text": text,"existing_terms": existing_terms,"document_id": document_id,
+        }, mode="request")
+        return result
+    def ExtractMetadataSchema(self, text: str,document_metadata: str,existing_elements: typing.List["types.MetadataElement"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractMetadataSchema", args={
+            "text": text,"document_metadata": document_metadata,"existing_elements": existing_elements,
+        }, mode="request")
+        return result
     def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
         result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractProcessGraph", args={
             "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
+        }, mode="request")
+        return result
+    def ExtractTaxonomy(self, terms: typing.List["types.VocabularyTerm"],text: str,existing_relations: typing.List["types.TaxonomyRelation"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractTaxonomy", args={
+            "terms": terms,"text": text,"existing_relations": existing_relations,
+        }, mode="request")
+        return result
+    def ExtractThesaurus(self, terms: typing.List["types.VocabularyTerm"],taxonomy_relations: typing.List["types.TaxonomyRelation"],text: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractThesaurus", args={
+            "terms": terms,"taxonomy_relations": taxonomy_relations,"text": text,
         }, mode="request")
         return result
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
@@ -321,11 +519,53 @@ class BamlHttpStreamRequestClient:
             "text": text,"current_ontology": current_ontology,"scope": scope,
         }, mode="stream")
         return result
+    def ConsolidateVocabulary(self, term_sets: typing.List[typing.List["types.VocabularyTerm"]],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ConsolidateVocabulary", args={
+            "term_sets": term_sets,
+        }, mode="stream")
+        return result
+    def EnhanceOntologyFromPipeline(self, text: str,vocabulary: typing.List["types.VocabularyTerm"],thesaurus_entries: typing.List["types.ThesaurusEntry"],scope: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="EnhanceOntologyFromPipeline", args={
+            "text": text,"vocabulary": vocabulary,"thesaurus_entries": thesaurus_entries,"scope": scope,
+        }, mode="stream")
+        return result
+    def ExtractControlledVocabulary(self, text: str,existing_terms: typing.List["types.VocabularyTerm"],document_id: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractControlledVocabulary", args={
+            "text": text,"existing_terms": existing_terms,"document_id": document_id,
+        }, mode="stream")
+        return result
+    def ExtractMetadataSchema(self, text: str,document_metadata: str,existing_elements: typing.List["types.MetadataElement"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractMetadataSchema", args={
+            "text": text,"document_metadata": document_metadata,"existing_elements": existing_elements,
+        }, mode="stream")
+        return result
     def ExtractProcessGraph(self, text: str,process_hint: typing.Optional[str] = None,existing_graph: typing.Optional["types.ProcessGraph"] = None,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
         result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractProcessGraph", args={
             "text": text,"process_hint": process_hint,"existing_graph": existing_graph,
+        }, mode="stream")
+        return result
+    def ExtractTaxonomy(self, terms: typing.List["types.VocabularyTerm"],text: str,existing_relations: typing.List["types.TaxonomyRelation"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractTaxonomy", args={
+            "terms": terms,"text": text,"existing_relations": existing_relations,
+        }, mode="stream")
+        return result
+    def ExtractThesaurus(self, terms: typing.List["types.VocabularyTerm"],taxonomy_relations: typing.List["types.TaxonomyRelation"],text: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        result = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractThesaurus", args={
+            "terms": terms,"taxonomy_relations": taxonomy_relations,"text": text,
         }, mode="stream")
         return result
     def ExtractTriples(self, text: str,ontology: types.Ontology,source_metadata: types.SourceMetadata,existing_triples: typing.List["types.Triple"],
@@ -358,4 +598,4 @@ class BamlHttpStreamRequestClient:
         return result
     
 
-b = BamlSyncClient(DoNotUseDirectlyCallManager({}))
+b = BamlSyncClient(DoNotUseDirectlyCallManager({}))

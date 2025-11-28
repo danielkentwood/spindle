@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["AttributeDefinition","AttributeValue","CharacterSpan","EdgeForMatching","EdgeMatch","EdgeMatchingResult","Entity","EntityForMatching","EntityMatch","EntityMatchingResult","EntityType","EvidenceSpan","ExtractionResult","Ontology","OntologyExtension","OntologyRecommendation","ProcessDependency","ProcessExtractionIssue","ProcessExtractionResult","ProcessGraph","ProcessStep","RelationType","SourceMetadata","Triple",]
+          ["AttributeDefinition","AttributeValue","CharacterSpan","EdgeForMatching","EdgeMatch","EdgeMatchingResult","Entity","EntityForMatching","EntityMatch","EntityMatchingResult","EntityType","EvidenceSpan","ExtractionResult","MetadataElement","MetadataExtractionResult","Ontology","OntologyEnhancementResult","OntologyExtension","OntologyRecommendation","ProcessDependency","ProcessExtractionIssue","ProcessExtractionResult","ProcessGraph","ProcessStep","RelationType","SourceMetadata","TaxonomyExtractionResult","TaxonomyRelation","ThesaurusEntry","ThesaurusExtractionResult","Triple","VocabularyExtractionResult","VocabularyTerm",]
         ), enums=set(
           ["ProcessStepType",]
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -35,7 +35,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 24
+    # Generated classes 33
     # #########################################################################
 
     @property
@@ -91,8 +91,20 @@ class TypeBuilder(type_builder.TypeBuilder):
         return ExtractionResultViewer(self)
 
     @property
+    def MetadataElement(self) -> "MetadataElementViewer":
+        return MetadataElementViewer(self)
+
+    @property
+    def MetadataExtractionResult(self) -> "MetadataExtractionResultViewer":
+        return MetadataExtractionResultViewer(self)
+
+    @property
     def Ontology(self) -> "OntologyViewer":
         return OntologyViewer(self)
+
+    @property
+    def OntologyEnhancementResult(self) -> "OntologyEnhancementResultViewer":
+        return OntologyEnhancementResultViewer(self)
 
     @property
     def OntologyExtension(self) -> "OntologyExtensionViewer":
@@ -131,8 +143,32 @@ class TypeBuilder(type_builder.TypeBuilder):
         return SourceMetadataViewer(self)
 
     @property
+    def TaxonomyExtractionResult(self) -> "TaxonomyExtractionResultViewer":
+        return TaxonomyExtractionResultViewer(self)
+
+    @property
+    def TaxonomyRelation(self) -> "TaxonomyRelationViewer":
+        return TaxonomyRelationViewer(self)
+
+    @property
+    def ThesaurusEntry(self) -> "ThesaurusEntryViewer":
+        return ThesaurusEntryViewer(self)
+
+    @property
+    def ThesaurusExtractionResult(self) -> "ThesaurusExtractionResultViewer":
+        return ThesaurusExtractionResultViewer(self)
+
+    @property
     def Triple(self) -> "TripleViewer":
         return TripleViewer(self)
+
+    @property
+    def VocabularyExtractionResult(self) -> "VocabularyExtractionResultViewer":
+        return VocabularyExtractionResultViewer(self)
+
+    @property
+    def VocabularyTerm(self) -> "VocabularyTermViewer":
+        return VocabularyTermViewer(self)
 
 
 
@@ -196,7 +232,7 @@ class ProcessStepTypeValues:
 
 
 # #########################################################################
-# Generated classes 24
+# Generated classes 33
 # #########################################################################
 
 class AttributeDefinitionAst:
@@ -826,6 +862,112 @@ class ExtractionResultProperties:
     
 
 
+class MetadataElementAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("MetadataElement")
+        self._properties: typing.Set[str] = set([  "element_id",  "name",  "element_type",  "description",  "data_type",  "required",  "examples",  ])
+        self._props = MetadataElementProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "MetadataElementProperties":
+        return self._props
+
+
+class MetadataElementViewer(MetadataElementAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class MetadataElementProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def element_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("element_id"))
+    
+    @property
+    def name(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("name"))
+    
+    @property
+    def element_type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("element_type"))
+    
+    @property
+    def description(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
+    
+    @property
+    def data_type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("data_type"))
+    
+    @property
+    def required(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("required"))
+    
+    @property
+    def examples(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("examples"))
+    
+    
+
+
+class MetadataExtractionResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("MetadataExtractionResult")
+        self._properties: typing.Set[str] = set([  "elements",  "reasoning",  ])
+        self._props = MetadataExtractionResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "MetadataExtractionResultProperties":
+        return self._props
+
+
+class MetadataExtractionResultViewer(MetadataExtractionResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class MetadataExtractionResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def elements(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("elements"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
 class OntologyAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
@@ -865,6 +1007,53 @@ class OntologyProperties:
     @property
     def relation_types(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("relation_types"))
+    
+    
+
+
+class OntologyEnhancementResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("OntologyEnhancementResult")
+        self._properties: typing.Set[str] = set([  "entity_types",  "relation_types",  "reasoning",  ])
+        self._props = OntologyEnhancementResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "OntologyEnhancementResultProperties":
+        return self._props
+
+
+class OntologyEnhancementResultViewer(OntologyEnhancementResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class OntologyEnhancementResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def entity_types(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("entity_types"))
+    
+    @property
+    def relation_types(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("relation_types"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
     
     
 
@@ -1360,6 +1549,214 @@ class SourceMetadataProperties:
     
 
 
+class TaxonomyExtractionResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("TaxonomyExtractionResult")
+        self._properties: typing.Set[str] = set([  "relations",  "root_terms",  "reasoning",  ])
+        self._props = TaxonomyExtractionResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "TaxonomyExtractionResultProperties":
+        return self._props
+
+
+class TaxonomyExtractionResultViewer(TaxonomyExtractionResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class TaxonomyExtractionResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def relations(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("relations"))
+    
+    @property
+    def root_terms(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("root_terms"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
+class TaxonomyRelationAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("TaxonomyRelation")
+        self._properties: typing.Set[str] = set([  "parent_term",  "child_term",  "relation_type",  "confidence",  ])
+        self._props = TaxonomyRelationProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "TaxonomyRelationProperties":
+        return self._props
+
+
+class TaxonomyRelationViewer(TaxonomyRelationAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class TaxonomyRelationProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def parent_term(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("parent_term"))
+    
+    @property
+    def child_term(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("child_term"))
+    
+    @property
+    def relation_type(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("relation_type"))
+    
+    @property
+    def confidence(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("confidence"))
+    
+    
+
+
+class ThesaurusEntryAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("ThesaurusEntry")
+        self._properties: typing.Set[str] = set([  "entry_id",  "term_id",  "preferred_label",  "use_for",  "broader_terms",  "narrower_terms",  "related_terms",  "scope_note",  ])
+        self._props = ThesaurusEntryProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "ThesaurusEntryProperties":
+        return self._props
+
+
+class ThesaurusEntryViewer(ThesaurusEntryAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class ThesaurusEntryProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def entry_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("entry_id"))
+    
+    @property
+    def term_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("term_id"))
+    
+    @property
+    def preferred_label(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("preferred_label"))
+    
+    @property
+    def use_for(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("use_for"))
+    
+    @property
+    def broader_terms(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("broader_terms"))
+    
+    @property
+    def narrower_terms(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("narrower_terms"))
+    
+    @property
+    def related_terms(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("related_terms"))
+    
+    @property
+    def scope_note(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("scope_note"))
+    
+    
+
+
+class ThesaurusExtractionResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("ThesaurusExtractionResult")
+        self._properties: typing.Set[str] = set([  "entries",  "reasoning",  ])
+        self._props = ThesaurusExtractionResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "ThesaurusExtractionResultProperties":
+        return self._props
+
+
+class ThesaurusExtractionResultViewer(ThesaurusExtractionResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class ThesaurusExtractionResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def entries(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("entries"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
 class TripleAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
@@ -1418,4 +1815,105 @@ class TripleProperties:
     
     
 
-
+
+class VocabularyExtractionResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("VocabularyExtractionResult")
+        self._properties: typing.Set[str] = set([  "terms",  "domain_summary",  "reasoning",  ])
+        self._props = VocabularyExtractionResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "VocabularyExtractionResultProperties":
+        return self._props
+
+
+class VocabularyExtractionResultViewer(VocabularyExtractionResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class VocabularyExtractionResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def terms(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("terms"))
+    
+    @property
+    def domain_summary(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("domain_summary"))
+    
+    @property
+    def reasoning(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
+    
+    
+
+
+class VocabularyTermAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("VocabularyTerm")
+        self._properties: typing.Set[str] = set([  "term_id",  "preferred_label",  "definition",  "synonyms",  "domain",  ])
+        self._props = VocabularyTermProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "VocabularyTermProperties":
+        return self._props
+
+
+class VocabularyTermViewer(VocabularyTermAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class VocabularyTermProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def term_id(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("term_id"))
+    
+    @property
+    def preferred_label(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("preferred_label"))
+    
+    @property
+    def definition(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("definition"))
+    
+    @property
+    def synonyms(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("synonyms"))
+    
+    @property
+    def domain(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("domain"))
+    
+    
+

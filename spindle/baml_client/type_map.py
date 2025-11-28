@@ -55,8 +55,17 @@ type_map = {
     "types.ExtractionResult": types.ExtractionResult,
     "stream_types.ExtractionResult": stream_types.ExtractionResult,
 
+    "types.MetadataElement": types.MetadataElement,
+    "stream_types.MetadataElement": stream_types.MetadataElement,
+
+    "types.MetadataExtractionResult": types.MetadataExtractionResult,
+    "stream_types.MetadataExtractionResult": stream_types.MetadataExtractionResult,
+
     "types.Ontology": types.Ontology,
     "stream_types.Ontology": stream_types.Ontology,
+
+    "types.OntologyEnhancementResult": types.OntologyEnhancementResult,
+    "stream_types.OntologyEnhancementResult": stream_types.OntologyEnhancementResult,
 
     "types.OntologyExtension": types.OntologyExtension,
     "stream_types.OntologyExtension": stream_types.OntologyExtension,
@@ -85,8 +94,26 @@ type_map = {
     "types.SourceMetadata": types.SourceMetadata,
     "stream_types.SourceMetadata": stream_types.SourceMetadata,
 
+    "types.TaxonomyExtractionResult": types.TaxonomyExtractionResult,
+    "stream_types.TaxonomyExtractionResult": stream_types.TaxonomyExtractionResult,
+
+    "types.TaxonomyRelation": types.TaxonomyRelation,
+    "stream_types.TaxonomyRelation": stream_types.TaxonomyRelation,
+
+    "types.ThesaurusEntry": types.ThesaurusEntry,
+    "stream_types.ThesaurusEntry": stream_types.ThesaurusEntry,
+
+    "types.ThesaurusExtractionResult": types.ThesaurusExtractionResult,
+    "stream_types.ThesaurusExtractionResult": stream_types.ThesaurusExtractionResult,
+
     "types.Triple": types.Triple,
     "stream_types.Triple": stream_types.Triple,
+
+    "types.VocabularyExtractionResult": types.VocabularyExtractionResult,
+    "stream_types.VocabularyExtractionResult": stream_types.VocabularyExtractionResult,
+
+    "types.VocabularyTerm": types.VocabularyTerm,
+    "stream_types.VocabularyTerm": stream_types.VocabularyTerm,
 
 
     "types.ProcessStepType": types.ProcessStepType,

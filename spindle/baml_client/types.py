@@ -48,7 +48,7 @@ class ProcessStepType(str, Enum):
     SUBPROCESS = "SUBPROCESS"
 
 # #########################################################################
-# Generated classes (24)
+# Generated classes (33)
 # #########################################################################
 
 class AttributeDefinition(BaseModel):
@@ -120,9 +120,27 @@ class ExtractionResult(BaseModel):
     triples: typing.List["Triple"]
     reasoning: str
 
+class MetadataElement(BaseModel):
+    element_id: str
+    name: str
+    element_type: str
+    description: str
+    data_type: str
+    required: bool
+    examples: typing.List[str]
+
+class MetadataExtractionResult(BaseModel):
+    elements: typing.List["MetadataElement"]
+    reasoning: str
+
 class Ontology(BaseModel):
     entity_types: typing.List["EntityType"]
     relation_types: typing.List["RelationType"]
+
+class OntologyEnhancementResult(BaseModel):
+    entity_types: typing.List["EntityType"]
+    relation_types: typing.List["RelationType"]
+    reasoning: str
 
 class OntologyExtension(BaseModel):
     needs_extension: bool
@@ -186,6 +204,31 @@ class SourceMetadata(BaseModel):
     source_name: str
     source_url: typing.Optional[str] = None
 
+class TaxonomyExtractionResult(BaseModel):
+    relations: typing.List["TaxonomyRelation"]
+    root_terms: typing.List[str]
+    reasoning: str
+
+class TaxonomyRelation(BaseModel):
+    parent_term: str
+    child_term: str
+    relation_type: str
+    confidence: str
+
+class ThesaurusEntry(BaseModel):
+    entry_id: str
+    term_id: str
+    preferred_label: str
+    use_for: typing.List[str]
+    broader_terms: typing.List[str]
+    narrower_terms: typing.List[str]
+    related_terms: typing.List[str]
+    scope_note: typing.Optional[str] = None
+
+class ThesaurusExtractionResult(BaseModel):
+    entries: typing.List["ThesaurusEntry"]
+    reasoning: str
+
 class Triple(BaseModel):
     subject: "Entity"
     predicate: str
@@ -193,6 +236,18 @@ class Triple(BaseModel):
     source: "SourceMetadata"
     supporting_spans: typing.List["CharacterSpan"]
     extraction_datetime: typing.Optional[str] = None
+
+class VocabularyExtractionResult(BaseModel):
+    terms: typing.List["VocabularyTerm"]
+    domain_summary: str
+    reasoning: str
+
+class VocabularyTerm(BaseModel):
+    term_id: str
+    preferred_label: str
+    definition: str
+    synonyms: typing.List[str]
+    domain: typing.Optional[str] = None
 
 # #########################################################################
 # Generated type aliases (0)

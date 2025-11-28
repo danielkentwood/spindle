@@ -9,6 +9,8 @@ from .templates import (
 )
 from .types import (
     ChunkArtifact,
+    Corpus,
+    CorpusDocument,
     DocumentArtifact,
     DocumentGraph,
     DocumentGraphEdge,
@@ -29,6 +31,8 @@ __all__ = [
     "load_templates_from_paths",
     "merge_template_sequences",
     "ChunkArtifact",
+    "Corpus",
+    "CorpusDocument",
     "DocumentArtifact",
     "DocumentGraph",
     "DocumentGraphEdge",

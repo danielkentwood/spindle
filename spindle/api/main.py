@@ -236,8 +236,16 @@ async def update_session_config(session_id: str, request: SessionUpdate):
 # Router Registration
 # ============================================================================
 
-# Import routers (will be created next)
-from spindle.api.routers import extraction, ingestion, ontology, process, resolution
+# Import routers
+from spindle.api.routers import (
+    corpus,
+    extraction,
+    ingestion,
+    ontology,
+    pipeline,
+    process,
+    resolution,
+)
 
 # Register routers
 app.include_router(ingestion.router, prefix="/api/ingestion", tags=["Ingestion"])
@@ -245,6 +253,8 @@ app.include_router(extraction.router, prefix="/api/extraction", tags=["Extractio
 app.include_router(ontology.router, prefix="/api/ontology", tags=["Ontology"])
 app.include_router(resolution.router, prefix="/api/resolution", tags=["Resolution"])
 app.include_router(process.router, prefix="/api/process", tags=["Process"])
+app.include_router(corpus.router, prefix="/api/corpus", tags=["Corpus"])
+app.include_router(pipeline.router, prefix="/api/corpus", tags=["Pipeline"])
 
 
 # ============================================================================

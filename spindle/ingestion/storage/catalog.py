@@ -11,6 +11,8 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 
 from spindle.ingestion.types import (
     ChunkArtifact,
+    Corpus,
+    CorpusDocument,
     DocumentArtifact,
     DocumentGraph,
     DocumentGraphEdge,
@@ -76,6 +78,29 @@ class IngestionRunRow(Base):
     bytes_read: Mapped[int] = mapped_column(Integer)
     errors: Mapped[list[str]] = mapped_column(JSON, default=list)
     extras: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class CorpusRow(Base):
+    """SQLAlchemy model for corpus storage."""
+
+    __tablename__ = "corpora"
+
+    corpus_id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    pipeline_state: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class CorpusDocumentRow(Base):
+    """SQLAlchemy model linking documents to corpora."""
+
+    __tablename__ = "corpus_documents"
+
+    corpus_id: Mapped[str] = mapped_column(String, primary_key=True)
+    document_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class DocumentCatalog:

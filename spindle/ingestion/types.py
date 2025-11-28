@@ -111,6 +111,36 @@ class DocumentGraph:
 
 
 @dataclass(slots=True)
+class Corpus:
+    """A collection of documents for ontology pipeline processing.
+
+    A corpus groups related documents together and tracks the state of
+    ontology pipeline stages (vocabulary, metadata, taxonomy, thesaurus,
+    ontology, knowledge graph) that have been executed against it.
+    """
+
+    corpus_id: str
+    name: str
+    description: str = ""
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    pipeline_state: Metadata = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class CorpusDocument:
+    """Links a document to a corpus.
+
+    References an existing DocumentArtifact by document_id, allowing
+    the same ingested document to belong to multiple corpora.
+    """
+
+    corpus_id: str
+    document_id: str
+    added_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass(slots=True)
 class IngestionRunMetrics:
     """Aggregated metrics for an ingestion run."""
 
