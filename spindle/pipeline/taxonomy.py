@@ -12,8 +12,11 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, DateTime, String, Integer, select
 from sqlalchemy.orm import Mapped, mapped_column
+from langfuse import observe, get_client as get_langfuse_client
+import baml_py
 
 from spindle.baml_client import b
+from spindle.extraction.helpers import _extract_model_from_collector
 from spindle.baml_client.types import (
     TaxonomyRelation as BAMLTaxonomyRelation,
     VocabularyTerm as BAMLVocabularyTerm,
@@ -83,6 +86,7 @@ class TaxonomyStage(BasePipelineStage[TaxonomyNode]):
         Base.metadata.create_all(self.corpus_manager._catalog._engine)
         self._vocabulary_stage = VocabularyStage(corpus_manager, graph_store)
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def extract_from_text(
         self,
         text: str,
@@ -132,11 +136,41 @@ class TaxonomyStage(BasePipelineStage[TaxonomyNode]):
             for r in existing_relations
         ]
 
-        # Call BAML extraction
-        result = b.ExtractTaxonomy(
+        # Call BAML extraction with collector
+        collector = baml_py.baml_py.Collector("taxonomy-extraction-collector")
+        result = b.with_options(collector=collector).ExtractTaxonomy(
             terms=baml_terms,
             text=text,
             existing_relations=baml_relations,
+        )
+
+        # Extract model from collector
+        model = _extract_model_from_collector(collector) or "CustomFast"
+
+        # Update Langfuse generation
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="ExtractTaxonomy",
+            model=model,
+            input={
+                "text": text,
+                "terms": [t.preferred_label for t in baml_terms],
+                "existing_relations": [
+                    {"parent": r.parent_term, "child": r.child_term}
+                    for r in baml_relations
+                ],
+            },
+            output={
+                "relations": [
+                    {
+                        "parent_term": r.parent_term,
+                        "child_term": r.child_term,
+                        "relation_type": r.relation_type,
+                        "confidence": r.confidence,
+                    }
+                    for r in result.relations
+                ],
+            },
         )
 
         # Build node map from vocabulary

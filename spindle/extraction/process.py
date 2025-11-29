@@ -5,12 +5,15 @@ This module provides functions for extracting process DAGs from text.
 """
 
 from typing import Optional
+from langfuse import observe, get_client as get_langfuse_client
+import baml_py
 from spindle.baml_client import b
 from spindle.baml_client.types import (
     ProcessExtractionResult,
     ProcessGraph,
 )
 from spindle.extraction.helpers import (
+    _extract_model_from_collector,
     _rehydrate_process_graph,
     _merge_process_graphs,
     _recalculate_process_boundaries,
@@ -19,6 +22,7 @@ from spindle.extraction.helpers import (
 )
 
 
+@observe(as_type="generation", capture_input=False, capture_output=False)
 def extract_process_graph(
     text: str,
     process_hint: Optional[str] = None,
@@ -28,10 +32,42 @@ def extract_process_graph(
     Extract or extend a process DAG from text using the ProcessGraph BAML function.
     """
 
-    result = b.ExtractProcessGraph(
+    # Call BAML extraction with collector
+    collector = baml_py.baml_py.Collector("process-graph-extraction-collector")
+    result = b.with_options(collector=collector).ExtractProcessGraph(
         text=text,
         process_hint=process_hint,
         existing_graph=existing_graph,
+    )
+
+    # Extract model from collector
+    model = _extract_model_from_collector(collector) or "CustomFast"
+
+    # Update Langfuse generation
+    langfuse = get_langfuse_client()
+    langfuse.update_current_generation(
+        name="ExtractProcessGraph",
+        model=model,
+        input={
+            "text": text,
+            "process_hint": process_hint,
+            "has_existing_graph": existing_graph is not None,
+        },
+        output={
+            "has_graph": result.graph is not None,
+            "graph": {
+                "nodes": [
+                    {"id": n.id, "label": n.label, "type": n.type}
+                    for n in result.graph.nodes
+                ] if result.graph else [],
+                "edges": [
+                    {"source": e.source, "target": e.target, "label": e.label}
+                    for e in result.graph.edges
+                ] if result.graph else [],
+            } if result.graph else None,
+            "reasoning": result.reasoning,
+            "issues": [str(i) for i in result.issues] if result.issues else [],
+        },
     )
 
     if result.graph is None:

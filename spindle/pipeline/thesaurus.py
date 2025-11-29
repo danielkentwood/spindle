@@ -12,8 +12,11 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, DateTime, String, select
 from sqlalchemy.orm import Mapped, mapped_column
+from langfuse import observe, get_client as get_langfuse_client
+import baml_py
 
 from spindle.baml_client import b
+from spindle.extraction.helpers import _extract_model_from_collector
 from spindle.baml_client.types import (
     ThesaurusEntry as BAMLThesaurusEntry,
     TaxonomyRelation as BAMLTaxonomyRelation,
@@ -78,6 +81,7 @@ class ThesaurusStage(BasePipelineStage[ThesaurusEntry]):
         self._vocabulary_stage = VocabularyStage(corpus_manager, graph_store)
         self._taxonomy_stage = TaxonomyStage(corpus_manager, graph_store)
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def extract_from_text(
         self,
         text: str,
@@ -127,11 +131,43 @@ class ThesaurusStage(BasePipelineStage[ThesaurusEntry]):
             for r in taxonomy_relations
         ]
 
-        # Call BAML extraction
-        result = b.ExtractThesaurus(
+        # Call BAML extraction with collector
+        collector = baml_py.baml_py.Collector("thesaurus-extraction-collector")
+        result = b.with_options(collector=collector).ExtractThesaurus(
             terms=baml_terms,
             taxonomy_relations=baml_relations,
             text=text,
+        )
+
+        # Extract model from collector
+        model = _extract_model_from_collector(collector) or "CustomFast"
+
+        # Update Langfuse generation
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="ExtractThesaurus",
+            model=model,
+            input={
+                "text": text,
+                "terms": [t.preferred_label for t in baml_terms],
+                "taxonomy_relations": [
+                    {"parent": r.parent_term, "child": r.child_term}
+                    for r in baml_relations
+                ],
+            },
+            output={
+                "entries": [
+                    {
+                        "preferred_label": e.preferred_label,
+                        "use_for": list(e.use_for) if e.use_for else [],
+                        "broader_terms": list(e.broader_terms) if e.broader_terms else [],
+                        "narrower_terms": list(e.narrower_terms) if e.narrower_terms else [],
+                        "related_terms": list(e.related_terms) if e.related_terms else [],
+                        "scope_note": e.scope_note,
+                    }
+                    for e in result.entries
+                ],
+            },
         )
 
         # Convert to ThesaurusEntry

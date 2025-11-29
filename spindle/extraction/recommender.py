@@ -11,6 +11,7 @@ Key Components:
 from typing import List, Dict, Any, Optional, Tuple
 import time
 import baml_py
+from langfuse import observe, get_client as get_langfuse_client
 from spindle.baml_client import b
 from spindle.baml_client.types import (
     ExtractionResult,
@@ -101,6 +102,7 @@ class OntologyRecommender:
             return b.with_options(env=self._baml_env_overrides)
         return b
     
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def recommend(
         self,
         text: str,
@@ -213,8 +215,30 @@ class OntologyRecommender:
                 "model": model,
             },
         )
+
+        # Update Langfuse generation with LLM metrics
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="RecommendOntology",
+            model=model,
+            input={"text": text, "scope": scope},
+            output={
+                "text_purpose": result.text_purpose,
+                "reasoning": result.reasoning,
+                "entity_types": [
+                    {"name": et.name, "description": et.description}
+                    for et in result.ontology.entity_types
+                ],
+                "relation_types": [
+                    {"name": rt.name, "domain": rt.domain, "range": rt.range}
+                    for rt in result.ontology.relation_types
+                ],
+            },
+            usage_details={"input": input_tokens, "output": output_tokens},
+        )
+
         return result
-    
+
     def recommend_and_extract(
         self,
         text: str,
@@ -314,6 +338,7 @@ class OntologyRecommender:
         )
         return recommendation, extraction_result
     
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def analyze_extension(
         self,
         text: str,
@@ -430,8 +455,36 @@ class OntologyRecommender:
                 "model": model,
             },
         )
+
+        # Update Langfuse generation with LLM metrics
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="AnalyzeOntologyExtension",
+            model=model,
+            input={
+                "text": text,
+                "scope": scope,
+                "current_entity_types": [et.name for et in current_ontology.entity_types],
+                "current_relation_types": [rt.name for rt in current_ontology.relation_types],
+            },
+            output={
+                "needs_extension": result.needs_extension,
+                "critical_information_at_risk": result.critical_information_at_risk,
+                "reasoning": result.reasoning,
+                "new_entity_types": [
+                    {"name": et.name, "description": et.description}
+                    for et in result.new_entity_types
+                ],
+                "new_relation_types": [
+                    {"name": rt.name, "domain": rt.domain, "range": rt.range}
+                    for rt in result.new_relation_types
+                ],
+            },
+            usage_details={"input": input_tokens, "output": output_tokens},
+        )
+
         return result
-    
+
     def extend_ontology(
         self,
         current_ontology: Ontology,

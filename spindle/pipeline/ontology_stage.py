@@ -13,8 +13,11 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, DateTime, String, select
 from sqlalchemy.orm import Mapped, mapped_column
+from langfuse import observe, get_client as get_langfuse_client
+import baml_py
 
 from spindle.baml_client import b
+from spindle.extraction.helpers import _extract_model_from_collector
 from spindle.baml_client.types import (
     Ontology,
     EntityType,
@@ -87,6 +90,7 @@ class OntologyStage(BasePipelineStage[Ontology]):
         self._recommender = OntologyRecommender()
         self.scope = scope
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def extract_from_text(
         self,
         text: str,
@@ -147,12 +151,39 @@ class OntologyStage(BasePipelineStage[Ontology]):
             for e in thesaurus_entries
         ]
 
-        # Call BAML enhanced ontology generation
-        result = b.EnhanceOntologyFromPipeline(
+        # Call BAML enhanced ontology generation with collector
+        collector = baml_py.baml_py.Collector("ontology-enhancement-collector")
+        result = b.with_options(collector=collector).EnhanceOntologyFromPipeline(
             text=text[:3000],  # Sample text
             vocabulary=baml_vocab,
             thesaurus_entries=baml_thesaurus,
             scope=self.scope,
+        )
+
+        # Extract model from collector
+        model = _extract_model_from_collector(collector) or "CustomFast"
+
+        # Update Langfuse generation
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="EnhanceOntologyFromPipeline",
+            model=model,
+            input={
+                "text": text[:3000],
+                "scope": self.scope,
+                "vocabulary_terms": [v.preferred_label for v in baml_vocab],
+                "thesaurus_entry_count": len(baml_thesaurus),
+            },
+            output={
+                "entity_types": [
+                    {"name": et.name, "description": et.description}
+                    for et in result.entity_types
+                ],
+                "relation_types": [
+                    {"name": rt.name, "domain": rt.domain, "range": rt.range}
+                    for rt in result.relation_types
+                ],
+            },
         )
 
         # Build Ontology from result

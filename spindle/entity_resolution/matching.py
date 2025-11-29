@@ -9,6 +9,7 @@ import json
 import time
 
 import baml_py
+from langfuse import observe, get_client as get_langfuse_client
 
 from spindle.baml_client import b
 from spindle.baml_client.types import (
@@ -41,6 +42,7 @@ class SemanticMatcher:
         """
         self.config = config
     
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def match_entities(
         self,
         block: List[Dict[str, Any]],
@@ -185,9 +187,37 @@ class SemanticMatcher:
                 "model": primary_model,
             }
         )
-        
+
+        # Update Langfuse generation with LLM metrics
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="MatchEntities",
+            model=primary_model,
+            input={
+                "entities": [
+                    {"id": e.id, "type": e.type, "description": e.description}
+                    for e in entities_for_matching
+                ],
+                "context": context,
+            },
+            output={
+                "matches": [
+                    {
+                        "entity1_id": m.entity1_id,
+                        "entity2_id": m.entity2_id,
+                        "is_duplicate": m.is_duplicate,
+                        "confidence": m.confidence,
+                        "reasoning": m.reasoning,
+                    }
+                    for m in all_matches
+                ],
+            },
+            usage_details={"input": total_input_tokens, "output": total_output_tokens},
+        )
+
         return all_matches
-    
+
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def match_edges(
         self,
         block: List[Dict[str, Any]],
@@ -352,9 +382,41 @@ class SemanticMatcher:
                 "model": primary_model,
             }
         )
-        
+
+        # Update Langfuse generation with LLM metrics
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="MatchEdges",
+            model=primary_model,
+            input={
+                "edges": [
+                    {
+                        "id": e.id,
+                        "subject": e.subject,
+                        "predicate": e.predicate,
+                        "object": e.object,
+                    }
+                    for e in edges_for_matching
+                ],
+                "context": context,
+            },
+            output={
+                "matches": [
+                    {
+                        "edge1_id": m.edge1_id,
+                        "edge2_id": m.edge2_id,
+                        "is_duplicate": m.is_duplicate,
+                        "confidence": m.confidence,
+                        "reasoning": m.reasoning,
+                    }
+                    for m in all_matches
+                ],
+            },
+            usage_details={"input": total_input_tokens, "output": total_output_tokens},
+        )
+
         return all_matches
-    
+
     def _confidence_level_to_score(self, level: str) -> float:
         """Convert confidence level string to numeric score.
         

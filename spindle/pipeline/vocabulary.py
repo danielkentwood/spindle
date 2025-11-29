@@ -12,9 +12,12 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, DateTime, String, Integer, select
 from sqlalchemy.orm import Mapped, mapped_column
+from langfuse import observe, get_client as get_langfuse_client
+import baml_py
 
 from spindle.baml_client import b
 from spindle.baml_client.types import VocabularyTerm as BAMLVocabularyTerm
+from spindle.extraction.helpers import _extract_model_from_collector
 from spindle.ingestion.storage.catalog import Base
 from spindle.ingestion.storage.corpus import CorpusManager
 from spindle.pipeline.base import BasePipelineStage
@@ -68,6 +71,7 @@ class VocabularyStage(BasePipelineStage[VocabularyTerm]):
         # Ensure vocabulary table exists
         Base.metadata.create_all(self.corpus_manager._catalog._engine)
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def extract_from_text(
         self,
         text: str,
@@ -98,11 +102,38 @@ class VocabularyStage(BasePipelineStage[VocabularyTerm]):
             for t in existing_artifacts
         ]
 
-        # Call BAML extraction
-        result = b.ExtractControlledVocabulary(
+        # Call BAML extraction with collector for model extraction
+        collector = baml_py.baml_py.Collector("vocabulary-extraction-collector")
+        result = b.with_options(collector=collector).ExtractControlledVocabulary(
             text=text,
             existing_terms=existing_baml_terms,
             document_id=document_id,
+        )
+
+        # Extract model from collector
+        model = _extract_model_from_collector(collector) or "CustomFast"
+
+        # Update Langfuse generation
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="ExtractControlledVocabulary",
+            model=model,
+            input={
+                "text": text,
+                "document_id": document_id,
+                "existing_terms": [t.preferred_label for t in existing_artifacts],
+            },
+            output={
+                "terms": [
+                    {
+                        "preferred_label": t.preferred_label,
+                        "definition": t.definition,
+                        "synonyms": list(t.synonyms) if t.synonyms else [],
+                        "domain": t.domain,
+                    }
+                    for t in result.terms
+                ],
+            },
         )
 
         # Convert BAML results to VocabularyTerm
@@ -123,6 +154,7 @@ class VocabularyStage(BasePipelineStage[VocabularyTerm]):
 
         return terms
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def merge_artifacts(
         self,
         artifact_sets: List[List[VocabularyTerm]],
@@ -162,7 +194,35 @@ class VocabularyStage(BasePipelineStage[VocabularyTerm]):
                 for term_set in artifact_sets
             ]
 
-            result = b.ConsolidateVocabulary(term_sets=baml_term_sets)
+            # Call BAML consolidation with collector for model extraction
+            collector = baml_py.baml_py.Collector("vocabulary-consolidation-collector")
+            result = b.with_options(collector=collector).ConsolidateVocabulary(term_sets=baml_term_sets)
+
+            # Extract model from collector
+            model = _extract_model_from_collector(collector) or "CustomFast"
+
+            # Update Langfuse generation
+            langfuse = get_langfuse_client()
+            langfuse.update_current_generation(
+                name="ConsolidateVocabulary",
+                model=model,
+                input={
+                    "term_sets": [
+                        [t.preferred_label for t in term_set]
+                        for term_set in baml_term_sets
+                    ],
+                },
+                output={
+                    "merged_terms": [
+                        {
+                            "preferred_label": t.preferred_label,
+                            "definition": t.definition,
+                            "synonyms": list(t.synonyms) if t.synonyms else [],
+                        }
+                        for t in result.terms
+                    ],
+                },
+            )
 
             merged_terms = []
             for i, baml_term in enumerate(result.terms):

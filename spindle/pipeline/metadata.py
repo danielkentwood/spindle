@@ -13,8 +13,11 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, DateTime, String, Boolean, select
 from sqlalchemy.orm import Mapped, mapped_column
+from langfuse import observe, get_client as get_langfuse_client
+import baml_py
 
 from spindle.baml_client import b
+from spindle.extraction.helpers import _extract_model_from_collector
 from spindle.baml_client.types import MetadataElement as BAMLMetadataElement
 from spindle.ingestion.storage.catalog import Base
 from spindle.ingestion.storage.corpus import CorpusManager
@@ -66,6 +69,7 @@ class MetadataStage(BasePipelineStage[MetadataElement]):
         super().__init__(corpus_manager, graph_store)
         Base.metadata.create_all(self.corpus_manager._catalog._engine)
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def extract_from_text(
         self,
         text: str,
@@ -103,11 +107,41 @@ class MetadataStage(BasePipelineStage[MetadataElement]):
             for e in existing_artifacts
         ]
 
-        # Call BAML extraction
-        result = b.ExtractMetadataSchema(
+        # Call BAML extraction with collector
+        collector = baml_py.baml_py.Collector("metadata-extraction-collector")
+        result = b.with_options(collector=collector).ExtractMetadataSchema(
             text=text[:2000],  # Sample text
             document_metadata=doc_metadata,
             existing_elements=existing_baml,
+        )
+
+        # Extract model from collector
+        model = _extract_model_from_collector(collector) or "CustomFast"
+
+        # Update Langfuse generation
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="ExtractMetadataSchema",
+            model=model,
+            input={
+                "text": text[:2000],
+                "document_id": document_id,
+                "document_metadata": doc_metadata,
+                "existing_elements": [e.name for e in existing_baml],
+            },
+            output={
+                "elements": [
+                    {
+                        "name": e.name,
+                        "element_type": e.element_type,
+                        "description": e.description,
+                        "data_type": e.data_type,
+                        "required": e.required,
+                        "examples": list(e.examples) if e.examples else [],
+                    }
+                    for e in result.elements
+                ],
+            },
         )
 
         # Convert to MetadataElement

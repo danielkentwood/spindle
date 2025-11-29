@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional, Tuple, AsyncIterator
 from datetime import datetime
 import time
 import baml_py
+from langfuse import observe, get_client as get_langfuse_client
 from spindle.baml_client import b
 from spindle.baml_client.async_client import b as async_b
 from spindle.baml_client.types import (
@@ -132,6 +133,7 @@ class SpindleExtractor:
             return async_b.with_options(env=self._baml_env_overrides)
         return async_b
     
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     def extract(
         self,
         text: str,
@@ -258,8 +260,35 @@ class SpindleExtractor:
                 "model": model,
             },
         )
+
+        # Update Langfuse generation with LLM metrics
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="ExtractTriples",
+            model=model,
+            input={
+                "text": text,
+                "source_name": source_name,
+                "source_url": source_url,
+                "existing_triples_count": len(existing_triples),
+            },
+            output={
+                "triples": [
+                    {
+                        "subject": t.subject.name,
+                        "predicate": t.predicate,
+                        "object": t.object.name,
+                    }
+                    for t in result.triples
+                ],
+                "reasoning": result.reasoning,
+            },
+            usage_details={"input": input_tokens, "output": output_tokens},
+        )
+
         return result
-    
+
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     async def extract_async(
         self,
         text: str,
@@ -389,8 +418,34 @@ class SpindleExtractor:
                 "model": model,
             },
         )
+
+        # Update Langfuse generation with LLM metrics
+        langfuse = get_langfuse_client()
+        langfuse.update_current_generation(
+            name="ExtractTriples",
+            model=model,
+            input={
+                "text": text,
+                "source_name": source_name,
+                "source_url": source_url,
+                "existing_triples_count": len(existing_triples),
+            },
+            output={
+                "triples": [
+                    {
+                        "subject": t.subject.name,
+                        "predicate": t.predicate,
+                        "object": t.object.name,
+                    }
+                    for t in result.triples
+                ],
+                "reasoning": result.reasoning,
+            },
+            usage_details={"input": input_tokens, "output": output_tokens},
+        )
+
         return result
-    
+
     async def extract_batch(
         self,
         texts: List[Tuple[str, str, Optional[str]]],
