@@ -27,6 +27,16 @@ tests/
 ├── test_serialization.py    # Serialization utilities
 ├── test_extractor.py        # SpindleExtractor flows
 ├── test_recommender.py      # OntologyRecommender logic
+├── test_process_extraction.py # Process graph extraction
+├── test_analytics.py        # Analytics and metrics
+├── test_api.py              # REST API endpoints
+├── test_configuration.py    # Configuration system
+├── test_entity_resolution.py # Entity resolution
+├── test_embeddings.py       # Vector store and embeddings
+├── test_graph_store.py      # GraphStore functionality
+├── test_ingestion_pipeline.py # Ingestion pipeline
+├── test_ingestion_templates.py # Ingestion templates
+├── test_observability_events.py # Observability events
 └── test_integration.py      # Real LLM exercises (requires API key)
 ```
 

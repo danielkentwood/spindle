@@ -74,6 +74,7 @@ What you get:
 Additional demos:
 - `uv run python demos/example_entity_resolution.py` — semantic entity deduplication
 - `uv run python demos/example_analytics_dashboard.py` — analytics visualization
+- `uv run python demos/example_api_usage.py` — API usage examples
 - `uv run python demos/ingestion_benchmark.py` — ingestion pipeline performance
 
 > **Note**: `SpindleExtractor()` without an ontology automatically recommends one on the first `extract()` call, so you can start with just text!
@@ -140,6 +141,7 @@ uv run python my_example.py
 
 - Pass `existing_triples=result.triples` on subsequent extracts to maintain entity consistency across sources.
 - Use helpers such as `filter_triples_by_source`, `parse_extraction_datetime`, and `triples_to_dict` (all exported from `spindle`).
+- Extract process DAGs from procedural text using `extract_process_graph()`.
 
 ## 6. Explore Graph Persistence & Embeddings
 

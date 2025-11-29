@@ -57,12 +57,12 @@ def extract_process_graph(
             "has_graph": result.graph is not None,
             "graph": {
                 "nodes": [
-                    {"id": n.id, "label": n.label, "type": n.type}
-                    for n in result.graph.nodes
+                    {"id": n.step_id, "label": n.title, "type": str(n.step_type)}
+                    for n in result.graph.steps
                 ] if result.graph else [],
                 "edges": [
-                    {"source": e.source, "target": e.target, "label": e.label}
-                    for e in result.graph.edges
+                    {"source": e.from_step, "target": e.to_step, "label": e.relation}
+                    for e in result.graph.dependencies
                 ] if result.graph else [],
             } if result.graph else None,
             "reasoning": result.reasoning,

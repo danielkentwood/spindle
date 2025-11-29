@@ -505,6 +505,103 @@ except Exception as exc:
     print("Authentication failed:", exc)
 ```
 
+## Langfuse Integration
+
+Spindle integrates with [Langfuse](https://langfuse.com) for LLM observability and tracing. Langfuse automatically tracks all LLM calls made through BAML functions, capturing inputs, outputs, model information, latency, token usage, and costs.
+
+### What Langfuse Tracks
+
+Langfuse automatically tracks LLM generations in the following Spindle components:
+
+- **Extraction**: Triple extraction calls via `SpindleExtractor.extract()`
+- **Ontology Recommendation**: Ontology recommendation and extension via `OntologyRecommender`
+- **Process Extraction**: Process DAG extraction via `extract_process_graph()`
+- **Entity Resolution**: Semantic matching during entity resolution
+- **Pipeline Stages**: Vocabulary, metadata, taxonomy, and ontology stages in the ingestion pipeline
+
+Each tracked generation includes:
+- Input text and parameters
+- Output triples, graphs, or recommendations
+- Model name and provider
+- Token usage (input/output/total)
+- Latency metrics
+- Cost calculations
+- Traces linking related operations
+
+### Configuration
+
+Langfuse is configured via environment variables. Add these to your `.env` file:
+
+```bash
+# Required for Langfuse cloud (https://cloud.langfuse.com)
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+
+# Optional: Custom Langfuse host (defaults to cloud)
+LANGFUSE_HOST=https://cloud.langfuse.com
+
+# Optional: Disable Langfuse entirely
+LANGFUSE_DISABLED=true
+```
+
+### Getting Langfuse Keys
+
+1. Sign up at [https://cloud.langfuse.com](https://cloud.langfuse.com) or deploy self-hosted Langfuse
+2. Create a new project
+3. Navigate to Settings → API Keys
+4. Create a new API key and copy both the public and secret keys
+
+### Self-Hosted Langfuse
+
+If you're running a self-hosted Langfuse instance, set the host:
+
+```bash
+LANGFUSE_HOST=https://your-langfuse-instance.com
+```
+
+### Disabling Langfuse
+
+Langfuse tracking is optional. If you don't set the required environment variables, Spindle will continue to work normally—Langfuse calls will simply be skipped. To explicitly disable:
+
+```bash
+LANGFUSE_DISABLED=true
+```
+
+### Viewing Traces
+
+Once configured, all LLM calls are automatically tracked. View them in your Langfuse dashboard:
+
+1. Open your Langfuse project dashboard
+2. Navigate to "Traces" to see all LLM calls
+3. Filter by:
+   - Project/application name
+   - Time range
+   - Model or provider
+   - Cost or latency thresholds
+
+### Integration with Observability
+
+Langfuse complements Spindle's internal observability system (`ServiceEvent` records). While `ServiceEvent` tracks high-level service operations (ingestion start/complete, graph mutations), Langfuse provides deep visibility into LLM-specific metrics (tokens, costs, latency) at the generation level.
+
+Both systems work independently:
+- **ServiceEvent**: Structured events persisted to SQLite (via `ObservabilitySettings.event_log_url`)
+- **Langfuse**: LLM generation traces and metrics (via environment variables)
+
+You can use both simultaneously for comprehensive observability across your knowledge graph extraction pipeline.
+
+### Example `.env` Configuration
+
+```bash
+# LLM Provider Keys
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Langfuse Observability (optional)
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_HOST=https://cloud.langfuse.com
+```
+
+
 ## Additional Resources
 
 - [UV Documentation](https://github.com/astral-sh/uv)

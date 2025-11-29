@@ -11,11 +11,22 @@ tests/
 ├── fixtures/
 │   ├── __init__.py
 │   ├── sample_texts.py          # Sample text data for tests
-│   └── sample_ontologies.py     # Sample ontology definitions
+│   ├── sample_ontologies.py     # Sample ontology definitions
+│   └── ingestion.py             # Ingestion test fixtures
 ├── test_helpers.py              # Tests for helper functions
 ├── test_serialization.py        # Tests for serialization functions
 ├── test_extractor.py            # Tests for SpindleExtractor
 ├── test_recommender.py          # Tests for OntologyRecommender
+├── test_process_extraction.py   # Tests for process graph extraction
+├── test_analytics.py            # Tests for analytics and metrics
+├── test_api.py                  # Tests for REST API endpoints
+├── test_configuration.py        # Tests for configuration system
+├── test_entity_resolution.py    # Tests for entity resolution
+├── test_embeddings.py           # Tests for vector store and embeddings
+├── test_graph_store.py          # Tests for GraphStore
+├── test_ingestion_pipeline.py   # Tests for ingestion pipeline
+├── test_ingestion_templates.py  # Tests for ingestion templates
+├── test_observability_events.py # Tests for observability events
 └── test_integration.py          # Integration tests (require API key)
 ```
 
@@ -50,6 +61,12 @@ Unit tests mock all LLM calls using `pytest-mock` and `unittest.mock`. They test
   - Extension analysis
   - Ontology extension logic
   - Combined operations
+
+- **Process Extraction** (`test_process_extraction.py`)
+  - Process graph extraction from text
+  - Process graph merging and validation
+  - Evidence span computation
+  - Cycle detection and boundary recalculation
 
 ### Integration Tests (Slow, Require API Key)
 
@@ -94,6 +111,9 @@ uv run pytest tests/test_extractor.py -v
 
 # Test recommender only
 uv run pytest tests/test_recommender.py -v
+
+# Test process extraction only
+uv run pytest tests/test_process_extraction.py -v
 ```
 
 ### Run with Coverage

@@ -68,11 +68,13 @@ def _fake_result(graph: ProcessGraph) -> ProcessExtractionResult:
 
 def _patch_extractor(monkeypatch: pytest.MonkeyPatch, factory: Callable[[], ProcessExtractionResult]) -> None:
     from spindle.baml_client import b
-    monkeypatch.setattr(
-        b,
-        "ExtractProcessGraph",
-        lambda **_: factory(),
-    )
+    from unittest.mock import MagicMock
+    
+    # Mock the with_options chain: b.with_options(...).ExtractProcessGraph(...)
+    mock_client = MagicMock()
+    mock_client.ExtractProcessGraph = lambda **_: factory()
+    mock_with_options = MagicMock(return_value=mock_client)
+    monkeypatch.setattr(b, "with_options", mock_with_options)
 
 
 def test_extract_process_graph_merges_existing_graph(monkeypatch: pytest.MonkeyPatch) -> None:

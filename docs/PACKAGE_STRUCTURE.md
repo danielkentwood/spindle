@@ -65,6 +65,7 @@ spindle/
 │   ├── example.py                   # Basic extraction example
 │   ├── example_entity_resolution.py # Semantic entity deduplication
 │   ├── example_analytics_dashboard.py # Analytics visualization
+│   ├── example_api_usage.py         # REST API usage examples
 │   └── ingestion_benchmark.py        # Ingestion pipeline performance
 ├── tests/                           # Pytest suite
 │   ├── conftest.py                  # Shared fixtures + marks
@@ -73,6 +74,16 @@ spindle/
 │   ├── test_graph_store.py          # GraphStore behaviour
 │   ├── test_embeddings.py           # Vector store + embedding helpers
 │   ├── test_recommender.py          # OntologyRecommender logic
+│   ├── test_process_extraction.py   # Process graph extraction tests
+│   ├── test_analytics.py            # Analytics and metrics tests
+│   ├── test_api.py                  # REST API endpoint tests
+│   ├── test_configuration.py        # Configuration system tests
+│   ├── test_entity_resolution.py    # Entity resolution tests
+│   ├── test_helpers.py              # Helper function tests
+│   ├── test_ingestion_pipeline.py   # Ingestion pipeline tests
+│   ├── test_ingestion_templates.py  # Template system tests
+│   ├── test_observability_events.py # Observability event tests
+│   ├── test_serialization.py        # Serialization utility tests
 │   └── test_integration.py          # Real LLM integration tests (requires API keys)
 ├── docs/                            # Additional documentation
 │   ├── QUICKSTART.md                # Getting started guide
@@ -165,6 +176,9 @@ GraphStore              # Optional (requires kuzu)
 VectorStore             # Optional (requires chromadb + embeddings extras)
 ChromaVectorStore
 
+# Process extraction
+extract_process_graph   # Extract process DAGs from text
+
 # Factory functions
 create_ontology
 create_source_metadata
@@ -192,9 +206,9 @@ get_default_embedding_function
 Core extraction functionality organized into modules:
 - `extractor.py`: `SpindleExtractor` class for triple extraction
 - `recommender.py`: `OntologyRecommender` class for ontology recommendation
-- `process.py`: Process graph extraction functions
+- `process.py`: `extract_process_graph()` function for extracting process DAGs from text
 - `utils.py`: Public utility functions (ontology creation, serialization, filtering)
-- `helpers.py`: Internal helper functions (span processing, event recording)
+- `helpers.py`: Internal helper functions (span processing, event recording, process graph utilities)
 - `__init__.py`: Public API exports maintaining backward compatibility
 
 #### `spindle/graph_store/`
@@ -235,6 +249,7 @@ BAML (Basically, A Made-up Language) schema definitions:
 - `clients.baml`: LLM client configurations (Claude Sonnet 4)
 - `generators.baml`: Code generation settings
 - `spindle.baml`: Function definitions for extraction and ontology recommendation
+- `process.baml`: Process graph extraction function definitions
 
 ### `spindle/baml_client/` Generated Code
 
@@ -299,6 +314,9 @@ from spindle import SpindleExtractor, create_ontology
 
 # Ontology recommendation
 from spindle import OntologyRecommender
+
+# Process extraction (from extraction subpackage)
+from spindle.extraction import extract_process_graph
 
 # Graph database (optional)
 from spindle import GraphStore
