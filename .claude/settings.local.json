@@ -3,7 +3,9 @@
     "allow": [
       "Bash(find:*)",
       "Bash(wc:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(while read dir)",
+      "Bash(do [ -d \"$dir\" ])"
     ]
   }
 }
