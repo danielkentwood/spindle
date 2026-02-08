@@ -1,6 +1,6 @@
 I want to start over and rebuild the codebase.
   * simplify and reduce interdependencies as much as possible
-  * everything should be built to be accessible to an agent that will help users build and maintain their knowledge systems. Each component will be accessible via an agentic Skill (in the Anthropic sense) that the agent can use.
+  * everything should be built to be accessible to an agent that will help users build and maintain their knowledge systems. 
   * each separate "project" is a Knowledge Organization System (KOS).
 
 # Core functionality
@@ -8,7 +8,6 @@ I want to start over and rebuild the codebase.
 * Capable of building a full KOS from a corpus of documents
   * For our purposes, the KOS comprises the following components:
     1. **Controlled Vocabulary** - Extract and define key terms
-    2. **Metadata Standards** - Define metadata schema
     3. **Taxonomy** - Build hierarchical structure
     4. **Thesaurus** - Add semantic relationships (BT, NT, RT)
     5. **Ontology** - Generate entity and relation types
@@ -24,7 +23,6 @@ I want to start over and rebuild the codebase.
       * project description: description of the scope, domain, purpose, etc. of the project
       * cold start: entities, relations, attributes, etc. that the user already knows and wants to ensure are included in the KOS
     * vocabulary
-    * metadata
     * taxonomy
     * thesaurus
     * ontology
@@ -50,6 +48,6 @@ I want to start over and rebuild the codebase.
 * Document preprocessing (potentially as a separate module)
   * if the corpus has a hierarchy of documents, then the KOS should be able to extract the hierarchy and create a graph of the hierarchy.
   * if the corpus has some documents that are more reliable/informative than others, these should be consumed first to establish the foundation of the KOS. 
-  * After an initial KOS is established, document preprocessing should include an entity recognition step where  entities are "tagged" with the entity class. If the KG is already established, entities should be linked to any existing entities in the KG. This provides a more reliable foundation for the triple extraction step (since entity recognition step has already been partially completed).
-  * Coreference resolution must precede extraction
+  * After an initial KOS is established, document preprocessing should include an entity recognition step where entities are "tagged" with the entity class. If the KG is already established, entities should be linked to any existing entities in the KG. This provides a more reliable foundation for the triple extraction step (since entity recognition step has already been partially completed).
+  * Coreference resolution must precede triple extraction
 * Fine-tuning flywheel: tools for easily fine-tuning an open-source LLM to improve triple extraction. Maybe even fine-tuning on a specific domain if the economics make sense.
