@@ -1,7 +1,7 @@
 I want to start over and rebuild the codebase.
-  * simplify and reduce interdependencies as much as possible
-  * everything should be built to be accessible to an agent that will help users build and maintain their knowledge systems. 
-  * each separate "project" is a Knowledge Organization System (KOS).
+* simplify and reduce interdependencies as much as possible
+* everything should be built to be accessible to an agent that will help users build and maintain their knowledge systems. 
+* each separate "project" is a Knowledge Organization System (KOS).
 
 # Core functionality
 
