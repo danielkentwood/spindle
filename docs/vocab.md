@@ -8,13 +8,13 @@
 * DocumentChunk: A chunk is a contiguous range of characters in a document that is optimized for processing by an LLM.
 * Contributor: A contributor is a person who has contributed to a document.
 * Person
-* Role: A role is a person's role in an organization.
+* Role: A role is a person's instructions and responsibilities in an organization.
 * Behavior
 * Skill: A skill is a behavior that a person can perform proficiently.
-* Task: A task is a behavior that a person can perform in a specific context.
+* Task: A task is a behavior that a person can perform in service of a goal or directive.
 * Event
-* Decision: A decision is a behavior that a person can perform in a specific context.
-* Process: A sequence of tasks
+* Decision: A decision is a choice that a person can make in service of a goal or directive.
+* Process: A sequence of tasks, decisions, and events that are performed in service of a goal or directive.
 * Subprocess: A subprocess is a process that is a part of a larger process.
 * Condition: A condition is a boolean expression that evaluates to true or false.
-* Resource: A resource is a thing that is used or produced by a task.
+* Resource: A resource is a thing that is used or produced by a task, decision, or event.
