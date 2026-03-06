@@ -5,7 +5,16 @@
       "Bash(wc:*)",
       "Bash(grep:*)",
       "Bash(while read dir)",
-      "Bash(do [ -d \"$dir\" ])"
+      "Bash(do [ -d \"$dir\" ])",
+      "Bash(git check-ignore:*)",
+      "Bash(uv run:*)",
+      "Bash(/Users/danielwood/.cargo/bin/uv:*)",
+      "Bash(export:*)",
+      "Bash(mdfind:*)",
+      "Bash(echo:*)",
+      "Bash(python3:*)",
+      "Bash(zsh:*)",
+      "Bash(/Users/danielwood/.local/bin/uv:*)"
     ]
   }
 }
