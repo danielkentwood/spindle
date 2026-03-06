@@ -53,12 +53,15 @@ class LangChainIngestionPipeline:
         observers: Sequence[Callable[[IngestionEvent], None]] | None = None,
         document_catalog: "DocumentCatalog" | None = None,
         vector_store: "ChromaVectorStoreAdapter" | None = None,
+        tracker=None,
     ) -> None:
         self._config = config
         self._registry = registry
         self._observers = list(observers or [])
         self._catalog = document_catalog
         self._vector_store = vector_store
+        from spindle.tracking import NoOpTracker
+        self._tracker = tracker if tracker is not None else NoOpTracker()
 
     def ingest(self, paths: Sequence[Path]) -> IngestionResult:
         metrics = IngestionRunMetrics(started_at=datetime.utcnow())
@@ -69,6 +72,7 @@ class LangChainIngestionPipeline:
         run_id = uuid.uuid4().hex
         self._stage_totals: dict[str, float] = defaultdict(float)
         self._stage_counts: dict[str, int] = defaultdict(int)
+        self._tracker.log_event("preprocessor", "chunk.start", {"path_count": len(paths)})
 
         for path in paths:
             try:
@@ -116,6 +120,14 @@ class LangChainIngestionPipeline:
             self._catalog.persist_result(result, run_id=run_id)
         if self._vector_store:
             self._vector_store.upsert_chunks(result.chunks)
+        avg_chunk_size = (
+            sum(len(c.text) for c in chunks) / len(chunks) if chunks else 0.0
+        )
+        self._tracker.log_event(
+            "preprocessor",
+            "chunk.complete",
+            {"chunk_count": len(chunks), "avg_chunk_size": avg_chunk_size},
+        )
         return result
 
     def _build_sequence(self, template: TemplateSpec) -> RunnableLambda:

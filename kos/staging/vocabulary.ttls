@@ -1,0 +1,6 @@
+# Vocabulary stage output: concepts, labels, definitions
+# Written by the vocabulary extraction pipeline stage.
+
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix spndl: <http://spindle.dev/ns/> .

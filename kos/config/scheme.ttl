@@ -1,0 +1,8 @@
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix spndl: <http://spindle.dev/ns/> .
+
+spndl:scheme/main a skos:ConceptScheme ;
+    dct:title "Spindle KOS"@en ;
+    dct:description "Auto-generated controlled vocabulary for the project corpus"@en .

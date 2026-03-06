@@ -1,0 +1,5 @@
+# Thesaurus stage output: related terms, scope notes
+# Written by the thesaurus extraction pipeline stage.
+
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix spndl: <http://spindle.dev/ns/> .

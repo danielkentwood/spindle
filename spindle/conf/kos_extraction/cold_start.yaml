@@ -1,0 +1,5 @@
+# LLM-based extraction from scratch (no existing KOS)
+mode: cold_start
+llm_model: claude-sonnet-4-6
+max_concepts_per_chunk: 20
+min_confidence: 0.6

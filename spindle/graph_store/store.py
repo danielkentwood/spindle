@@ -32,6 +32,8 @@ from spindle.graph_store.embeddings import (
 
 if TYPE_CHECKING:
     from spindle.vector_store import VectorStore
+    from spindle.provenance import ProvenanceStore
+    from spindle.tracking import NoOpTracker
 
 
 class GraphStore:
@@ -71,6 +73,8 @@ class GraphStore:
         *,
         config: Optional[SpindleConfig] = None,
         backend: Optional[GraphStoreBackend] = None,
+        provenance_store: Optional['ProvenanceStore'] = None,
+        tracker: Optional['NoOpTracker'] = None,
     ):
         """
         Initialize GraphStore with backend.
@@ -87,6 +91,11 @@ class GraphStore:
                     database will be persisted to ``config.storage.graph_store_path``.
             backend: Optional GraphStoreBackend instance. If not provided,
                     defaults to KuzuBackend.
+            provenance_store: Optional ProvenanceStore for normalized provenance
+                    tracking. When provided, graph mutations also write provenance
+                    to the SQLite side-table. When None, provenance is not tracked.
+            tracker: Optional Tracker for emitting structured pipeline events.
+                    Defaults to NoOpTracker (routes to Python logging).
         """
         self._spindle_config = config
         graph_settings = GraphStoreSettings()
@@ -104,7 +113,15 @@ class GraphStore:
             if graph_settings.snapshot_dir and graph_settings.auto_snapshot:
                 graph_settings.snapshot_dir.mkdir(parents=True, exist_ok=True)
         self._graph_settings = graph_settings
-        
+
+        # v2 provenance + tracking
+        self._provenance_store = provenance_store
+        if tracker is None:
+            from spindle.tracking import NoOpTracker as _NoOpTracker
+            self._tracker: Any = _NoOpTracker()
+        else:
+            self._tracker = tracker
+
         # Convert to absolute path in /graphs directory structure
         self.db_path = resolve_graph_path(db_path)
         self.vector_store = vector_store
@@ -353,13 +370,16 @@ class GraphStore:
     
     def add_triples(self, triples: List[Triple]) -> int:
         """Bulk import triples from Spindle extraction."""
+        import time
         self._emit_event(
             "add_triples.start",
             {
                 "requested": len(triples),
             },
         )
+        self._tracker.log_event("graph_store", "ingest.start", {"triple_count": len(triples)})
         count = 0
+        t0 = time.perf_counter()
         try:
             for triple in triples:
                 if self.add_edge_from_triple(triple):
@@ -374,12 +394,19 @@ class GraphStore:
                 },
             )
             raise
+        elapsed_ms = (time.perf_counter() - t0) * 1000
         self._emit_event(
             "add_triples.complete",
             {
                 "requested": len(triples),
                 "added": count,
             },
+        )
+        node_count = len(self._backend.nodes()) if hasattr(self._backend, "nodes") else 0
+        self._tracker.log_event(
+            "graph_store",
+            "ingest.complete",
+            {"triple_count": count, "node_count": node_count, "elapsed_ms": elapsed_ms},
         )
         return count
     

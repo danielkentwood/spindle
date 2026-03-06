@@ -1,0 +1,8 @@
+# Consolidated SKOS thesaurus (source of truth)
+# This file is auto-managed by KOSService and the KOS extraction pipeline.
+# Edit via the API or staging workflow — do not modify manually.
+
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix spndl: <http://spindle.dev/ns/> .

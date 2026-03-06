@@ -246,6 +246,7 @@ from spindle.api.routers import (
     process,
     resolution,
 )
+from spindle.api.kos_router import router as kos_router
 
 # Register routers
 app.include_router(ingestion.router, prefix="/api/ingestion", tags=["Ingestion"])
@@ -255,6 +256,7 @@ app.include_router(resolution.router, prefix="/api/resolution", tags=["Resolutio
 app.include_router(process.router, prefix="/api/process", tags=["Process"])
 app.include_router(corpus.router, prefix="/api/corpus", tags=["Corpus"])
 app.include_router(pipeline.router, prefix="/api/corpus", tags=["Pipeline"])
+app.include_router(kos_router, prefix="/kos", tags=["KOS"])
 
 
 # ============================================================================

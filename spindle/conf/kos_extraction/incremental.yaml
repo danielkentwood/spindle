@@ -1,0 +1,5 @@
+# NER cascade against existing KOS — for iterative refinement
+mode: incremental
+match_threshold: 0.85
+promote_candidates: true
+staging_review_mode: auto

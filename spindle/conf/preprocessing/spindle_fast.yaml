@@ -1,0 +1,7 @@
+# Lighter config for CI — skip coref, use only dictionary NER
+chunk_size: 600
+overlap: 0.10
+strategy: recursive
+coref_model: null
+ner_cascade:
+  - aho_corasick

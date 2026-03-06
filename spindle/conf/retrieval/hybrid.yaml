@@ -1,0 +1,6 @@
+strategy: hybrid
+top_k: 10
+traversal_depth: 2
+community_level: C0
+vector_weight: 0.5
+graph_weight: 0.5
