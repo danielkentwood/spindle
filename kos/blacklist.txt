@@ -1,0 +1,11 @@
+# Terms excluded from NER recognition and vocabulary extraction.
+# One term per line, case-insensitive matching.
+# Lines beginning with # are comments.
+the
+a
+an
+it
+this
+that
+these
+those

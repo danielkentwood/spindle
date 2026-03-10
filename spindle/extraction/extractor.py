@@ -63,6 +63,7 @@ class SpindleExtractor:
         ontology: Optional[Ontology] = None,
         llm_config: Optional["LLMConfig"] = None,
         auto_detect_auth: bool = True,
+        tracker=None,
     ):
         """
         Initialize the extractor with an ontology.
@@ -76,11 +77,16 @@ class SpindleExtractor:
                 will be auto-detected from the environment.
             auto_detect_auth: Whether to auto-detect authentication credentials when
                 llm_config is not provided. Defaults to True.
+            tracker: Optional Tracker for emitting structured pipeline events.
+                    Defaults to NoOpTracker.
         """
         self.ontology = ontology
         self.llm_config = llm_config
         self.auto_detect_auth = auto_detect_auth
         self._baml_env_overrides: Optional[Dict[str, str]] = None
+
+        from spindle.tracking import NoOpTracker
+        self._tracker = tracker if tracker is not None else NoOpTracker()
 
         self._configure_baml_client(self.llm_config, self.auto_detect_auth)
     
@@ -153,6 +159,11 @@ class SpindleExtractor:
                 "source_url": source_url,
                 "existing_triples": len(existing_triples),
             },
+        )
+        self._tracker.log_event(
+            "extractor",
+            "extract.start",
+            {"text_length": len(text), "source_name": source_name},
         )
 
         try:
@@ -229,6 +240,15 @@ class SpindleExtractor:
                 "cost": total_cost,
                 "latency_ms": latency_ms,
                 "model": model,
+            },
+        )
+        self._tracker.log_event(
+            "extractor",
+            "extract.complete",
+            {
+                "triple_count": len(result.triples),
+                "total_tokens": total_tokens,
+                "elapsed_ms": latency_ms,
             },
         )
 

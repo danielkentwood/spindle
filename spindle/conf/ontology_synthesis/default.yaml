@@ -1,0 +1,4 @@
+# OWL ontology synthesis from SKOS thesaurus
+max_axioms_per_class: 10
+generate_shacl: true
+shacl_severity: warning

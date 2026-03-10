@@ -30,19 +30,23 @@ from spindle.entity_resolution.utils import (
 
 class EntityResolver:
     """Main orchestrator for entity resolution pipeline.
-    
+
     Coordinates blocking, matching, and merging to deduplicate knowledge graphs.
     """
-    
-    def __init__(self, config: Optional[ResolutionConfig] = None):
+
+    def __init__(self, config: Optional[ResolutionConfig] = None, tracker=None):
         """Initialize entity resolver.
-        
+
         Args:
             config: Optional ResolutionConfig (uses defaults if not provided)
+            tracker: Optional Tracker for emitting structured pipeline events.
+                    Defaults to NoOpTracker.
         """
         self.config = config or ResolutionConfig()
         self.blocker = SemanticBlocker(self.config)
         self.matcher = SemanticMatcher(self.config)
+        from spindle.tracking import NoOpTracker
+        self._tracker = tracker if tracker is not None else NoOpTracker()
     
     def resolve_entities(
         self,
@@ -66,16 +70,21 @@ class EntityResolver:
         """
         start_time = datetime.utcnow()
         result = ResolutionResult(config=self.config)
-        
+
         _record_resolution_event(
             "resolution.start",
             {
                 "apply_to_nodes": apply_to_nodes,
                 "apply_to_edges": apply_to_edges,
-                "config": self.config.__dict__
-            }
+                "config": self.config.__dict__,
+            },
         )
-        
+        self._tracker.log_event(
+            "entity_resolution",
+            "resolve.start",
+            {"apply_to_nodes": apply_to_nodes, "apply_to_edges": apply_to_edges},
+        )
+
         try:
             # Phase 1: Resolve nodes
             if apply_to_nodes:
@@ -99,11 +108,17 @@ class EntityResolver:
             end_time = datetime.utcnow()
             result.execution_time_seconds = (end_time - start_time).total_seconds()
             
-            _record_resolution_event(
-                "resolution.complete",
-                result.to_dict()
+            _record_resolution_event("resolution.complete", result.to_dict())
+            self._tracker.log_event(
+                "entity_resolution",
+                "resolve.complete",
+                {
+                    "candidates": result.total_nodes_processed + result.total_edges_processed,
+                    "merged": result.same_as_edges_created,
+                    "elapsed_ms": result.execution_time_seconds * 1000,
+                },
             )
-            
+
             return result
             
         except Exception as exc:

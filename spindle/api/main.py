@@ -185,9 +185,11 @@ from spindle.api.routers import (
     extraction,
     resolution,
 )
+from spindle.api.kos_router import router as kos_router
 
 app.include_router(extraction.router, prefix="/api/extraction", tags=["Extraction"])
 app.include_router(resolution.router, prefix="/api/resolution", tags=["Resolution"])
+app.include_router(kos_router, prefix="/kos", tags=["KOS"])
 
 
 # ============================================================================

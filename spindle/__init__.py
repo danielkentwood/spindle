@@ -100,6 +100,23 @@ except ImportError:
     merge_edge_metadata = None
     _ENTITY_RESOLUTION_AVAILABLE = False
 
+# Import KOS service (optional dependency — requires pyoxigraph)
+try:
+    from spindle.kos import KOSService
+    _KOS_AVAILABLE = True
+except ImportError:
+    KOSService = None  # type: ignore[assignment,misc]
+    _KOS_AVAILABLE = False
+
+# Import eval bridge (available whenever spindle is installed)
+try:
+    from spindle.eval_bridge import get_pipeline_definition, PipelineDefinition
+    _EVAL_BRIDGE_AVAILABLE = True
+except ImportError:
+    get_pipeline_definition = None  # type: ignore[assignment]
+    PipelineDefinition = None  # type: ignore[assignment,misc]
+    _EVAL_BRIDGE_AVAILABLE = False
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -144,4 +161,9 @@ __all__ = [
     "merge_edge_metadata",
     # Internal (for testing)
     "_find_span_indices",
+    # KOS
+    "KOSService",
+    # eval bridge
+    "get_pipeline_definition",
+    "PipelineDefinition",
 ]

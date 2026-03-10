@@ -1,0 +1,3 @@
+strategy: local
+top_k: 10
+traversal_depth: 2
