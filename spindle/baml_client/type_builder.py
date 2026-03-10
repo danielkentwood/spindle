@@ -20,22 +20,18 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["AttributeDefinition","AttributeValue","CharacterSpan","EdgeForMatching","EdgeMatch","EdgeMatchingResult","Entity","EntityForMatching","EntityMatch","EntityMatchingResult","EntityType","EvidenceSpan","ExtractionResult","MetadataElement","MetadataExtractionResult","Ontology","OntologyEnhancementResult","OntologyExtension","OntologyRecommendation","ProcessDependency","ProcessExtractionIssue","ProcessExtractionResult","ProcessGraph","ProcessStep","RelationType","SourceMetadata","TaxonomyExtractionResult","TaxonomyRelation","ThesaurusEntry","ThesaurusExtractionResult","Triple","VocabularyExtractionResult","VocabularyTerm",]
+          ["AttributeDefinition","AttributeValue","CharacterSpan","EdgeForMatching","EdgeMatch","EdgeMatchingResult","Entity","EntityForMatching","EntityMatch","EntityMatchingResult","EntityType","ExtractionResult","MetadataElement","MetadataExtractionResult","Ontology","OntologyEnhancementResult","RelationType","SourceMetadata","TaxonomyExtractionResult","TaxonomyRelation","ThesaurusEntry","ThesaurusExtractionResult","Triple","VocabularyExtractionResult","VocabularyTerm",]
         ), enums=set(
-          ["ProcessStepType",]
+          []
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
 
     # #########################################################################
-    # Generated enums 1
+    # Generated enums 0
     # #########################################################################
-
-    @property
-    def ProcessStepType(self) -> "ProcessStepTypeViewer":
-        return ProcessStepTypeViewer(self)
 
 
     # #########################################################################
-    # Generated classes 33
+    # Generated classes 25
     # #########################################################################
 
     @property
@@ -83,10 +79,6 @@ class TypeBuilder(type_builder.TypeBuilder):
         return EntityTypeViewer(self)
 
     @property
-    def EvidenceSpan(self) -> "EvidenceSpanViewer":
-        return EvidenceSpanViewer(self)
-
-    @property
     def ExtractionResult(self) -> "ExtractionResultViewer":
         return ExtractionResultViewer(self)
 
@@ -105,34 +97,6 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def OntologyEnhancementResult(self) -> "OntologyEnhancementResultViewer":
         return OntologyEnhancementResultViewer(self)
-
-    @property
-    def OntologyExtension(self) -> "OntologyExtensionViewer":
-        return OntologyExtensionViewer(self)
-
-    @property
-    def OntologyRecommendation(self) -> "OntologyRecommendationViewer":
-        return OntologyRecommendationViewer(self)
-
-    @property
-    def ProcessDependency(self) -> "ProcessDependencyViewer":
-        return ProcessDependencyViewer(self)
-
-    @property
-    def ProcessExtractionIssue(self) -> "ProcessExtractionIssueViewer":
-        return ProcessExtractionIssueViewer(self)
-
-    @property
-    def ProcessExtractionResult(self) -> "ProcessExtractionResultViewer":
-        return ProcessExtractionResultViewer(self)
-
-    @property
-    def ProcessGraph(self) -> "ProcessGraphViewer":
-        return ProcessGraphViewer(self)
-
-    @property
-    def ProcessStep(self) -> "ProcessStepViewer":
-        return ProcessStepViewer(self)
 
     @property
     def RelationType(self) -> "RelationTypeViewer":
@@ -173,66 +137,12 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
 # #########################################################################
-# Generated enums 1
+# Generated enums 0
 # #########################################################################
-
-class ProcessStepTypeAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.enum("ProcessStepType")
-        self._values: typing.Set[str] = set([  "ACTIVITY",  "DECISION",  "EVENT",  "PARALLEL_GATEWAY",  "SUBPROCESS",  ])
-        self._vals = ProcessStepTypeValues(self._bldr, self._values)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def values(self) -> "ProcessStepTypeValues":
-        return self._vals
-
-
-class ProcessStepTypeViewer(ProcessStepTypeAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_values(self) -> typing.List[typing.Tuple[str, type_builder.EnumValueViewer]]:
-        return [(name, type_builder.EnumValueViewer(self._bldr.value(name))) for name in self._values]
-    
-
-class ProcessStepTypeValues:
-    def __init__(self, enum_bldr: baml_py.EnumBuilder, values: typing.Set[str]):
-        self.__bldr = enum_bldr
-        self.__values = values # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def ACTIVITY(self) -> type_builder.EnumValueViewer:
-        return type_builder.EnumValueViewer(self.__bldr.value("ACTIVITY"))
-    
-    @property
-    def DECISION(self) -> type_builder.EnumValueViewer:
-        return type_builder.EnumValueViewer(self.__bldr.value("DECISION"))
-    
-    @property
-    def EVENT(self) -> type_builder.EnumValueViewer:
-        return type_builder.EnumValueViewer(self.__bldr.value("EVENT"))
-    
-    @property
-    def PARALLEL_GATEWAY(self) -> type_builder.EnumValueViewer:
-        return type_builder.EnumValueViewer(self.__bldr.value("PARALLEL_GATEWAY"))
-    
-    @property
-    def SUBPROCESS(self) -> type_builder.EnumValueViewer:
-        return type_builder.EnumValueViewer(self.__bldr.value("SUBPROCESS"))
-    
-    
-
 
 
 # #########################################################################
-# Generated classes 33
+# Generated classes 25
 # #########################################################################
 
 class AttributeDefinitionAst:
@@ -772,53 +682,6 @@ class EntityTypeProperties:
     
 
 
-class EvidenceSpanAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("EvidenceSpan")
-        self._properties: typing.Set[str] = set([  "text",  "start",  "end",  ])
-        self._props = EvidenceSpanProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "EvidenceSpanProperties":
-        return self._props
-
-
-class EvidenceSpanViewer(EvidenceSpanAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class EvidenceSpanProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def text(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("text"))
-    
-    @property
-    def start(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("start"))
-    
-    @property
-    def end(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("end"))
-    
-    
-
-
 class ExtractionResultAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
@@ -1054,403 +917,6 @@ class OntologyEnhancementResultProperties:
     @property
     def reasoning(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
-    
-    
-
-
-class OntologyExtensionAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("OntologyExtension")
-        self._properties: typing.Set[str] = set([  "needs_extension",  "new_entity_types",  "new_relation_types",  "critical_information_at_risk",  "reasoning",  ])
-        self._props = OntologyExtensionProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "OntologyExtensionProperties":
-        return self._props
-
-
-class OntologyExtensionViewer(OntologyExtensionAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class OntologyExtensionProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def needs_extension(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("needs_extension"))
-    
-    @property
-    def new_entity_types(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("new_entity_types"))
-    
-    @property
-    def new_relation_types(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("new_relation_types"))
-    
-    @property
-    def critical_information_at_risk(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("critical_information_at_risk"))
-    
-    @property
-    def reasoning(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
-    
-    
-
-
-class OntologyRecommendationAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("OntologyRecommendation")
-        self._properties: typing.Set[str] = set([  "ontology",  "text_purpose",  "reasoning",  ])
-        self._props = OntologyRecommendationProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "OntologyRecommendationProperties":
-        return self._props
-
-
-class OntologyRecommendationViewer(OntologyRecommendationAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class OntologyRecommendationProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def ontology(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("ontology"))
-    
-    @property
-    def text_purpose(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("text_purpose"))
-    
-    @property
-    def reasoning(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
-    
-    
-
-
-class ProcessDependencyAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ProcessDependency")
-        self._properties: typing.Set[str] = set([  "from_step",  "to_step",  "relation",  "condition",  "evidence",  ])
-        self._props = ProcessDependencyProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ProcessDependencyProperties":
-        return self._props
-
-
-class ProcessDependencyViewer(ProcessDependencyAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ProcessDependencyProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def from_step(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("from_step"))
-    
-    @property
-    def to_step(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("to_step"))
-    
-    @property
-    def relation(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("relation"))
-    
-    @property
-    def condition(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("condition"))
-    
-    @property
-    def evidence(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("evidence"))
-    
-    
-
-
-class ProcessExtractionIssueAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ProcessExtractionIssue")
-        self._properties: typing.Set[str] = set([  "code",  "message",  "related_step_ids",  ])
-        self._props = ProcessExtractionIssueProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ProcessExtractionIssueProperties":
-        return self._props
-
-
-class ProcessExtractionIssueViewer(ProcessExtractionIssueAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ProcessExtractionIssueProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def code(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("code"))
-    
-    @property
-    def message(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("message"))
-    
-    @property
-    def related_step_ids(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("related_step_ids"))
-    
-    
-
-
-class ProcessExtractionResultAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ProcessExtractionResult")
-        self._properties: typing.Set[str] = set([  "status",  "graph",  "reasoning",  "issues",  ])
-        self._props = ProcessExtractionResultProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ProcessExtractionResultProperties":
-        return self._props
-
-
-class ProcessExtractionResultViewer(ProcessExtractionResultAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ProcessExtractionResultProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def status(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("status"))
-    
-    @property
-    def graph(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("graph"))
-    
-    @property
-    def reasoning(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("reasoning"))
-    
-    @property
-    def issues(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("issues"))
-    
-    
-
-
-class ProcessGraphAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ProcessGraph")
-        self._properties: typing.Set[str] = set([  "process_name",  "scope",  "primary_goal",  "start_step_ids",  "end_step_ids",  "steps",  "dependencies",  "notes",  ])
-        self._props = ProcessGraphProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ProcessGraphProperties":
-        return self._props
-
-
-class ProcessGraphViewer(ProcessGraphAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ProcessGraphProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def process_name(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("process_name"))
-    
-    @property
-    def scope(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("scope"))
-    
-    @property
-    def primary_goal(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("primary_goal"))
-    
-    @property
-    def start_step_ids(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("start_step_ids"))
-    
-    @property
-    def end_step_ids(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("end_step_ids"))
-    
-    @property
-    def steps(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("steps"))
-    
-    @property
-    def dependencies(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("dependencies"))
-    
-    @property
-    def notes(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("notes"))
-    
-    
-
-
-class ProcessStepAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ProcessStep")
-        self._properties: typing.Set[str] = set([  "step_id",  "title",  "summary",  "step_type",  "actors",  "inputs",  "outputs",  "duration",  "prerequisites",  "evidence",  ])
-        self._props = ProcessStepProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ProcessStepProperties":
-        return self._props
-
-
-class ProcessStepViewer(ProcessStepAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ProcessStepProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def step_id(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("step_id"))
-    
-    @property
-    def title(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("title"))
-    
-    @property
-    def summary(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("summary"))
-    
-    @property
-    def step_type(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("step_type"))
-    
-    @property
-    def actors(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("actors"))
-    
-    @property
-    def inputs(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("inputs"))
-    
-    @property
-    def outputs(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("outputs"))
-    
-    @property
-    def duration(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("duration"))
-    
-    @property
-    def prerequisites(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("prerequisites"))
-    
-    @property
-    def evidence(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("evidence"))
     
     
 

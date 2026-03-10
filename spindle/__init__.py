@@ -5,24 +5,23 @@ A tool for real-time extraction of knowledge graphs from multimodal data using B
 
 Main Components:
 - SpindleExtractor: Extract triples from text using a predefined ontology
-- OntologyRecommender: Automatically recommend ontologies by analyzing text
-- GraphStore: Persistent graph database storage using Kùzu
+- GraphStore: Persistent graph database storage using Kuzu
+- KOSService: Knowledge Organization System for ontology synthesis
 - Helper functions for ontology creation, serialization, and filtering
 
 Example:
     >>> from spindle import SpindleExtractor, create_ontology
-    >>> 
+    >>>
     >>> entity_types = [{"name": "Person", "description": "A human"}]
     >>> relation_types = [{"name": "knows", "description": "Knows", "domain": "Person", "range": "Person"}]
     >>> ontology = create_ontology(entity_types, relation_types)
-    >>> 
+    >>>
     >>> extractor = SpindleExtractor(ontology)
     >>> result = extractor.extract("Alice knows Bob", source_name="Test")
 """
 
 from spindle.extraction import (
     SpindleExtractor,
-    OntologyRecommender,
     create_ontology,
     create_source_metadata,
     triples_to_dict,
@@ -32,8 +31,6 @@ from spindle.extraction import (
     parse_extraction_datetime,
     filter_triples_by_date_range,
     ontology_to_dict,
-    recommendation_to_dict,
-    extension_to_dict,
     _find_span_indices,
 )
 
@@ -108,7 +105,6 @@ __version__ = "0.1.0"
 __all__ = [
     # Main classes
     "SpindleExtractor",
-    "OntologyRecommender",
     "GraphStore",
     "VectorStore",
     "ChromaVectorStore",
@@ -131,8 +127,6 @@ __all__ = [
     "triples_to_dict",
     "dict_to_triples",
     "ontology_to_dict",
-    "recommendation_to_dict",
-    "extension_to_dict",
     # Query/filter functions
     "get_supporting_text",
     "filter_triples_by_source",
@@ -151,4 +145,3 @@ __all__ = [
     # Internal (for testing)
     "_find_span_indices",
 ]
-

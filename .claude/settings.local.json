@@ -14,7 +14,10 @@
       "Bash(echo:*)",
       "Bash(python3:*)",
       "Bash(zsh:*)",
-      "Bash(/Users/danielwood/.local/bin/uv:*)"
+      "Bash(/Users/danielwood/.local/bin/uv:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(git:*)"
     ]
   }
 }

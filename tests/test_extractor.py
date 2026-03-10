@@ -33,27 +33,25 @@ def _create_test_entity(name: str, entity_type: str, description: str = "", **at
 
 class TestSpindleExtractorInit:
     """Tests for SpindleExtractor initialization."""
-    
+
     def test_init_with_ontology(self, simple_ontology):
         """Test initializing with an ontology."""
         extractor = SpindleExtractor(simple_ontology)
-        
+
         assert extractor.ontology == simple_ontology
-        assert extractor._ontology_recommender is None
-    
+
     def test_init_without_ontology(self):
         """Test initializing without an ontology."""
         extractor = SpindleExtractor()
-        
+
         assert extractor.ontology is None
-        assert extractor._ontology_recommender is not None
-        assert extractor.ontology_scope == "balanced"
-    
-    def test_init_with_custom_scope(self):
-        """Test initializing with custom ontology scope."""
-        extractor = SpindleExtractor(ontology_scope="minimal")
-        
-        assert extractor.ontology_scope == "minimal"
+
+    def test_extract_requires_ontology(self):
+        """Test that extraction raises ValueError when no ontology is provided."""
+        extractor = SpindleExtractor()
+
+        with pytest.raises(ValueError, match="ontology is required"):
+            extractor.extract(text="some text", source_name="Test")
 
 
 class TestSpindleExtractorExtract:
@@ -232,90 +230,6 @@ class TestSpindleExtractorExtract:
         span = result.triples[0].supporting_spans[0]
         assert span.start == -1
         assert span.end == -1
-    
-    @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.extraction.extractor.b')
-    def test_extract_auto_recommends_ontology(self, mock_baml, mock_recommend, mock_ontology_recommendation):
-        """Test that extraction auto-recommends ontology when not provided."""
-        # Setup mocks
-        mock_recommend.return_value = mock_ontology_recommendation
-        mock_result = ExtractionResult(triples=[], reasoning="Test")
-        
-        # Mock the with_options() call chain - handle double chaining
-        mock_final_client = MagicMock()
-        mock_final_client.ExtractTriples.return_value = mock_result
-        
-        mock_intermediate_client = MagicMock()
-        mock_intermediate_client.with_options.return_value = mock_final_client
-        
-        mock_baml.with_options.return_value = mock_intermediate_client
-        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
-        
-        # Execute
-        extractor = SpindleExtractor()  # No ontology provided
-        result = extractor.extract(
-            text=SIMPLE_TEXT,
-            source_name="Test"
-        )
-        
-        # Verify that recommend was called
-        mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="balanced")
-        
-        # Verify that ontology was set
-        assert extractor.ontology == mock_ontology_recommendation.ontology
-    
-    @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.extraction.extractor.b')
-    def test_extract_uses_custom_scope_for_auto_ontology(self, mock_baml, mock_recommend, mock_ontology_recommendation):
-        """Test that custom scope is used for auto-recommendation."""
-        mock_recommend.return_value = mock_ontology_recommendation
-        mock_result = ExtractionResult(triples=[], reasoning="Test")
-        
-        # Mock the with_options() call chain - handle double chaining
-        mock_final_client = MagicMock()
-        mock_final_client.ExtractTriples.return_value = mock_result
-        
-        mock_intermediate_client = MagicMock()
-        mock_intermediate_client.with_options.return_value = mock_final_client
-        
-        mock_baml.with_options.return_value = mock_intermediate_client
-        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
-        
-        extractor = SpindleExtractor(ontology_scope="comprehensive")
-        result = extractor.extract(
-            text=SIMPLE_TEXT,
-            source_name="Test"
-        )
-        
-        # Verify that recommend was called with custom scope
-        mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="comprehensive")
-    
-    @patch('spindle.OntologyRecommender.recommend')
-    @patch('spindle.extraction.extractor.b')
-    def test_extract_ontology_scope_override(self, mock_baml, mock_recommend, mock_ontology_recommendation):
-        """Test that ontology_scope parameter overrides default."""
-        mock_recommend.return_value = mock_ontology_recommendation
-        mock_result = ExtractionResult(triples=[], reasoning="Test")
-        
-        # Mock the with_options() call chain - handle double chaining
-        mock_final_client = MagicMock()
-        mock_final_client.ExtractTriples.return_value = mock_result
-        
-        mock_intermediate_client = MagicMock()
-        mock_intermediate_client.with_options.return_value = mock_final_client
-        
-        mock_baml.with_options.return_value = mock_intermediate_client
-        mock_baml.ExtractTriples = mock_final_client.ExtractTriples
-        
-        extractor = SpindleExtractor(ontology_scope="balanced")
-        result = extractor.extract(
-            text=SIMPLE_TEXT,
-            source_name="Test",
-            ontology_scope="minimal"  # Override
-        )
-        
-        # Verify that recommend was called with overridden scope
-        mock_recommend.assert_called_once_with(text=SIMPLE_TEXT, scope="minimal")
     
     @patch('spindle.extraction.extractor.b')
     def test_extract_preserves_existing_indices(self, mock_baml, simple_ontology):

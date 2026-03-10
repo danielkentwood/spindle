@@ -10,16 +10,12 @@ from spindle.baml_client.types import (
     EntityType,
     RelationType,
     Ontology,
-    OntologyRecommendation,
-    OntologyExtension
 )
 
 from spindle import (
     triples_to_dict,
     dict_to_triples,
     ontology_to_dict,
-    recommendation_to_dict,
-    extension_to_dict
 )
 
 
@@ -238,80 +234,4 @@ class TestOntologySerialization:
         assert len(d["relation_types"]) == 5
 
 
-class TestRecommendationSerialization:
-    """Tests for recommendation_to_dict function."""
-    
-    def test_recommendation_to_dict(self, mock_ontology_recommendation):
-        """Test converting recommendation to dict."""
-        d = recommendation_to_dict(mock_ontology_recommendation)
-        
-        assert "ontology" in d
-        assert "text_purpose" in d
-        assert "reasoning" in d
-    
-    def test_recommendation_to_dict_ontology(self, mock_ontology_recommendation):
-        """Test ontology structure in recommendation dict."""
-        d = recommendation_to_dict(mock_ontology_recommendation)
-        
-        ontology = d["ontology"]
-        assert "entity_types" in ontology
-        assert "relation_types" in ontology
-        assert len(ontology["entity_types"]) == 2
-        assert len(ontology["relation_types"]) == 1
-    
-    def test_recommendation_to_dict_text_purpose(self, mock_ontology_recommendation):
-        """Test text_purpose field in dict."""
-        d = recommendation_to_dict(mock_ontology_recommendation)
-        
-        assert d["text_purpose"] == "To describe employment relationships in a technology company."
-    
-    def test_recommendation_to_dict_reasoning(self, mock_ontology_recommendation):
-        """Test reasoning field in dict."""
-        d = recommendation_to_dict(mock_ontology_recommendation)
-        
-        assert "Person" in d["reasoning"]
-        assert "Organization" in d["reasoning"]
-
-
-class TestExtensionSerialization:
-    """Tests for extension_to_dict function."""
-    
-    def test_extension_to_dict_needed(self, mock_ontology_extension_needed):
-        """Test converting extension (needed) to dict."""
-        d = extension_to_dict(mock_ontology_extension_needed)
-        
-        assert d["needs_extension"] is True
-        assert len(d["new_entity_types"]) == 2
-        assert len(d["new_relation_types"]) == 1
-        assert "medical" in d["critical_information_at_risk"].lower()
-        assert len(d["reasoning"]) > 0
-    
-    def test_extension_to_dict_not_needed(self, mock_ontology_extension_not_needed):
-        """Test converting extension (not needed) to dict."""
-        d = extension_to_dict(mock_ontology_extension_not_needed)
-        
-        assert d["needs_extension"] is False
-        assert len(d["new_entity_types"]) == 0
-        assert len(d["new_relation_types"]) == 0
-        assert d["critical_information_at_risk"] is None
-    
-    def test_extension_to_dict_entity_structure(self, mock_ontology_extension_needed):
-        """Test new entity types structure in dict."""
-        d = extension_to_dict(mock_ontology_extension_needed)
-        
-        entity = d["new_entity_types"][0]
-        assert "name" in entity
-        assert "description" in entity
-        assert entity["name"] == "Medication"
-    
-    def test_extension_to_dict_relation_structure(self, mock_ontology_extension_needed):
-        """Test new relation types structure in dict."""
-        d = extension_to_dict(mock_ontology_extension_needed)
-        
-        relation = d["new_relation_types"][0]
-        assert "name" in relation
-        assert "description" in relation
-        assert "domain" in relation
-        assert "range" in relation
-        assert relation["name"] == "treats"
 

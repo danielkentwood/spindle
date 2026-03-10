@@ -1,8 +1,5 @@
 """Tests for the Spindle REST API."""
 
-import json
-from pathlib import Path
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -150,23 +147,6 @@ def test_update_session_config(client):
 # ============================================================================
 
 
-def test_extract_triples_without_ontology(client):
-    """Test extracting triples with auto-recommendation."""
-    request = {
-        "text": "Alice works at TechCorp as an engineer.",
-        "source_name": "test-doc",
-        "ontology_scope": "minimal"
-    }
-    
-    response = client.post("/api/extraction/extract", json=request)
-    assert response.status_code == 200
-    data = response.json()
-    assert "triples" in data
-    assert "reasoning" in data
-    assert data["source_name"] == "test-doc"
-    assert "triple_count" in data
-
-
 def test_extract_triples_with_ontology(client):
     """Test extracting triples with provided ontology."""
     ontology = {
@@ -193,14 +173,24 @@ def test_extract_triples_with_ontology(client):
 
 def test_extract_batch(client):
     """Test batch extraction."""
+    ontology = {
+        "entity_types": [
+            {"name": "Person", "description": "A person", "attributes": []},
+            {"name": "Organization", "description": "An organization", "attributes": []}
+        ],
+        "relation_types": [
+            {"name": "WORKS_AT", "description": "Works at", "domain": "Person", "range": "Organization"},
+            {"name": "MANAGES", "description": "Manages", "domain": "Person", "range": "Person"}
+        ]
+    }
     request = {
         "texts": [
             {"text": "Alice works at TechCorp.", "source_name": "doc1"},
             {"text": "Bob manages Alice.", "source_name": "doc2"}
         ],
-        "ontology_scope": "minimal"
+        "ontology": ontology
     }
-    
+
     response = client.post("/api/extraction/extract/batch", json=request)
     assert response.status_code == 200
     data = response.json()
@@ -236,112 +226,6 @@ def test_extract_session(client):
     assert response.status_code == 200
     data = response.json()
     assert "triples" in data
-
-
-# ============================================================================
-# Ontology Tests
-# ============================================================================
-
-
-def test_recommend_ontology(client):
-    """Test ontology recommendation."""
-    request = {
-        "text": "Alice works at TechCorp as an engineer in San Francisco.",
-        "scope": "balanced"
-    }
-    
-    response = client.post("/api/ontology/recommend", json=request)
-    assert response.status_code == 200
-    data = response.json()
-    assert "ontology" in data
-    assert "text_purpose" in data
-    assert "reasoning" in data
-    assert data["entity_type_count"] > 0
-    assert data["relation_type_count"] > 0
-
-
-def test_analyze_ontology_extension(client):
-    """Test ontology extension analysis."""
-    ontology = {
-        "entity_types": [{"name": "Person", "description": "A person", "attributes": []}],
-        "relation_types": [{"name": "KNOWS", "description": "Knows", "domain": "Person", "range": "Person"}]
-    }
-    
-    request = {
-        "text": "The hospital treated 50 patients yesterday.",
-        "current_ontology": ontology,
-        "scope": "balanced"
-    }
-    
-    response = client.post("/api/ontology/extend/analyze", json=request)
-    assert response.status_code == 200
-    data = response.json()
-    assert "needs_extension" in data
-    assert "reasoning" in data
-
-
-def test_apply_ontology_extension(client):
-    """Test applying ontology extension."""
-    ontology = {
-        "entity_types": [{"name": "Person", "description": "A person", "attributes": []}],
-        "relation_types": []
-    }
-    
-    extension = {
-        "needs_extension": True,
-        "new_entity_types": [{"name": "Location", "description": "A place", "attributes": []}],
-        "new_relation_types": [{"name": "LOCATED_IN", "description": "Located in", "domain": "Person", "range": "Location"}],
-        "reasoning": "Need location types"
-    }
-    
-    request = {
-        "current_ontology": ontology,
-        "extension": extension
-    }
-    
-    response = client.post("/api/ontology/extend/apply", json=request)
-    assert response.status_code == 200
-    data = response.json()
-    assert "extended_ontology" in data
-    assert data["entity_type_count"] == 2
-    assert data["relation_type_count"] == 1
-
-
-def test_recommend_and_extract(client):
-    """Test combined recommendation and extraction."""
-    request = {
-        "text": "Alice works at TechCorp.",
-        "source_name": "test-doc",
-        "scope": "minimal"
-    }
-    
-    response = client.post("/api/ontology/recommend-and-extract", json=request)
-    assert response.status_code == 200
-    data = response.json()
-    assert "ontology" in data
-    assert "text_purpose" in data
-    assert "triples" in data
-    assert "triple_count" in data
-
-
-# ============================================================================
-# Process Extraction Tests
-# ============================================================================
-
-
-def test_extract_process(client):
-    """Test process extraction."""
-    request = {
-        "text": "First, the customer submits an order. Then, the order is validated. Finally, it is shipped.",
-        "process_hint": "order fulfillment"
-    }
-    
-    response = client.post("/api/process/extract", json=request)
-    assert response.status_code == 200
-    data = response.json()
-    assert "status" in data
-    assert "reasoning" in data
-    assert "issues" in data
 
 
 # ============================================================================
@@ -393,23 +277,24 @@ def test_full_session_workflow(client):
     )
     assert session_response.status_code == 201
     session_id = session_response.json()["session_id"]
-    
-    # 2. Recommend ontology
-    ontology_response = client.post(
-        "/api/ontology/recommend",
-        json={"text": "Alice works at TechCorp.", "scope": "minimal"}
-    )
-    assert ontology_response.status_code == 200
-    ontology = ontology_response.json()["ontology"]
-    
-    # 3. Update session ontology
+
+    # 2. Set ontology on session
+    ontology = {
+        "entity_types": [
+            {"name": "Person", "description": "A person", "attributes": []},
+            {"name": "Organization", "description": "An organization", "attributes": []}
+        ],
+        "relation_types": [
+            {"name": "WORKS_AT", "description": "Works at", "domain": "Person", "range": "Organization"}
+        ]
+    }
     update_response = client.put(
         f"/api/sessions/{session_id}/ontology",
         json={"ontology": ontology}
     )
     assert update_response.status_code == 200
-    
-    # 4. Extract triples
+
+    # 3. Extract triples
     extract_response = client.post(
         f"/api/extraction/session/{session_id}/extract",
         json={
@@ -418,13 +303,13 @@ def test_full_session_workflow(client):
         }
     )
     assert extract_response.status_code == 200
-    
-    # 5. Verify session state
+
+    # 4. Verify session state
     session_info = client.get(f"/api/sessions/{session_id}").json()
     assert session_info["triple_count"] > 0
     assert session_info["ontology"] is not None
-    
-    # 6. Clean up
+
+    # 5. Clean up
     delete_response = client.delete(f"/api/sessions/{session_id}")
     assert delete_response.status_code == 204
 

@@ -14,8 +14,6 @@ from spindle.baml_client.types import (
     RelationType,
     Ontology,
     ExtractionResult,
-    OntologyRecommendation,
-    OntologyExtension,
     SourceMetadata,
     CharacterSpan
 )
@@ -132,60 +130,6 @@ def mock_extraction_result(sample_triples):
     return ExtractionResult(
         triples=sample_triples,
         reasoning="Extracted entities and relations based on the ontology."
-    )
-
-
-@pytest.fixture
-def mock_ontology_recommendation(simple_ontology):
-    """Provide a mock OntologyRecommendation."""
-    return OntologyRecommendation(
-        ontology=simple_ontology,
-        text_purpose="To describe employment relationships in a technology company.",
-        reasoning="The text focuses on people working at companies, so Person and Organization entity types are appropriate."
-    )
-
-
-@pytest.fixture
-def mock_ontology_extension_needed():
-    """Provide a mock OntologyExtension indicating extension is needed."""
-    return OntologyExtension(
-        needs_extension=True,
-        new_entity_types=[
-            EntityType(
-                name="Medication",
-                description="A pharmaceutical drug or treatment",
-                attributes=[
-                    AttributeDefinition(name="dosage", type="string", description="Medication dosage")
-                ]
-            ),
-            EntityType(
-                name="Condition",
-                description="A medical condition or disease",
-                attributes=[]
-            )
-        ],
-        new_relation_types=[
-            RelationType(
-                name="treats",
-                description="Treatment relationship",
-                domain="Medication",
-                range="Condition"
-            )
-        ],
-        critical_information_at_risk="Medical entities and treatment relationships cannot be captured with current ontology.",
-        reasoning="The text discusses medical treatments which require specialized entity types."
-    )
-
-
-@pytest.fixture
-def mock_ontology_extension_not_needed():
-    """Provide a mock OntologyExtension indicating no extension is needed."""
-    return OntologyExtension(
-        needs_extension=False,
-        new_entity_types=[],
-        new_relation_types=[],
-        critical_information_at_risk=None,
-        reasoning="All entities can be represented with existing Person and Organization types."
     )
 
 

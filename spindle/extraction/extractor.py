@@ -26,7 +26,6 @@ from spindle.extraction.helpers import (
     _extract_metrics_from_collector,
     _compute_all_span_indices,
 )
-from spindle.extraction.recommender import OntologyRecommender
 
 try:
     from spindle.llm_config import (
@@ -46,38 +45,32 @@ except ImportError:  # pragma: no cover - optional dependency
 class SpindleExtractor:
     """
     Main interface for extracting knowledge graph triples from text.
-    
+
     This class wraps the BAML extraction function and provides a simple
     interface for incremental triple extraction with entity consistency.
     Each extracted triple includes source metadata, supporting text spans,
     and an extraction datetime (set automatically in post-processing).
-    
+
     Supports multiple authentication methods for LLM access via optional LLM
     configuration or automatic detection of available credentials.
 
-    If no ontology is provided at initialization, the extractor will
-    automatically recommend one based on the text when extract() is called.
+    An ontology must be provided at initialization or at extract time.
+    Ontologies are typically derived from KOS synthesis.
     """
-    
+
     def __init__(
         self,
         ontology: Optional[Ontology] = None,
-        ontology_scope: str = "balanced",
         llm_config: Optional["LLMConfig"] = None,
         auto_detect_auth: bool = True,
     ):
         """
         Initialize the extractor with an ontology.
-        
+
         Args:
-            ontology: Optional Ontology object defining valid entity and relation types.
-                     If None, an ontology will be automatically recommended from the
-                     text when extract() is first called.
-            ontology_scope: Scope for auto-recommended ontologies. One of:
-                          - "minimal": Essential concepts only (3-8 entity types, 4-10 relations)
-                          - "balanced": Standard analysis (6-12 entity types, 8-15 relations)
-                          - "comprehensive": Detailed ontology (10-20 entity types, 12-25 relations)
-                          Only used if ontology is None.
+            ontology: Ontology object defining valid entity and relation types.
+                     Can be provided here or passed to extract() / extract_async().
+                     Must be provided before extraction occurs.
             llm_config: Optional LLMConfig providing explicit authentication details
                 for LLM access. If None and auto_detect_auth is True, credentials
                 will be auto-detected from the environment.
@@ -85,20 +78,11 @@ class SpindleExtractor:
                 llm_config is not provided. Defaults to True.
         """
         self.ontology = ontology
-        self.ontology_scope = ontology_scope
         self.llm_config = llm_config
         self.auto_detect_auth = auto_detect_auth
         self._baml_env_overrides: Optional[Dict[str, str]] = None
 
         self._configure_baml_client(self.llm_config, self.auto_detect_auth)
-        self._ontology_recommender = (
-            None
-            if ontology is not None
-            else OntologyRecommender(
-                llm_config=self.llm_config,
-                auto_detect_auth=self.auto_detect_auth,
-            )
-        )
     
     def _configure_baml_client(
         self,
@@ -140,14 +124,10 @@ class SpindleExtractor:
         source_name: str,
         source_url: Optional[str] = None,
         existing_triples: List[Triple] = None,
-        ontology_scope: Optional[str] = None
     ) -> ExtractionResult:
         """
-        Extract triples from text using the configured or auto-recommended ontology.
-        
-        If no ontology was provided at initialization, one will be automatically
-        recommended based on the text before extraction.
-        
+        Extract triples from text using the configured ontology.
+
         Args:
             text: The text to extract triples from
             source_name: Name or identifier of the source document
@@ -155,13 +135,13 @@ class SpindleExtractor:
             existing_triples: Optional list of previously extracted triples
                             to maintain entity consistency. Duplicate triples
                             from different sources are allowed.
-            ontology_scope: Override the default ontology scope for this extraction.
-                          One of "minimal", "balanced", or "comprehensive".
-                          Only used if no ontology was provided at init.
-        
+
         Returns:
             ExtractionResult containing the extracted triples (with source
             metadata, supporting spans, and extraction datetime) and reasoning
+
+        Raises:
+            ValueError: If no ontology has been provided
         """
         if existing_triples is None:
             existing_triples = []
@@ -176,14 +156,8 @@ class SpindleExtractor:
         )
 
         try:
-            # Auto-recommend ontology if not provided
             if self.ontology is None:
-                scope = ontology_scope or self.ontology_scope
-                recommendation = self._ontology_recommender.recommend(
-                    text=text,
-                    scope=scope
-                )
-                self.ontology = recommendation.ontology
+                raise ValueError("ontology is required — provide one via constructor or KOS synthesis")
 
             # Create source metadata
             source_metadata = SourceMetadata(
@@ -235,8 +209,6 @@ class SpindleExtractor:
                 # Post-processing: Compute character indices for supporting spans using batch processing
                 triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
             
-            # Determine ontology scope for strategy grouping
-            used_scope = ontology_scope or self.ontology_scope or "balanced"
         except Exception as exc:
             _record_extractor_event(
                 "extract.error",
@@ -252,7 +224,6 @@ class SpindleExtractor:
             {
                 "source_name": source_name,
                 "triple_count": len(result.triples),
-                "ontology_scope": used_scope,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "cost": total_cost,
@@ -295,17 +266,13 @@ class SpindleExtractor:
         source_name: str,
         source_url: Optional[str] = None,
         existing_triples: List[Triple] = None,
-        ontology_scope: Optional[str] = None
     ) -> ExtractionResult:
         """
-        Extract triples from text using the configured or auto-recommended ontology (async version).
-        
+        Extract triples from text using the configured ontology (async version).
+
         This is the async version of extract(). It uses the async BAML client for
         non-blocking extraction, which is useful for batch processing and streaming.
-        
-        If no ontology was provided at initialization, one will be automatically
-        recommended based on the text before extraction.
-        
+
         Args:
             text: The text to extract triples from
             source_name: Name or identifier of the source document
@@ -313,13 +280,13 @@ class SpindleExtractor:
             existing_triples: Optional list of previously extracted triples
                             to maintain entity consistency. Duplicate triples
                             from different sources are allowed.
-            ontology_scope: Override the default ontology scope for this extraction.
-                          One of "minimal", "balanced", or "comprehensive".
-                          Only used if no ontology was provided at init.
-        
+
         Returns:
             ExtractionResult containing the extracted triples (with source
             metadata, supporting spans, and extraction datetime) and reasoning
+
+        Raises:
+            ValueError: If no ontology has been provided
         """
         if existing_triples is None:
             existing_triples = []
@@ -334,14 +301,8 @@ class SpindleExtractor:
         )
 
         try:
-            # Auto-recommend ontology if not provided
             if self.ontology is None:
-                scope = ontology_scope or self.ontology_scope
-                recommendation = self._ontology_recommender.recommend(
-                    text=text,
-                    scope=scope
-                )
-                self.ontology = recommendation.ontology
+                raise ValueError("ontology is required — provide one via constructor or KOS synthesis")
 
             # Create source metadata
             source_metadata = SourceMetadata(
@@ -393,8 +354,6 @@ class SpindleExtractor:
                 # Post-processing: Compute character indices for supporting spans using batch processing
                 triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
             
-            # Determine ontology scope for strategy grouping
-            used_scope = ontology_scope or self.ontology_scope or "balanced"
         except Exception as exc:
             _record_extractor_event(
                 "extract_async.error",
@@ -410,7 +369,6 @@ class SpindleExtractor:
             {
                 "source_name": source_name,
                 "triple_count": len(result.triples),
-                "ontology_scope": used_scope,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "cost": total_cost,
@@ -451,16 +409,15 @@ class SpindleExtractor:
         texts: List[Tuple[str, str, Optional[str]]],
         existing_triples: List[Triple] = None,
         max_concurrent: int = 20,
-        ontology_scope: Optional[str] = None
     ) -> List[ExtractionResult]:
         """
         Extract triples from multiple texts sequentially with entity consistency.
-        
+
         This method processes texts one at a time (asynchronously) to maintain
         entity consistency. Triples extracted from earlier texts are automatically
         included in the existing_triples for later texts, ensuring consistent
         entity naming across the batch.
-        
+
         Args:
             texts: List of tuples (text, source_name, source_url) to extract from.
                   source_url can be None.
@@ -468,10 +425,7 @@ class SpindleExtractor:
                             to maintain entity consistency across the batch.
             max_concurrent: Maximum concurrent extractions (default: 20).
                           Currently used for internal async operations.
-            ontology_scope: Override the default ontology scope for extractions.
-                          One of "minimal", "balanced", or "comprehensive".
-                          Only used if no ontology was provided at init.
-        
+
         Returns:
             List of ExtractionResult objects, one per input text, in the same order
         """
@@ -498,7 +452,6 @@ class SpindleExtractor:
                     source_name=source_name,
                     source_url=source_url,
                     existing_triples=list(accumulated_triples),
-                    ontology_scope=ontology_scope
                 )
                 results.append(result)
                 # Accumulate triples from this extraction for next texts
@@ -527,16 +480,15 @@ class SpindleExtractor:
         texts: List[Tuple[str, str, Optional[str]]],
         existing_triples: List[Triple] = None,
         max_concurrent: int = 20,
-        ontology_scope: Optional[str] = None
     ) -> AsyncIterator[ExtractionResult]:
         """
         Extract triples from multiple texts, streaming results as they complete.
-        
+
         This is an async generator that yields ExtractionResult objects as soon
         as each extraction completes. Results are yielded in the same order as
         the input texts, maintaining sequential consistency where triples from
         earlier texts are available to later texts.
-        
+
         Args:
             texts: List of tuples (text, source_name, source_url) to extract from.
                   source_url can be None.
@@ -544,21 +496,9 @@ class SpindleExtractor:
                             to maintain entity consistency across the batch.
             max_concurrent: Maximum concurrent extractions (default: 20).
                           Currently used for internal async operations.
-            ontology_scope: Override the default ontology scope for extractions.
-                          One of "minimal", "balanced", or "comprehensive".
-                          Only used if no ontology was provided at init.
-        
+
         Yields:
             ExtractionResult objects as they complete, in input order
-        
-        Example:
-            >>> extractor = SpindleExtractor(ontology)
-            >>> texts = [
-            ...     ("Alice works at TechCorp", "doc1", None),
-            ...     ("Bob manages Alice", "doc2", None)
-            ... ]
-            >>> async for result in extractor.extract_batch_stream(texts):
-            ...     print(f"Extracted {len(result.triples)} triples from {result.triples[0].source.source_name}")
         """
         if existing_triples is None:
             existing_triples = []
@@ -581,7 +521,6 @@ class SpindleExtractor:
                     source_name=source_name,
                     source_url=source_url,
                     existing_triples=list(accumulated_triples),
-                    ontology_scope=ontology_scope
                 )
                 _record_extractor_event(
                     "extract_batch_stream.item",

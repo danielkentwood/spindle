@@ -14,8 +14,6 @@ from spindle.baml_client.types import (
     Entity,
     EntityType,
     Ontology,
-    OntologyExtension,
-    OntologyRecommendation,
     RelationType,
     SourceMetadata,
     Triple,
@@ -400,64 +398,4 @@ def ontology_to_dict(ontology: Ontology) -> Dict[str, List[Dict[str, Any]]]:
     }
 
 
-def recommendation_to_dict(
-    recommendation: OntologyRecommendation
-) -> Dict[str, Any]:
-    """
-    Convert an OntologyRecommendation to a dictionary for serialization.
-    
-    Args:
-        recommendation: An OntologyRecommendation object
-    
-    Returns:
-        Dictionary with ontology, text_purpose, and reasoning
-    """
-    return {
-        "ontology": ontology_to_dict(recommendation.ontology),
-        "text_purpose": recommendation.text_purpose,
-        "reasoning": recommendation.reasoning
-    }
-
-
-def extension_to_dict(
-    extension: OntologyExtension
-) -> Dict[str, Any]:
-    """
-    Convert an OntologyExtension to a dictionary for serialization.
-    
-    Args:
-        extension: An OntologyExtension object
-    
-    Returns:
-        Dictionary with extension analysis results including attributes
-    """
-    return {
-        "needs_extension": extension.needs_extension,
-        "new_entity_types": [
-            {
-                "name": et.name,
-                "description": et.description,
-                "attributes": [
-                    {
-                        "name": attr.name,
-                        "type": attr.type,
-                        "description": attr.description
-                    }
-                    for attr in et.attributes
-                ]
-            }
-            for et in extension.new_entity_types
-        ],
-        "new_relation_types": [
-            {
-                "name": rt.name,
-                "description": rt.description,
-                "domain": rt.domain,
-                "range": rt.range
-            }
-            for rt in extension.new_relation_types
-        ],
-        "critical_information_at_risk": extension.critical_information_at_risk,
-        "reasoning": extension.reasoning
-    }
 

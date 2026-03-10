@@ -24,12 +24,6 @@ class LlmResponseParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def AnalyzeOntologyExtension(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.OntologyExtension:
-        result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="request")
-        return typing.cast(types.OntologyExtension, result)
-
     def ConsolidateVocabulary(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.VocabularyExtractionResult:
@@ -53,12 +47,6 @@ class LlmResponseParser:
     ) -> types.MetadataExtractionResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMetadataSchema", llm_response=llm_response, mode="request")
         return typing.cast(types.MetadataExtractionResult, result)
-
-    def ExtractProcessGraph(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.ProcessExtractionResult:
-        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractProcessGraph", llm_response=llm_response, mode="request")
-        return typing.cast(types.ProcessExtractionResult, result)
 
     def ExtractTaxonomy(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -90,12 +78,6 @@ class LlmResponseParser:
         result = self.__options.merge_options(baml_options).parse_response(function_name="MatchEntities", llm_response=llm_response, mode="request")
         return typing.cast(types.EntityMatchingResult, result)
 
-    def RecommendOntology(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.OntologyRecommendation:
-        result = self.__options.merge_options(baml_options).parse_response(function_name="RecommendOntology", llm_response=llm_response, mode="request")
-        return typing.cast(types.OntologyRecommendation, result)
-
     
 
 class LlmStreamParser:
@@ -103,12 +85,6 @@ class LlmStreamParser:
 
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
-
-    def AnalyzeOntologyExtension(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.OntologyExtension:
-        result = self.__options.merge_options(baml_options).parse_response(function_name="AnalyzeOntologyExtension", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.OntologyExtension, result)
 
     def ConsolidateVocabulary(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -133,12 +109,6 @@ class LlmStreamParser:
     ) -> stream_types.MetadataExtractionResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMetadataSchema", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.MetadataExtractionResult, result)
-
-    def ExtractProcessGraph(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.ProcessExtractionResult:
-        result = self.__options.merge_options(baml_options).parse_response(function_name="ExtractProcessGraph", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.ProcessExtractionResult, result)
 
     def ExtractTaxonomy(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -169,11 +139,5 @@ class LlmStreamParser:
     ) -> stream_types.EntityMatchingResult:
         result = self.__options.merge_options(baml_options).parse_response(function_name="MatchEntities", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.EntityMatchingResult, result)
-
-    def RecommendOntology(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.OntologyRecommendation:
-        result = self.__options.merge_options(baml_options).parse_response(function_name="RecommendOntology", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.OntologyRecommendation, result)
 
     

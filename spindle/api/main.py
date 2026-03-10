@@ -74,11 +74,7 @@ async def general_exception_handler(request, exc):
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
-    """Check API health status.
-    
-    Returns:
-        Health status information
-    """
+    """Check API health status."""
     return HealthResponse(
         status="healthy",
         timestamp=datetime.utcnow(),
@@ -97,19 +93,11 @@ async def health_check():
     tags=["Sessions"],
 )
 async def create_session(request: SessionCreate):
-    """Create a new session for stateful operations.
-    
-    Args:
-        request: Session creation parameters
-        
-    Returns:
-        Created session information
-    """
+    """Create a new session for stateful operations."""
     session = session_manager.create_session(
         name=request.name,
         graph_store_path=request.graph_store_path,
         vector_store_uri=request.vector_store_uri,
-        catalog_url=request.catalog_url,
         config=request.config,
     )
     return session.to_info()
@@ -117,27 +105,13 @@ async def create_session(request: SessionCreate):
 
 @app.get("/api/sessions", response_model=List[SessionInfo], tags=["Sessions"])
 async def list_sessions():
-    """List all active sessions.
-    
-    Returns:
-        List of session information
-    """
+    """List all active sessions."""
     return session_manager.list_sessions()
 
 
 @app.get("/api/sessions/{session_id}", response_model=SessionInfo, tags=["Sessions"])
 async def get_session(session_id: str):
-    """Get information about a specific session.
-    
-    Args:
-        session_id: Session identifier
-        
-    Returns:
-        Session information
-        
-    Raises:
-        HTTPException: 404 if session not found
-    """
+    """Get information about a specific session."""
     session = session_manager.get_session(session_id)
     if session is None:
         raise HTTPException(
@@ -153,14 +127,7 @@ async def get_session(session_id: str):
     tags=["Sessions"],
 )
 async def delete_session(session_id: str):
-    """Delete a session.
-    
-    Args:
-        session_id: Session identifier
-        
-    Raises:
-        HTTPException: 404 if session not found
-    """
+    """Delete a session."""
     deleted = session_manager.delete_session(session_id)
     if not deleted:
         raise HTTPException(
@@ -176,25 +143,14 @@ async def delete_session(session_id: str):
     tags=["Sessions"],
 )
 async def update_session_ontology(session_id: str, request: OntologyUpdate):
-    """Update the ontology for a session.
-    
-    Args:
-        session_id: Session identifier
-        request: Ontology update
-        
-    Returns:
-        Updated session information
-        
-    Raises:
-        HTTPException: 404 if session not found
-    """
+    """Update the ontology for a session."""
     session = session_manager.get_session(session_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Session not found: {session_id}",
         )
-    
+
     session.update_ontology(request.ontology)
     return session.to_info()
 
@@ -205,30 +161,19 @@ async def update_session_ontology(session_id: str, request: OntologyUpdate):
     tags=["Sessions"],
 )
 async def update_session_config(session_id: str, request: SessionUpdate):
-    """Update session configuration.
-    
-    Args:
-        session_id: Session identifier
-        request: Configuration update
-        
-    Returns:
-        Updated session information
-        
-    Raises:
-        HTTPException: 404 if session not found
-    """
+    """Update session configuration."""
     session = session_manager.get_session(session_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Session not found: {session_id}",
         )
-    
+
     if request.name is not None:
         session.name = request.name
     if request.config is not None:
         session.update_config(request.config)
-    
+
     return session.to_info()
 
 
@@ -236,25 +181,13 @@ async def update_session_config(session_id: str, request: SessionUpdate):
 # Router Registration
 # ============================================================================
 
-# Import routers
 from spindle.api.routers import (
-    corpus,
     extraction,
-    ingestion,
-    ontology,
-    pipeline,
-    process,
     resolution,
 )
 
-# Register routers
-app.include_router(ingestion.router, prefix="/api/ingestion", tags=["Ingestion"])
 app.include_router(extraction.router, prefix="/api/extraction", tags=["Extraction"])
-app.include_router(ontology.router, prefix="/api/ontology", tags=["Ontology"])
 app.include_router(resolution.router, prefix="/api/resolution", tags=["Resolution"])
-app.include_router(process.router, prefix="/api/process", tags=["Process"])
-app.include_router(corpus.router, prefix="/api/corpus", tags=["Corpus"])
-app.include_router(pipeline.router, prefix="/api/corpus", tags=["Pipeline"])
 
 
 # ============================================================================
@@ -269,4 +202,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

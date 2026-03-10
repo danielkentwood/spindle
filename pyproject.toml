@@ -31,20 +31,14 @@ dependencies = [
     "kuzu>=0.7.0",
     "pandas>=2.0.0",
     "chromadb>=0.4.0",
-    "langchain-core>=0.2.0",
-    "langchain-community>=0.2.0",
-    "langchain-text-splitters>=0.2.0",
     "PyYAML>=6.0",
     "sqlalchemy>=2.0.0",
     "tomli>=2.0.1; python_version < '3.11'",
     "numpy",
-    "ipywidgets>=8.0.0",
-    "node2vec>=0.4.5",
     "networkx>=3.0",
     "anthropic[vertex]>=0.68.0",
     "google-auth>=2.0.0",
     "google-cloud-aiplatform>=1.40.0",
-    "streamlit>=1.28.0",
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "python-multipart>=0.0.6"
@@ -75,26 +69,20 @@ Homepage = "https://github.com/danielkentwood/spindle"
 Repository = "https://github.com/danielkentwood/spindle"
 
 [project.scripts]
-spindle-ingest = "spindle.ingestion.cli:main"
-spindle-dashboard = "spindle.dashboard.app:main"
 spindle-api = "spindle.api.main:main"
-spindle-pipeline = "spindle.pipeline.cli:main"
 
 [tool.setuptools]
 packages = [
     "spindle",
     "spindle.baml_client",
+    "spindle.baml_src",
     "spindle.api",
     "spindle.api.routers",
-    "spindle.ingestion",
-    "spindle.ingestion.pipeline",
-    "spindle.ingestion.loaders",
-    "spindle.ingestion.splitters",
-    "spindle.ingestion.templates",
-    "spindle.ingestion.observers",
-    "spindle.ingestion.storage",
-    "spindle.ingestion.graph",
-    "spindle.pipeline",
+    "spindle.extraction",
+    "spindle.entity_resolution",
+    "spindle.graph_store",
+    "spindle.vector_store",
+    "spindle.observability",
 ]
 
 [tool.setuptools.package-data]

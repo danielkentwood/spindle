@@ -2,7 +2,6 @@
 
 import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from spindle.api.models import SessionInfo
@@ -17,7 +16,6 @@ class Session:
         name: Optional[str] = None,
         graph_store_path: Optional[str] = None,
         vector_store_uri: Optional[str] = None,
-        catalog_url: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
     ):
         self.session_id = session_id
@@ -25,9 +23,8 @@ class Session:
         self.created_at = datetime.utcnow()
         self.graph_store_path = graph_store_path
         self.vector_store_uri = vector_store_uri
-        self.catalog_url = catalog_url
         self.config = config or {}
-        
+
         # Session state
         self.ontology: Optional[Dict[str, Any]] = None
         self.triples: List[Dict[str, Any]] = []
@@ -41,7 +38,6 @@ class Session:
             created_at=self.created_at,
             graph_store_path=self.graph_store_path,
             vector_store_uri=self.vector_store_uri,
-            catalog_url=self.catalog_url,
             ontology=self.ontology,
             triple_count=len(self.triples),
             config=self.config,
@@ -71,78 +67,39 @@ class SessionManager:
         name: Optional[str] = None,
         graph_store_path: Optional[str] = None,
         vector_store_uri: Optional[str] = None,
-        catalog_url: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
     ) -> Session:
-        """Create a new session.
-        
-        Args:
-            name: Optional session name
-            graph_store_path: Path to graph store database
-            vector_store_uri: Vector store URI
-            catalog_url: Document catalog URL
-            config: Additional configuration
-            
-        Returns:
-            Created Session object
-        """
+        """Create a new session."""
         session_id = str(uuid.uuid4())
         session = Session(
             session_id=session_id,
             name=name,
             graph_store_path=graph_store_path,
             vector_store_uri=vector_store_uri,
-            catalog_url=catalog_url,
             config=config,
         )
         self._sessions[session_id] = session
         return session
 
     def get_session(self, session_id: str) -> Optional[Session]:
-        """Get a session by ID.
-        
-        Args:
-            session_id: Session identifier
-            
-        Returns:
-            Session object or None if not found
-        """
+        """Get a session by ID."""
         return self._sessions.get(session_id)
 
     def delete_session(self, session_id: str) -> bool:
-        """Delete a session.
-        
-        Args:
-            session_id: Session identifier
-            
-        Returns:
-            True if deleted, False if not found
-        """
+        """Delete a session."""
         if session_id in self._sessions:
             del self._sessions[session_id]
             return True
         return False
 
     def list_sessions(self) -> List[SessionInfo]:
-        """List all active sessions.
-        
-        Returns:
-            List of SessionInfo objects
-        """
+        """List all active sessions."""
         return [session.to_info() for session in self._sessions.values()]
 
     def session_exists(self, session_id: str) -> bool:
-        """Check if a session exists.
-        
-        Args:
-            session_id: Session identifier
-            
-        Returns:
-            True if session exists
-        """
+        """Check if a session exists."""
         return session_id in self._sessions
 
 
 # Global session manager instance
 session_manager = SessionManager()
-

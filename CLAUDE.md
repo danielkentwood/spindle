@@ -21,12 +21,9 @@ uv run pytest tests/test_extractor.py -v         # Single file
 uv run pytest tests/test_helpers.py::TestFindSpanIndices::test_exact_match  # Single test
 
 # Regenerate BAML client after editing .baml files
-uv run baml-cli generate
+cd spindle && uv run baml-cli generate
 
 # CLI tools
-uv run spindle-ingest config init                # Create config.py
-uv run spindle-ingest ingest docs/ --template default
-uv run spindle-dashboard
 uv run spindle-api
 ```
 
@@ -34,34 +31,30 @@ uv run spindle-api
 
 ### Core Data Flow
 ```
-Documents → Loaders → Splitters → OntologyRecommender → SpindleExtractor → EntityResolver → GraphStore/VectorStore
+Documents → SpindleExtractor (ontology required, BAML) → Triples → EntityResolver → GraphStore/VectorStore
 ```
 
 ### Key Components
 
-- **`spindle/extraction/`**: `SpindleExtractor` (main extraction), `OntologyRecommender` (auto-generates ontologies), `process.py` (process/DAG extraction)
+- **`spindle/extraction/`**: `SpindleExtractor` (main extraction engine, ontology required), helpers, utils
 - **`spindle/graph_store/`**: `GraphStore` facade over Kùzu backend for triple persistence and querying
 - **`spindle/entity_resolution/`**: `EntityResolver`, `SemanticBlocker`, `SemanticMatcher` for LLM-based entity deduplication
 - **`spindle/vector_store/`**: `ChromaVectorStore` with embedding factories (OpenAI, HuggingFace, Google, local)
-- **`spindle/ingestion/`**: CLI-driven document ingestion pipeline with templates, loaders, splitters, observers
-- **`spindle/api/`**: FastAPI REST endpoints
+- **`spindle/api/`**: FastAPI REST endpoints (extraction, resolution)
 - **`spindle/observability/`**: `ServiceEvent` and `EventRecorder` for structured logging (SQLite persistence)
 
 ### BAML Files (LLM Prompts)
 
 Located in `spindle/baml_src/`:
-- `spindle.baml` - Core extraction schemas (Entity, Triple, Ontology)
-- `process.baml` - Process/DAG extraction
+- `spindle.baml` - Core extraction schemas (Entity, Triple, Ontology, ExtractionResult, ExtractTriples)
 - `entity_resolution.baml` - Entity matching functions
-- `pipeline.baml` - Vocabulary/taxonomy/thesaurus extraction
 - `clients.baml` - LLM client configuration
 
-**Important**: `spindle/baml_client/` is auto-generated. Edit `.baml` files, then run `uv run baml-cli generate`.
+**Important**: `spindle/baml_client/` is auto-generated. Edit `.baml` files, then run `cd spindle && uv run baml-cli generate`.
 
 ### Configuration
 
 - `SpindleConfig` in `configuration.py` is the unified config system
-- Generate with `uv run spindle-ingest config init`
 - Load programmatically: `from spindle.configuration import load_config_from_file`
 
 ## BAML Patterns
@@ -71,7 +64,7 @@ When editing `.baml` files:
 - Use `{{ _.role("user") }}` to mark user inputs
 - Don't repeat output schema fields in prompt text
 - Use "high"/"medium"/"low" for confidence, not numbers
-- Run `uv run baml-cli generate` after changes
+- Run `cd spindle && uv run baml-cli generate` after changes
 
 ## Testing
 
@@ -96,13 +89,12 @@ Optional:
 From `spindle/baml_client/types.py` (auto-generated from BAML):
 - `Entity`, `Triple`, `Ontology`
 - `EntityType`, `RelationType`, `AttributeDefinition`
-- `ExtractionResult`, `OntologyRecommendation`
-- `ProcessStep`, `ProcessGraph`
+- `ExtractionResult`
 
 ## Public API
 
 Main exports from `spindle/__init__.py`:
-- `SpindleExtractor`, `OntologyRecommender`
+- `SpindleExtractor`
 - `GraphStore`, `ChromaVectorStore`
 - `EntityResolver`, `ResolutionConfig`
 - Factory functions: `create_ontology()`, `create_source_metadata()`
