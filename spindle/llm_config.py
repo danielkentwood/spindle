@@ -13,7 +13,7 @@ Supports:
 
 Integration with SpindleConfig:
     LLMConfig instances can be assigned to :class:`~spindle.configuration.SpindleConfig.llm`
-    to provide authentication for SpindleExtractor and OntologyRecommender. See
+    to provide authentication for SpindleExtractor. See
     :mod:`spindle.configuration` for details on using LLM config with SpindleConfig.
 """
 
@@ -49,7 +49,7 @@ class LLMConfig:
 
     This class can be used standalone or integrated with :class:`~spindle.configuration.SpindleConfig`
     by assigning an instance to ``SpindleConfig.llm``. When used with SpindleConfig, the LLM
-    configuration will be automatically passed to SpindleExtractor and OntologyRecommender instances
+    configuration will be automatically passed to SpindleExtractor instances
     created via the config's factory methods.
 
     Attributes:
