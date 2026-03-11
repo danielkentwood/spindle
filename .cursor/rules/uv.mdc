@@ -13,8 +13,6 @@ alwaysApply: true
 
 ## For Package Installation:
 - Install packages: `uv pip install <package>`
-- Install from requirements: `uv pip install -r requirements.txt`
-- Install dev dependencies: `uv pip install -r requirements-dev.txt`
 - Install project in editable mode: `uv pip install -e .`
 - Install with extras: `uv pip install -e ".[dev]"`
 
@@ -24,8 +22,8 @@ alwaysApply: true
 - Run any command: `uv run <command>`
 
 ## For Adding Dependencies:
-- Add to requirements.txt or pyproject.toml, then run `uv pip install`
-- Or use: `uv pip install <package>` and manually update requirements
+- Add dependencies to `pyproject.toml` and run `uv pip install -e ".[dev]"`
+- Or use: `uv pip install <package>` and update `pyproject.toml` accordingly
 
 ## Initial Setup (if .venv doesn't exist):
 ```bash

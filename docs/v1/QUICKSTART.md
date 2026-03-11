@@ -4,7 +4,7 @@ Spin up Spindle, extract your first triples, and explore the tooling in a few mi
 
 ## Prerequisites
 
-- Python 3.9+ (managed automatically by `uv` via `.python-version` if present)
+- Python 3.10+ (managed automatically by `uv` via `.python-version` if present)
 - [uv](https://github.com/astral-sh/uv) installed and on your `PATH`
 - Anthropic API key (required) plus any optional embedding API keys you plan to use
 
@@ -13,7 +13,7 @@ Spin up Spindle, extract your first triples, and explore the tooling in a few mi
 ```bash
 cd /path/to/spindle
 
-# Create the virtual environment (uses Python 3.9+)
+# Create the virtual environment (uses Python 3.10+)
 uv venv
 
 # Install project + dev dependencies in editable mode

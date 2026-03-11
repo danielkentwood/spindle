@@ -6,9 +6,9 @@ calls to discover the Spindle pipeline stages.
 Usage from spindle-eval::
 
     from spindle import get_pipeline_definition
-    defn = get_pipeline_definition(cfg)
-    for stage in defn.stages:
-        output = stage.run(...)
+    defn = get_pipeline_definition(cfg, ontology=my_ontology)
+    for stage_def in defn.stages:
+        output = stage_def.stage.run(...)
 """
 
 from __future__ import annotations
@@ -19,15 +19,35 @@ from typing import Any, Dict, List, Optional
 
 
 @dataclass
+class StageDef:
+    """Describes a pipeline stage with optional metrics and quality gates.
+
+    Attributes:
+        name: Human-readable stage identifier.
+        stage: Stage instance implementing ``run()``.
+        input_keys: Maps param name to ``"stage.output_key"`` documenting
+            inter-stage data flow.
+        metrics: Metric callables (populated when spindle-eval publishes them).
+        gate: Quality gate callable (populated when spindle-eval publishes them).
+    """
+
+    name: str
+    stage: Any
+    input_keys: Dict[str, str] = field(default_factory=dict)
+    metrics: List[Any] = field(default_factory=list)
+    gate: Optional[Any] = None
+
+
+@dataclass
 class PipelineDefinition:
     """Describes a Spindle pipeline for spindle-eval.
 
     Attributes:
-        stages: Ordered list of Stage objects.
+        stages: Ordered list of StageDef objects.
         metadata: Arbitrary metadata dict for the eval framework.
     """
 
-    stages: List[Any] = field(default_factory=list)
+    stages: List[StageDef] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -37,6 +57,9 @@ def get_pipeline_definition(
     include_kos: bool = True,
     include_generation: bool = True,
     tracker: Optional[Any] = None,
+    ontology: Optional[Any] = None,
+    graph_store: Optional[Any] = None,
+    vector_store: Optional[Any] = None,
 ) -> PipelineDefinition:
     """Factory that creates a Spindle pipeline definition for spindle-eval.
 
@@ -49,19 +72,26 @@ def get_pipeline_definition(
         include_kos: Whether to include KOS extraction stages.
         include_generation: Whether to include the generation stage.
         tracker: Optional tracker passed to all stages.
+        ontology: Ontology object threaded to GenerationStage.
+        graph_store: GraphStore instance for RetrievalStage.
+        vector_store: ChromaVectorStore instance for RetrievalStage.
 
     Returns:
-        PipelineDefinition with ordered stages.
+        PipelineDefinition with ordered stages wrapped in StageDef.
     """
     from spindle.stages.preprocessing import PreprocessingStage
     from spindle.stages.retrieval import RetrievalStage
 
     kos_dir = kos_dir or Path("kos")
-    stages: List[Any] = []
+    stage_defs: List[StageDef] = []
 
     # Stage 1: Document preprocessing
     preprocessing_cfg = _get(cfg, "preprocessing", {})
-    stages.append(PreprocessingStage(cfg=preprocessing_cfg, tracker=tracker))
+    stage_defs.append(StageDef(
+        name="preprocessing",
+        stage=PreprocessingStage(cfg=preprocessing_cfg, tracker=tracker),
+        input_keys={},
+    ))
 
     if include_kos:
         # Stage 2: KOS extraction
@@ -69,41 +99,60 @@ def get_pipeline_definition(
         if kos_svc is not None:
             from spindle.stages.kos_extraction import KOSExtractionStage
             stage_dir = kos_dir / "staging"
-            stages.append(KOSExtractionStage(
-                kos_service=kos_svc,
-                stage_dir=stage_dir,
-                tracker=tracker,
+            stage_defs.append(StageDef(
+                name="kos_extraction",
+                stage=KOSExtractionStage(
+                    kos_service=kos_svc,
+                    stage_dir=stage_dir,
+                    tracker=tracker,
+                ),
+                input_keys={"chunks": "preprocessing.chunks"},
             ))
 
             # Stage 3: Ontology synthesis
             from spindle.stages.ontology_synthesis import OntologySynthesisStage
             synthesis_cfg = _get(cfg, "ontology_synthesis", {})
-            stages.append(OntologySynthesisStage(
-                kos_service=kos_svc,
-                output_dir=kos_dir,
-                max_axioms_per_class=_get(synthesis_cfg, "max_axioms_per_class", 10),
-                generate_shacl=_get(synthesis_cfg, "generate_shacl", True),
+            stage_defs.append(StageDef(
+                name="ontology_synthesis",
+                stage=OntologySynthesisStage(
+                    kos_service=kos_svc,
+                    output_dir=kos_dir,
+                    max_axioms_per_class=_get(synthesis_cfg, "max_axioms_per_class", 10),
+                    generate_shacl=_get(synthesis_cfg, "generate_shacl", True),
+                ),
+                input_keys={"kos_path": "kos_extraction.kos_path"},
             ))
 
             # Stage 4: Retrieval
             retrieval_cfg = _get(cfg, "retrieval", {})
-            stages.append(RetrievalStage(
-                kos_service=kos_svc,
-                mode=_get(retrieval_cfg, "mode", "hybrid"),
-                top_k=_get(retrieval_cfg, "top_k", 10),
+            stage_defs.append(StageDef(
+                name="retrieval",
+                stage=RetrievalStage(
+                    kos_service=kos_svc,
+                    graph_store=graph_store,
+                    vector_store=vector_store,
+                    mode=_get(retrieval_cfg, "mode", "hybrid"),
+                    top_k=_get(retrieval_cfg, "top_k", 10),
+                ),
+                input_keys={"graph": "ontology_synthesis.graph"},
             ))
 
     if include_generation:
         # Stage 5: LLM generation
         from spindle.stages.generation import GenerationStage
-        stages.append(GenerationStage(tracker=tracker))
+        stage_defs.append(StageDef(
+            name="generation",
+            stage=GenerationStage(tracker=tracker, ontology=ontology),
+            input_keys={"contexts": "retrieval.contexts"},
+        ))
 
+    all_stages = stage_defs
     return PipelineDefinition(
-        stages=stages,
+        stages=all_stages,
         metadata={
             "kos_dir": str(kos_dir),
-            "stage_count": len(stages),
-            "stage_names": [getattr(s, "name", type(s).__name__) for s in stages],
+            "stage_count": len(all_stages),
+            "stage_names": [sd.name for sd in all_stages],
         },
     )
 

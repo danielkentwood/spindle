@@ -24,7 +24,7 @@ This guide explains how to configure your Spindle development environment, insta
 ## Prerequisites
 
 1. macOS, Linux, or Windows shell (instructions assume Unix-like shell).
-2. Python 3.9+ (managed via `.python-version` if present).
+2. Python 3.10+ (managed via `.python-version` if present).
 3. `uv` installed and available on your `PATH`.
 4. (Optional) Access to GCP with Vertex AI enabled if you plan to use managed models.
 
@@ -69,7 +69,7 @@ cd /Users/thalamus/Repos/spindle
 uv venv
 ```
 
-This creates `.venv/` with the environment using Python 3.9+ (or the version specified in `.python-version` if present).
+This creates `.venv/` with the environment using Python 3.10+ (or the version specified in `.python-version` if present).
 
 ### 2. Install Project Dependencies
 
@@ -80,9 +80,8 @@ uv pip install -e ".[dev]"
 # Production-only install
 uv pip install -e .
 
-# Install from requirements files
-uv pip install -r requirements.txt
-uv pip install -r requirements-dev.txt
+# Install all optional groups used in this repo
+uv pip install -e ".[dev,embeddings,embeddings-api,eval]"
 ```
 
 ## Manage Dependencies
@@ -106,7 +105,7 @@ uv run pytest --cov=spindle --cov-report=html
 # Install a new package
 uv pip install some-package
 
-# Add to pyproject.toml or requirements.txt to keep the dependency pinned
+# Add to pyproject.toml to keep the dependency pinned
 ```
 
 ### Development Dependencies
@@ -124,8 +123,8 @@ uv pip install pytest-asyncio
 # Update a specific package
 uv pip install --upgrade some-package
 
-# Update from a requirements file (use with caution)
-uv pip install --upgrade -r requirements.txt
+# Reinstall project dependencies after dependency changes
+uv pip install -e ".[dev]"
 ```
 
 ### Inspecting the Environment
@@ -429,7 +428,7 @@ uv pip install -e ".[dev]"
 
 ```bash
 # Verify Python version
-uv run python --version  # Should show 3.9 or higher
+uv run python --version  # Should show 3.10 or higher
 ```
 
 ```bash

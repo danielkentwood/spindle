@@ -110,11 +110,12 @@ except ImportError:
 
 # Import eval bridge (available whenever spindle is installed)
 try:
-    from spindle.eval_bridge import get_pipeline_definition, PipelineDefinition
+    from spindle.eval_bridge import get_pipeline_definition, PipelineDefinition, StageDef
     _EVAL_BRIDGE_AVAILABLE = True
 except ImportError:
     get_pipeline_definition = None  # type: ignore[assignment]
     PipelineDefinition = None  # type: ignore[assignment,misc]
+    StageDef = None  # type: ignore[assignment,misc]
     _EVAL_BRIDGE_AVAILABLE = False
 
 __version__ = "0.1.0"
@@ -166,4 +167,5 @@ __all__ = [
     # eval bridge
     "get_pipeline_definition",
     "PipelineDefinition",
+    "StageDef",
 ]

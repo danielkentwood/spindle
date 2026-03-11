@@ -185,7 +185,11 @@ class KOSExtractionPipeline:
 
     def _emit(self, event: str, data: Dict[str, Any]) -> None:
         try:
-            self._tracker.log_event(event, data)
+            if "/" in event:
+                service, name = event.split("/", 1)
+            else:
+                service, name = "kos", event
+            self._tracker.log_event(service, name, data)
         except Exception:
             pass
 

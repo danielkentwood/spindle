@@ -17,7 +17,9 @@
       "Bash(/Users/danielwood/.local/bin/uv:*)",
       "Bash(ls:*)",
       "Bash(xargs:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(pip index:*)",
+      "Bash(uv pip:*)"
     ]
   }
 }

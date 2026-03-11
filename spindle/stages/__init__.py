@@ -12,6 +12,7 @@ from spindle.stages.kos_extraction import KOSExtractionStage
 from spindle.stages.ontology_synthesis import OntologySynthesisStage
 from spindle.stages.retrieval import RetrievalStage
 from spindle.stages.generation import GenerationStage
+from spindle.stages.entity_resolution import EntityResolutionStage
 
 __all__ = [
     "PreprocessingStage",
@@ -19,4 +20,5 @@ __all__ = [
     "OntologySynthesisStage",
     "RetrievalStage",
     "GenerationStage",
+    "EntityResolutionStage",
 ]

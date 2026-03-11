@@ -100,7 +100,6 @@ Total: **25+ comprehensive test cases**
 ### 7. Dependencies & Configuration
 
 **Updated Files:**
-- `requirements.txt` - Added fastapi, uvicorn, python-multipart
 - `pyproject.toml` - Added:
   - API dependencies
   - `spindle-api` CLI entry point

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Spindle is an LLM-powered ontology-first knowledge graph extraction toolkit. It extracts structured knowledge (triples) from unstructured text using BAML-defined LLM prompts, stores them in a graph database (Kùzu), and provides entity resolution, vector search, and observability.
+Spindle is an LLM-powered, ontology-first knowledge graph extraction toolkit. It processes unstructured documents through a multi-stage pipeline: preprocessing (Docling/Chonkie/fastcoref), KOS extraction (pyoxigraph + NER cascade), ontology synthesis, LLM-powered triple extraction (BAML), entity resolution, and graph storage (Kùzu). Stages are composable and integrate with spindle-eval via Hydra configuration.
 
 ## Essential Commands
 
@@ -29,19 +29,30 @@ uv run spindle-api
 
 ## Architecture
 
-### Core Data Flow
+### Pipeline Stages
 ```
-Documents → SpindleExtractor (ontology required, BAML) → Triples → EntityResolver → GraphStore/VectorStore
+Documents → PreprocessingStage (Docling → Chonkie → fastcoref)
+         → KOSExtractionStage (cold-start LLM | incremental 3-pass NER)
+         → OntologySynthesisStage (KOS → ontology + SHACL)
+         → RetrievalStage (KOS + GraphStore + ChromaDB)
+         → GenerationStage (SpindleExtractor → triples)
+         → EntityResolutionStage (semantic deduplication)
 ```
 
 ### Key Components
 
+- **`spindle/preprocessing/`**: `SpindlePreprocessor` — Docling document conversion, Chonkie chunking, fastcoref coreference resolution
+- **`spindle/kos/`**: `KOSService` — in-process SKOS/OWL/SHACL runtime (pyoxigraph), Aho-Corasick NER, ANN search, SPARQL; `KOSExtractionPipeline` for cold-start and incremental extraction
+- **`spindle/stages/`**: Pipeline stage wrappers (`PreprocessingStage`, `KOSExtractionStage`, `OntologySynthesisStage`, `RetrievalStage`, `GenerationStage`, `EntityResolutionStage`) implementing the spindle-eval stage protocol
 - **`spindle/extraction/`**: `SpindleExtractor` (main extraction engine, ontology required), helpers, utils
 - **`spindle/graph_store/`**: `GraphStore` facade over Kùzu backend for triple persistence and querying
 - **`spindle/entity_resolution/`**: `EntityResolver`, `SemanticBlocker`, `SemanticMatcher` for LLM-based entity deduplication
 - **`spindle/vector_store/`**: `ChromaVectorStore` with embedding factories (OpenAI, HuggingFace, Google, local)
-- **`spindle/api/`**: FastAPI REST endpoints (extraction, resolution)
+- **`spindle/provenance/`**: `ProvenanceStore` — SQLite provenance tracking (objects ↔ documents ↔ evidence spans)
 - **`spindle/observability/`**: `ServiceEvent` and `EventRecorder` for structured logging (SQLite persistence)
+- **`spindle/api/`**: FastAPI REST endpoints (extraction, resolution)
+- **`spindle/eval_bridge.py`**: `get_pipeline_definition()` factory for spindle-eval integration; `PipelineDefinition`, `StageDef`
+- **`spindle/conf/`**: Hydra YAML config groups (preprocessing, kos_extraction, ontology_synthesis, retrieval, generation)
 
 ### BAML Files (LLM Prompts)
 
@@ -54,7 +65,8 @@ Located in `spindle/baml_src/`:
 
 ### Configuration
 
-- `SpindleConfig` in `configuration.py` is the unified config system
+- Hydra YAML configs under `spindle/conf/` for each pipeline stage
+- `SpindleConfig` in `configuration.py` for programmatic config
 - Load programmatically: `from spindle.configuration import load_config_from_file`
 
 ## BAML Patterns
@@ -94,8 +106,9 @@ From `spindle/baml_client/types.py` (auto-generated from BAML):
 ## Public API
 
 Main exports from `spindle/__init__.py`:
-- `SpindleExtractor`
-- `GraphStore`, `ChromaVectorStore`
+- `SpindleExtractor`, `GraphStore`, `ChromaVectorStore`
 - `EntityResolver`, `ResolutionConfig`
+- `KOSService`
+- `get_pipeline_definition`, `PipelineDefinition`, `StageDef`
 - Factory functions: `create_ontology()`, `create_source_metadata()`
 - Utilities: `triples_to_dict()`, `filter_triples_by_source()`

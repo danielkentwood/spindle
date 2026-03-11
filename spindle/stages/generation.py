@@ -24,9 +24,11 @@ class GenerationStage:
     def __init__(
         self,
         extractor: Optional["SpindleExtractor"] = None,
+        ontology: Optional[Any] = None,
         tracker: Optional[Any] = None,
     ) -> None:
         self._extractor = extractor
+        self._ontology = ontology
         self._tracker = tracker
 
     def run(
@@ -105,4 +107,4 @@ class GenerationStage:
 
     def _create_extractor(self) -> "SpindleExtractor":
         from spindle.extraction.extractor import SpindleExtractor
-        return SpindleExtractor(tracker=self._tracker)
+        return SpindleExtractor(ontology=self._ontology, tracker=self._tracker)

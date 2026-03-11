@@ -184,7 +184,7 @@ uv pip install kuzu>=0.7.0
 Or install all Spindle dependencies including GraphStore support:
 
 ```bash
-uv pip install -r requirements.txt
+uv pip install -e ".[dev,embeddings,embeddings-api,eval]"
 ```
 
 ## Quick Start

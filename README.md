@@ -5,30 +5,32 @@
 
 # Spindle
 
-LLM-powered ontology-first extraction of knowledge graph triples from text.
+LLM-powered, ontology-first knowledge graph extraction from unstructured text.
 
 ## What It Does
 
-Spindle is a comprehensive toolkit for building knowledge graphs from unstructured text. It combines LLM-powered extraction with graph storage, entity resolution, and observability features.
+Spindle is a multi-stage pipeline for building knowledge graphs from unstructured documents. It combines document preprocessing, a Knowledge Organization System (KOS), ontology synthesis, LLM-powered triple extraction, entity resolution, and graph storage — all orchestrated through composable pipeline stages.
 
 ### Core Features
 
-- **Ontology Recommendation**: Automatically recommends ontologies (entities, relations, attributes) from raw text using BAML-driven LLM prompts
-- **Triple Extraction**: Extracts knowledge graph triples with source metadata, evidence spans, and timestamps
-- **Entity Resolution**: Semantic entity deduplication using embeddings and LLM-based matching to keep entities consistent across documents
-- **Graph Storage**: Persistent graph database using embedded Kùzu with support for nodes, edges, and embeddings
-- **Vector Store Integration**: ChromaDB-based vector storage with support for multiple embedding providers (OpenAI, HuggingFace, Google)
-- **Document Ingestion Pipeline**: CLI-driven ingestion system with template-based document processing, chunking, and graph construction
-- **Analytics Dashboard**: Streamlit-based dashboard for visualizing ingestion metrics, extraction statistics, and entity resolution results
-- **Observability**: Structured event logging across ingestion, extraction, and storage with optional SQLite persistence
-- **Configuration Management**: Unified configuration system for storage paths, graph databases, vector stores, and observability settings
+- **Document Preprocessing**: Converts documents (PDF, HTML, etc.) via [Docling](https://github.com/DS4SD/docling), chunks with [Chonkie](https://github.com/chonkie-ai/chonkie), and resolves coreferences with [fastcoref](https://github.com/shon-otmazgin/fastcoref)
+- **Knowledge Organization System (KOS)**: In-process SKOS/OWL/SHACL runtime backed by [pyoxigraph](https://github.com/oxigraph/oxigraph), with Aho-Corasick NER, ANN semantic search, and SPARQL queries
+- **KOS Extraction**: Cold-start (LLM-based vocab/taxonomy/thesaurus) and incremental (three-pass NER cascade: Aho-Corasick → multi-step resolution → [GLiNER](https://github.com/urchade/GLiNER)) extraction pipelines
+- **Ontology Synthesis**: Transforms KOS artifacts into formal ontologies with SHACL validation
+- **Triple Extraction**: LLM-powered extraction of knowledge graph triples with source metadata, evidence spans, and timestamps via BAML prompts
+- **Entity Resolution**: Semantic entity deduplication using embeddings and LLM-based matching
+- **Graph Storage**: Persistent graph database using embedded [Kùzu](https://kuzudb.com/)
+- **Vector Store Integration**: ChromaDB-based vector storage with multiple embedding providers (OpenAI, HuggingFace, Google)
+- **Provenance Tracking**: SQLite-backed provenance store linking extracted objects to source documents and evidence spans
+- **Eval Bridge**: Integration layer for [spindle-eval](https://github.com/danielkentwood/spindle-eval) with Hydra-based configuration and composable stage definitions
+- **Observability**: Structured event logging across all pipeline stages with optional SQLite persistence
 
 ## Quick Start
 
-Prerequisites: Python 3.9+, Anthropic API key, and [`uv`](https://github.com/astral-sh/uv) (preferred installer).
+Prerequisites: Python 3.10+, Anthropic API key, and [`uv`](https://github.com/astral-sh/uv).
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/danielkentwood/spindle.git
 cd spindle
 uv venv
 uv pip install -e ".[dev]"
@@ -43,31 +45,50 @@ HF_API_KEY=hf_...
 GEMINI_API_KEY=AIza...
 ```
 
-See `docs/QUICKSTART.md` for detailed setup instructions and `docs/ENV_SETUP.md` if you hit environment issues.
+## Usage
 
-## Basic Usage
+### Pipeline Stages
+
+Spindle is organised as composable pipeline stages. You can use them individually or wire them together via the eval bridge.
+
+```python
+from spindle import get_pipeline_definition
+
+defn = get_pipeline_definition(
+    cfg=my_config,
+    kos_dir="kos/",
+    ontology=my_ontology,
+)
+
+for stage_def in defn.stages:
+    output = stage_def.stage.run(...)
+```
 
 ### Simple Extraction
 
 ```python
-from spindle import SpindleExtractor
+from spindle import SpindleExtractor, create_ontology
 
-extractor = SpindleExtractor()  # auto-recommends ontology on first extract
+entity_types = [{"name": "Person", "description": "A human"}]
+relation_types = [{"name": "works_at", "description": "Employed by", "domain": "Person", "range": "Organization"}]
+ontology = create_ontology(entity_types, relation_types)
+
+extractor = SpindleExtractor(ontology)
 result = extractor.extract(
     text="Alice Johnson leads research at TechCorp.",
-    source_name="Company Blog"
+    source_name="Company Blog",
 )
 
 for triple in result.triples:
     print(triple.subject.name, triple.predicate, triple.object.name)
 ```
 
-### With Graph Storage
+### Graph Storage
 
 ```python
 from spindle import SpindleExtractor, GraphStore
 
-extractor = SpindleExtractor()
+extractor = SpindleExtractor(ontology)
 store = GraphStore("path/to/graph.db")
 
 result = extractor.extract(text="...", source_name="...")
@@ -84,68 +105,95 @@ result = resolver.resolve_entities(store.get_all_nodes())
 store.add_edges(result.same_as_edges)
 ```
 
-### Document Ingestion Pipeline
+### KOS Service
 
-```bash
-# Initialize configuration
-uv run spindle-ingest config init
+```python
+from spindle.kos import KOSService
 
-# Ingest documents
-uv run spindle-ingest ingest --input documents/ --template default
-
-# View analytics dashboard
-uv run spindle-dashboard --database sqlite:///spindle_storage/analytics.db
+kos = KOSService(kos_dir="kos/")
+hits = kos.search_ahocorasick("Alice works at TechCorp in New York")
+concepts = kos.resolve("TechCorp")
 ```
 
-### Key Features
+### Preprocessing
 
-- **Ontology Scope Control**: Use `ontology_scope="minimal" | "balanced" | "comprehensive"` to control extraction granularity
-- **Ontology Recommender**: Use `OntologyRecommender` for explicit recommendations and conservative ontology extension
-- **Graph Persistence**: Store and query triples with `GraphStore()` backed by Kùzu
-- **Vector Search**: Use `ChromaVectorStore` for semantic search over extracted content
-- **Template-Based Ingestion**: Define custom document processing templates (see `docs/INGESTION_TEMPLATES.md`)
+```python
+from spindle.preprocessing import SpindlePreprocessor
+
+preprocessor = SpindlePreprocessor(cfg=preprocessing_config)
+chunks = preprocessor.run(documents=["path/to/document.pdf"])
+```
 
 ### Configuration
 
-- Scaffold a runtime config with `uv run spindle-ingest config init`
-- Edit the generated `config.py` to customize storage paths, graph DB, vector store, and observability settings
-- Pass config to tooling via `--config /path/to/config.py`
-- Load programmatically: `from spindle.configuration import load_config_from_file`
-- See `docs/CONFIGURATION.md` for the full schema and usage patterns
+Spindle uses [Hydra](https://hydra.cc/) for configuration. YAML config groups live under `spindle/conf/`:
+
+```
+spindle/conf/
+├── preprocessing/       # spindle_default.yaml, spindle_fast.yaml
+├── kos_extraction/      # cold_start.yaml, incremental.yaml
+├── ontology_synthesis/  # default.yaml
+├── retrieval/           # local.yaml, hybrid.yaml, global.yaml
+└── generation/          # default.yaml
+```
+
+Load programmatically: `from spindle.configuration import load_config_from_file`
+
+## Architecture
+
+```
+Documents
+    │
+    ▼
+PreprocessingStage (Docling → Chonkie → fastcoref)
+    │
+    ▼
+KOSExtractionStage (cold-start LLM | incremental 3-pass NER)
+    │
+    ▼
+KOSService (pyoxigraph + Aho-Corasick/ANN indices) ←→ ProvenanceStore
+    │
+    ▼
+OntologySynthesisStage (KOS → formal ontology + SHACL)
+    │
+    ▼
+RetrievalStage (KOS + GraphStore + ChromaDB)
+    │
+    ▼
+GenerationStage (SpindleExtractor → triples)
+    │
+    ▼
+EntityResolutionStage (semantic deduplication, post-batch)
+```
 
 ## Project Layout
 
 ```
 spindle/
-├── spindle/                    # Main package
-│   ├── extraction/             # Core extraction and ontology recommendation
-│   ├── graph_store/            # Kùzu-backed graph database
-│   ├── entity_resolution/      # Semantic entity deduplication
-│   ├── vector_store/           # Vector storage and embeddings
-│   ├── ingestion/              # Document ingestion pipeline
-│   │   ├── loaders/            # Document loaders
-│   │   ├── splitters/          # Text splitting strategies
-│   │   ├── templates/          # Ingestion templates
-│   │   └── observers/          # Observability hooks
-│   ├── analytics/              # Analytics and metrics
-│   ├── observability/          # Event logging and persistence
-│   ├── dashboard/              # Streamlit analytics dashboard
-│   ├── baml_client/            # BAML runtime client
-│   ├── baml_src/               # BAML function definitions
-│   ├── notebooks/              # Jupyter notebook examples 
-├── tests/                      # Test suite       
+├── spindle/
+│   ├── preprocessing/         # Docling ingestion, chunking, coreference
+│   ├── kos/                   # Knowledge Organization System (pyoxigraph)
+│   ├── stages/                # Pipeline stage wrappers for spindle-eval
+│   ├── extraction/            # SpindleExtractor and ontology helpers
+│   ├── entity_resolution/     # Semantic entity deduplication
+│   ├── graph_store/           # Kùzu-backed graph database
+│   ├── vector_store/          # ChromaDB vector storage and embeddings
+│   ├── provenance/            # SQLite provenance store
+│   ├── observability/         # Structured event logging
+│   ├── conf/                  # Hydra YAML config groups
+│   ├── api/                   # FastAPI REST endpoints
+│   ├── baml_src/              # BAML prompt definitions
+│   ├── baml_client/           # Auto-generated BAML client
+│   └── eval_bridge.py         # spindle-eval integration
+├── tests/                     # Test suite
+└── docs/
+    ├── v1/                    # Legacy v1 documentation
+    └── v2/                    # v2 design docs and notes
 ```
 
 ## Documentation
 
-- **[Quick Start Guide](docs/QUICKSTART.md)**: Get up and running in minutes
-- **[Configuration](docs/CONFIGURATION.md)**: Unified configuration system
-- **[Graph Store](docs/GRAPH_STORE.md)**: Graph database operations and queries
-- **[Entity Resolution](docs/ENTITY_RESOLUTION.md)**: Semantic entity deduplication
-- **[Ingestion Templates](docs/INGESTION_TEMPLATES.md)**: Custom document processing
-- **[Ontology Recommender](docs/ONTOLOGY_RECOMMENDER.md)**: Automatic ontology generation
-- **[Observability](docs/OBSERVABILITY.md)**: Event logging and monitoring
-- **[Analytics](docs/INGESTION_ANALYTICS.md)**: Metrics and dashboard usage
+...coming soon!
 
 ## Testing
 
@@ -160,11 +208,7 @@ uv run pytest tests/ -m integration
 uv run pytest tests/ --cov=spindle --cov-report=html
 ```
 
-Coverage reports and further details: `docs/TESTING.md` and `docs/TESTING_QUICK_REF.md`.
-
 ## Optional Dependencies
-
-Install additional features with extras:
 
 ```bash
 # Embedding models (sentence-transformers)
@@ -173,13 +217,35 @@ uv pip install -e ".[embeddings]"
 # Embedding API providers (OpenAI, HuggingFace, Google)
 uv pip install -e ".[embeddings-api]"
 
+# Eval framework integration (Hydra, OmegaConf)
+uv pip install -e ".[eval]"
+
 # All extras
-uv pip install -e ".[dev,embeddings,embeddings-api]"
+uv pip install -e ".[dev,embeddings,embeddings-api,eval]"
 ```
+
+## Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `baml-py` | LLM prompt orchestration |
+| `kuzu` | Embedded graph database |
+| `chromadb` | Vector storage |
+| `pyoxigraph` | In-process RDF/SPARQL for KOS |
+| `pyahocorasick` | Fast NER via Aho-Corasick |
+| `hnswlib` | ANN vector search for KOS concepts |
+| `pyshacl` | SHACL validation |
+| `docling` | Document conversion (PDF, HTML, etc.) |
+| `chonkie` | Recursive semantic chunking |
+| `fastcoref` | Coreference resolution |
+| `gliner` | Open NER for novel term discovery |
+| `deepdiff` | Change detection for incremental ingestion |
+| `hydra-core` | Config composition |
+| `omegaconf` | Config composition |
+| `spindle-eval` | Evaluation framework |
 
 ## Contributing & License
 
 Contribution guidelines and license details are tracked in the `/docs` folder. PRs welcome.
 
 **License**: MIT
-
