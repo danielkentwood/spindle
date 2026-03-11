@@ -1,3 +1,151 @@
+## Quickstart
+
+This guide gets you from zero to a working extraction with the current Spindle package.
+
+## Prerequisites
+
+- Python 3.10+
+- `uv`
+- `ANTHROPIC_API_KEY`
+
+## Install
+
+```bash
+git clone https://github.com/danielkentwood/spindle.git
+cd spindle
+uv venv
+uv pip install -e ".[dev]"
+```
+
+## Minimal extraction
+
+```python
+from spindle import SpindleExtractor, create_ontology
+
+entity_types = [{"name": "Person", "description": "A human"}]
+relation_types = [{
+    "name": "works_at",
+    "description": "Employment relationship",
+    "domain": "Person",
+    "range": "Organization",
+}]
+
+ontology = create_ontology(entity_types, relation_types)
+extractor = SpindleExtractor(ontology=ontology)
+
+result = extractor.extract(
+    text="Alice works at Acme Corp.",
+    source_name="example",
+)
+
+print(f"Triples: {len(result.triples)}")
+```
+
+Run:
+
+```bash
+uv run python your_script.py
+```
+
+## Start the API
+
+```bash
+uv run spindle-api
+```
+
+Useful endpoints:
+
+- `GET /health`
+- Swagger: `http://localhost:8000/docs`
+
+## Pipeline integration
+
+`get_pipeline_definition(...)` returns `list[StageDef]`.
+
+```python
+from spindle import get_pipeline_definition
+
+stages = get_pipeline_definition(cfg=my_cfg, kos_dir="kos")
+for stage in stages:
+    print(stage.name)
+```
+## Quickstart
+
+This quickstart reflects the current package API and scripts.
+
+## 1) Install
+
+```bash
+git clone https://github.com/danielkentwood/spindle.git
+cd spindle
+uv venv
+uv pip install -e ".[dev]"
+```
+
+Set required credentials:
+
+```bash
+export ANTHROPIC_API_KEY="..."
+```
+
+## 2) Run a minimal extraction
+
+```python
+from spindle import SpindleExtractor, create_ontology
+
+entity_types = [{"name": "Person", "description": "A human"}]
+relation_types = [{
+    "name": "works_at",
+    "description": "Employment relationship",
+    "domain": "Person",
+    "range": "Organization",
+}]
+ontology = create_ontology(entity_types, relation_types)
+
+extractor = SpindleExtractor(ontology=ontology)
+result = extractor.extract(
+    text="Alice works at Acme Corp.",
+    source_name="example-doc",
+)
+
+print(len(result.triples))
+```
+
+Run it with:
+
+```bash
+uv run python your_script.py
+```
+
+## 3) Start the REST API
+
+```bash
+uv run spindle-api
+```
+
+Then visit:
+
+- `http://localhost:8000/docs`
+- `http://localhost:8000/health`
+
+## 4) Optional: build a staged pipeline
+
+`get_pipeline_definition(...)` returns `list[StageDef]`, not an object with a
+`.stages` field.
+
+```python
+from spindle import get_pipeline_definition
+
+stage_defs = get_pipeline_definition(cfg=my_cfg, kos_dir="kos")
+for stage_def in stage_defs:
+    print(stage_def.name)
+```
+
+## Common pitfalls
+
+- `SpindleExtractor` requires an ontology before extraction.
+- `EntityResolver.resolve_entities(...)` takes `graph_store` and `vector_store`.
+- `KOSService` uses `resolve_multistep(...)` for mention resolution.
 # Spindle Quick Start Guide
 
 Spin up Spindle, extract your first triples, and explore the tooling in a few minutes.

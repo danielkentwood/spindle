@@ -1,3 +1,52 @@
+## KOS Data Model
+
+Spindle's KOS (Knowledge Organization System) runtime is implemented by `KOSService`.
+It loads SKOS/OWL/SHACL artifacts into an in-process Oxigraph store and builds
+derived indices for low-latency lookup and resolution.
+
+## On-disk inputs
+
+Expected under `kos/`:
+
+- `kos.ttls`
+- `ontology.owl`
+- `shapes.ttl`
+- `config/scheme.ttl`
+- optional `blacklist.txt`
+
+## Derived runtime structures
+
+- concept cache (`uri -> ConceptRecord`)
+- label map (`normalized label -> concept URIs`)
+- Aho-Corasick automaton for lexical mention detection
+- optional ANN index for semantic lookup (when embedding function is available)
+
+## Core operations
+
+- `search_ahocorasick(text, longest_match_only=False)`
+- `search_ann(query, top_k=10)`
+- `resolve_multistep(mentions, threshold=0.7)`
+- concept CRUD (`list_concepts`, `get_concept`, `create_concept`, `delete_concept`)
+- hierarchy helpers (`get_hierarchy`, `get_ancestors`, `get_descendants`)
+- validation (`validate_skos`, `validate_triples`)
+- `sparql(query)`
+- `reload()`
+
+## API surface
+
+FastAPI routes are exposed under `/kos`, including:
+
+- `/kos/search/*`
+- `/kos/concepts*`
+- `/kos/hierarchy/*`
+- `/kos/validate*`
+- `/kos/sparql`
+- `/kos/reload`
+
+## Notes
+
+- `resolve_multistep` is the current mention-resolution method.
+- ANN search returns empty results if no embedding function is configured.
 # KOS Data Model & Serving Architecture
 
 This document specifies how Spindle stores, loads, and serves its Knowledge Organization System (KOS) artifacts: the consolidated SKOS thesaurus (vocabulary + taxonomy + associative relationships), the OWL ontology, and optional SHACL shapes. It also describes the `KOSService` runtime, the derived indices for low-latency operations, and the FastAPI endpoints.
