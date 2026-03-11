@@ -80,7 +80,7 @@ def _chunk_with_chonkie(
 
     context_size = max(1, int(chunk_size * overlap))
     chunker = RecursiveChunker(
-        tokenizer_or_token_counter="character",
+        tokenizer="character",
         chunk_size=chunk_size,
     )
     raw_chunks = chunker.chunk(text)

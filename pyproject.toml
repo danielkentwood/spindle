@@ -72,8 +72,6 @@ embeddings-api = [
     "google-generativeai",
 ]
 eval = [
-    "hydra-core>=1.3.0",
-    "omegaconf>=2.3.0",
     "spindle-eval>=0.1.0",
 ]
 
@@ -108,6 +106,7 @@ packages = [
     "spindle.conf.kos_extraction",
     "spindle.conf.ontology_synthesis",
     "spindle.conf.retrieval",
+    "spindle.conf.generation",
 ]
 
 [tool.setuptools.package-data]
@@ -117,6 +116,7 @@ spindle = ["py.typed"]
 "spindle.conf.kos_extraction" = ["*.yaml"]
 "spindle.conf.ontology_synthesis" = ["*.yaml"]
 "spindle.conf.retrieval" = ["*.yaml"]
+"spindle.conf.generation" = ["*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

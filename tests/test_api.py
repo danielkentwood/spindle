@@ -147,6 +147,7 @@ def test_update_session_config(client):
 # ============================================================================
 
 
+@pytest.mark.integration
 def test_extract_triples_with_ontology(client):
     """Test extracting triples with provided ontology."""
     ontology = {
@@ -171,6 +172,7 @@ def test_extract_triples_with_ontology(client):
     assert "triples" in data
 
 
+@pytest.mark.integration
 def test_extract_batch(client):
     """Test batch extraction."""
     ontology = {
@@ -199,6 +201,7 @@ def test_extract_batch(client):
     assert len(data["results"]) == 2
 
 
+@pytest.mark.integration
 def test_extract_session(client):
     """Test session-based extraction."""
     # Create session with ontology
@@ -268,6 +271,7 @@ def test_invalid_ontology_format(client):
 # ============================================================================
 
 
+@pytest.mark.integration
 def test_full_session_workflow(client):
     """Test a complete session workflow."""
     # 1. Create session
