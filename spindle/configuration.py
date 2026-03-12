@@ -11,10 +11,14 @@ for details on LLM authentication and credential management.
 
 Example usage::
 
-    from pathlib import Path
-    from spindle.configuration import SpindleConfig
+    from spindle.configuration import SpindleConfig, default_config
 
-    config = SpindleConfig.with_root(Path.cwd() / "spindle_storage")
+    # Use auto-detected stores root (git repo root / stores, or CWD / stores)
+    config = default_config()
+    print(config.storage.kos_dir)
+
+    # Or specify an explicit root:
+    config = SpindleConfig.with_root("/path/to/my/stores")
     print(config.storage.vector_store_dir)
 
 The configuration loader can execute a user supplied `config.py` file::
@@ -29,6 +33,7 @@ of :class:`SpindleConfig`.
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -38,7 +43,7 @@ if TYPE_CHECKING:  # pragma: no cover - import cycle guard
     from spindle.llm_config import LLMConfig
 
 
-DEFAULT_STORAGE_ROOT_NAME = "spindle_storage"
+DEFAULT_STORAGE_ROOT_NAME = "stores"
 CONFIG_SYMBOL_NAME = "SPINDLE_CONFIG"
 
 
@@ -53,25 +58,92 @@ def _ensure_path(path: Path | str) -> Path:
     return result
 
 
+def find_stores_root() -> Path:
+    """Locate the default stores root directory.
+
+    Attempts to find the root of the current git repository via
+    ``git rev-parse --show-toplevel``.  Returns ``<git_root>/stores`` when
+    successful, otherwise falls back to ``<cwd>/stores``.
+
+    The directory is **not** created by this function; callers that need the
+    directory on disk should call :py:meth:`StoragePaths.ensure_directories`.
+
+    Returns:
+        Absolute path to the ``stores`` directory.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            git_root = Path(result.stdout.strip())
+            return git_root / DEFAULT_STORAGE_ROOT_NAME
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+    return Path.cwd() / DEFAULT_STORAGE_ROOT_NAME
+
+
 @dataclass(slots=True)
 class StoragePaths:
-    """Filesystem locations used by Spindle."""
+    """Filesystem locations used by Spindle.
+
+    All paths are absolute.  Use :py:meth:`SpindleConfig.with_root` to
+    construct a coherent set of paths rooted at a single directory, or
+    :py:func:`default_config` to use the auto-detected stores root.
+
+    Attributes:
+        root: Top-level stores directory that contains all sub-stores.
+        kos_dir: Directory for KOS artifacts (kos.ttls, ontology.owl,
+            shapes.ttl, staging/).
+        graphs_dir: Parent directory for named Kùzu graph databases.
+        vector_store_dir: Directory for the ChromaDB persistent client.
+        graph_store_path: Full path to the *default* Kùzu database file
+            (``<graphs_dir>/spindle_graph/graph.db``).  Named graphs created
+            via ``GraphStore(db_path="my_graph")`` live alongside it under
+            ``graphs_dir``.
+        document_store_dir: Directory for Docling JSON output and related
+            document artefacts.
+        log_dir: Directory for structured log files.
+        provenance_db: Path to the SQLite provenance database.
+        catalog_db: Path to the SQLite document catalog database.
+        rejection_db: Path to the SQLite KOS rejection-log database.
+        event_log_db: Path to the SQLite observability event-log database.
+    """
 
     root: Path
+    kos_dir: Path
+    graphs_dir: Path
     vector_store_dir: Path
     graph_store_path: Path
     document_store_dir: Path
     log_dir: Path
+    provenance_db: Path
+    catalog_db: Path
+    rejection_db: Path
+    event_log_db: Path
 
     def ensure_directories(self) -> None:
-        """Create directories represented by this configuration."""
+        """Create all directories represented by this configuration."""
         dirs = {
             self.root,
+            self.kos_dir,
+            self.graphs_dir,
             self.vector_store_dir,
             self.document_store_dir,
             self.log_dir,
         }
-        dirs.add(Path(self.graph_store_path).parent)
+        # Parents of file-based paths
+        for db_path in (
+            self.graph_store_path,
+            self.provenance_db,
+            self.catalog_db,
+            self.rejection_db,
+            self.event_log_db,
+        ):
+            dirs.add(Path(db_path).parent)
         for directory in dirs:
             directory.mkdir(parents=True, exist_ok=True)
 
@@ -221,6 +293,22 @@ class SpindleConfig:
         """
         Create a SpindleConfig with storage paths derived from a root directory.
 
+        All sub-stores are placed under ``root`` using the standard layout::
+
+            <root>/
+              kos/                  # KOS artifacts
+              graphs/               # Kùzu graph databases
+                spindle_graph/
+                  graph.db
+              vector_store/         # ChromaDB
+              documents/            # Docling JSON output
+              logs/
+              sqlite/
+                provenance.db
+                catalog.db
+                rejections.db
+                events.db
+
         Args:
             root: Root directory for all storage backends.
             extras: Optional user-defined metadata.
@@ -235,12 +323,19 @@ class SpindleConfig:
             Configured SpindleConfig instance.
         """
         root_path = _ensure_path(root)
+        sqlite_dir = root_path / "sqlite"
         storage = StoragePaths(
             root=root_path,
+            kos_dir=root_path / "kos",
+            graphs_dir=root_path / "graphs",
             vector_store_dir=root_path / "vector_store",
-            graph_store_path=root_path / "graph" / "graph.db",
+            graph_store_path=root_path / "graphs" / "spindle_graph" / "graph.db",
             document_store_dir=root_path / "documents",
             log_dir=root_path / "logs",
+            provenance_db=sqlite_dir / "provenance.db",
+            catalog_db=sqlite_dir / "catalog.db",
+            rejection_db=sqlite_dir / "rejections.db",
+            event_log_db=sqlite_dir / "events.db",
         )
         resolved_extras: Mapping[str, Any]
         if extras:
@@ -306,9 +401,20 @@ class SpindleConfig:
 
 
 def default_config(root: Path | None = None) -> SpindleConfig:
-    """Return a default configuration rooted at the provided directory."""
+    """Return a default configuration using the auto-detected stores root.
+
+    When ``root`` is not provided the stores root is resolved by
+    :py:func:`find_stores_root` — ``<git_root>/stores`` when running inside a
+    git repository, ``<cwd>/stores`` otherwise.
+
+    Args:
+        root: Optional explicit root directory.  Overrides auto-detection.
+
+    Returns:
+        :class:`SpindleConfig` with all paths under ``root``.
+    """
     if root is None:
-        root = Path.cwd() / DEFAULT_STORAGE_ROOT_NAME
+        root = find_stores_root()
     return SpindleConfig.with_root(root)
 
 
@@ -353,6 +459,6 @@ __all__ = [
     "StoragePaths",
     "VectorStoreSettings",
     "default_config",
+    "find_stores_root",
     "load_config_from_file",
 ]
-

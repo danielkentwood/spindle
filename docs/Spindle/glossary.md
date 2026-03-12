@@ -15,6 +15,7 @@ This glossary defines terms as used by the current Spindle codebase.
 - **Entity resolution**: deduplication pipeline (`EntityResolver`) that blocks, matches, and links duplicates with `SAME_AS`.
 - **Provenance**: source/evidence tracking for graph facts (`spindle.provenance`).
 - **Observability events**: structured runtime events emitted by services/stages and optionally persisted.
+- **No-op tracker**: default tracker implementation that accepts observability calls but performs no recording/persistence.
 - **Session API**: REST mode where ontology/config/triples are retained across calls in a session context.
 - **Stateless API**: REST mode where each request provides all required inputs.
 - **BAML source (`spindle/baml_src`)**: editable prompt/schema definitions.

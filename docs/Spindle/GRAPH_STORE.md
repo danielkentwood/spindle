@@ -9,12 +9,31 @@
 - Provide node/edge/triple query helpers.
 - Support entity-resolution utilities (duplicate clusters, canonical entities).
 
+## Default path
+
+When no explicit path or config is provided, `GraphStore()` places the
+database under the auto-detected stores root:
+
+```
+<stores_root>/graphs/spindle_graph/graph.db
+```
+
+Named graphs (e.g. `GraphStore(db_path="my_graph")`) live alongside:
+
+```
+<stores_root>/graphs/my_graph/graph.db
+```
+
+The stores root is `<git_root>/stores` when running inside a git repository,
+or `<cwd>/stores` otherwise.
+
 ## Basic usage
 
 ```python
 from spindle import GraphStore
 
-store = GraphStore(db_path="spindle_graph")
+# Uses <stores_root>/graphs/spindle_graph/graph.db by default
+store = GraphStore()
 store.add_triples(result.triples)
 
 print(len(store.nodes()))
@@ -25,16 +44,28 @@ store.close()
 
 ## Configuration-aware usage
 
+Passing a `SpindleConfig` pins the graph path to
+`cfg.storage.graph_store_path` (or `cfg.graph_store.db_path_override` if
+set) and creates the directory tree on first use:
+
+```python
+from spindle.configuration import default_config
+from spindle import GraphStore
+
+cfg = default_config()
+store = GraphStore(config=cfg)
+```
+
+To point the default graph at a custom root:
+
 ```python
 from spindle.configuration import SpindleConfig
 from spindle import GraphStore
 
-cfg = SpindleConfig.with_root("spindle_storage")
+cfg = SpindleConfig.with_root("/data/my_project/stores")
 store = GraphStore(config=cfg)
+# Writes to /data/my_project/stores/graphs/spindle_graph/graph.db
 ```
-
-With `config`, default graph path is derived from `cfg.storage.graph_store_path`
-(unless overridden by `cfg.graph_store.db_path_override`).
 
 ## Integration points
 

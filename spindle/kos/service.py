@@ -50,6 +50,8 @@ class KOSService:
 
     Args:
         kos_dir: Root KOS directory (contains kos.ttls, ontology.owl, etc.).
+            Defaults to ``<stores_root>/kos`` where stores_root is determined
+            by :py:func:`~spindle.configuration.find_stores_root`.
         embedding_fn: Optional callable for ANN index (takes list[str], returns
                       list of float vectors).  If None, ANN search is disabled.
         provenance_store: Optional ProvenanceStore for concept provenance lookups.
@@ -57,10 +59,13 @@ class KOSService:
 
     def __init__(
         self,
-        kos_dir: str | Path = "kos",
+        kos_dir: str | Path | None = None,
         embedding_fn: Optional[Callable] = None,
         provenance_store: Optional[Any] = None,
     ) -> None:
+        if kos_dir is None:
+            from spindle.configuration import find_stores_root
+            kos_dir = find_stores_root() / "kos"
         self._kos_dir = Path(kos_dir)
         self._embedding_fn = embedding_fn
         self._provenance_store = provenance_store

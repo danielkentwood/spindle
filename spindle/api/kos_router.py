@@ -17,7 +17,14 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 
 _kos_service: Any = None  # KOSService | None
-_KOS_DIR: Path = Path("kos")
+
+
+def _default_kos_dir() -> Path:
+    from spindle.configuration import find_stores_root
+    return find_stores_root() / "kos"
+
+
+_KOS_DIR: Path = _default_kos_dir()
 
 
 def _get_kos() -> Any:

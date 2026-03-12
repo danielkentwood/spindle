@@ -232,7 +232,9 @@ def get_pipeline_definition(
     from spindle.stages.preprocessing import PreprocessingStage
     from spindle.stages.retrieval import RetrievalStage
 
-    kos_dir = kos_dir or Path("kos")
+    if kos_dir is None:
+        from spindle.configuration import find_stores_root
+        kos_dir = find_stores_root() / "kos"
     stage_defs: List[StageDef] = []
 
     # Stage 1: Document preprocessing

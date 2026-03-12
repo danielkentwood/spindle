@@ -46,10 +46,10 @@ class GraphStore:
     Example:
         >>> from spindle import GraphStore
         >>> 
-        >>> # Create or connect to database (stored in /graphs/spindle_graph/)
+        >>> # Create or connect to database (stored in <stores>/graphs/spindle_graph/)
         >>> store = GraphStore()  # Uses default "spindle_graph"
         >>> 
-        >>> # Or specify graph name (stored in /graphs/my_graph/)
+        >>> # Or specify graph name (stored in <stores>/graphs/my_graph/)
         >>> store = GraphStore(db_path="my_graph")
         >>> 
         >>> # Add triples from extraction
@@ -68,7 +68,7 @@ class GraphStore:
     
     def __init__(
         self,
-        db_path: str = "spindle_graph",
+        db_path: str = "spindle_graph",  # resolved to <stores>/graphs/spindle_graph/
         vector_store: Optional['VectorStore'] = None,
         *,
         config: Optional[SpindleConfig] = None,
@@ -81,8 +81,9 @@ class GraphStore:
         
         Args:
             db_path: Graph name or path. If just a name (e.g., "my_graph"),
-                    creates /graphs/my_graph/ directory. If an absolute path,
-                    uses that path directly. Defaults to "spindle_graph".
+                    creates ``<stores_root>/graphs/my_graph/`` directory. If an
+                    absolute path, uses that path directly. Defaults to
+                    "spindle_graph" → ``<stores_root>/graphs/spindle_graph/``.
             vector_store: Optional VectorStore instance for storing embeddings.
                          Required for compute_graph_embeddings() method.
                          Embeddings are computed on-demand, not automatically.
@@ -106,6 +107,7 @@ class GraphStore:
                 graph_settings.db_path_override
                 or self._spindle_config.storage.graph_store_path
             )
+            # graph_store_path lives under storage.graphs_dir; ensure it exists
             if db_path == "spindle_graph":
                 db_path = str(default_path)
             elif graph_settings.db_path_override is not None:

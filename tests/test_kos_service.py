@@ -113,6 +113,31 @@ class TestAhoCorasick:
         assert "pump" in texts or "valve" in texts
 
 
+# ── KOSService default path ───────────────────────────────────────────────────
+
+class TestKOSServiceDefaultPath:
+    """KOSService auto-resolves kos_dir from the stores root when none is given."""
+
+    def test_default_kos_dir_uses_stores_root(self, tmp_path):
+        mock_stores_root = tmp_path / "stores"
+        expected_kos_dir = mock_stores_root / "kos"
+
+        with patch("spindle.configuration.find_stores_root", return_value=mock_stores_root):
+            with patch.dict("sys.modules", {"pyoxigraph": None}):
+                svc = KOSService()
+
+        assert svc._kos_dir == expected_kos_dir
+
+    def test_explicit_kos_dir_overrides_default(self, tmp_path):
+        explicit_dir = tmp_path / "custom_kos"
+        # find_stores_root should NOT be called when kos_dir is explicit
+        with patch("spindle.configuration.find_stores_root") as mock_find:
+            with patch.dict("sys.modules", {"pyoxigraph": None}):
+                svc = KOSService(kos_dir=explicit_dir)
+        mock_find.assert_not_called()
+        assert svc._kos_dir == explicit_dir
+
+
 # ── KOSService (no pyoxigraph) ────────────────────────────────────────────────
 
 class TestKOSServiceNoOxigraph:

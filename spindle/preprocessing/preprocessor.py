@@ -32,9 +32,11 @@ class SpindlePreprocessor:
         documents: List of source document paths.  If None, no documents
                    will be ingested unless paths are passed to ``__call__``.
         catalog_path: Path to the SQLite document catalog.  Defaults to
-                      in-memory (``":memory:"``), which means no persistence
-                      between runs.
-        docling_output_dir: Directory for Docling JSON output files.
+                      in-memory (``":memory:"``); pass a filesystem path or use
+                      :py:func:`~spindle.configuration.default_config` to
+                      persist the catalog across runs.
+        docling_output_dir: Directory for Docling JSON output files. Defaults
+                            to ``<stores_root>/documents``.
         blacklist_path: Optional path to ``kos/blacklist.txt`` for filtering
                         coref mentions.
         tracker: Optional Tracker (NoOpTracker by default).
@@ -50,7 +52,10 @@ class SpindlePreprocessor:
     ) -> None:
         self._documents = [Path(d) for d in (documents or [])]
         self._catalog = DocumentCatalog(catalog_path)
-        self._docling_output_dir = docling_output_dir or Path(".docling_cache")
+        if docling_output_dir is None:
+            from spindle.configuration import find_stores_root
+            docling_output_dir = find_stores_root() / "documents"
+        self._docling_output_dir = docling_output_dir
 
         from spindle.tracking import NoOpTracker
         self._tracker = tracker if tracker is not None else NoOpTracker()

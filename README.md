@@ -15,7 +15,7 @@ Spindle is a multi-stage pipeline for building knowledge graphs from unstructure
 
 - **Document Preprocessing**: Converts documents (PDF, HTML, etc.) via [Docling](https://github.com/DS4SD/docling), chunks with [Chonkie](https://github.com/chonkie-ai/chonkie), and resolves coreferences with [fastcoref](https://github.com/shon-otmazgin/fastcoref)
 - **Knowledge Organization System (KOS)**: In-process SKOS/OWL/SHACL runtime backed by [pyoxigraph](https://github.com/oxigraph/oxigraph), with Aho-Corasick NER, ANN semantic search, and SPARQL queries
-- **KOS Extraction**: Cold-start (LLM-based vocab/taxonomy/thesaurus) and incremental (three-pass NER cascade: Aho-Corasick → multi-step resolution → [GLiNER](https://github.com/urchade/GLiNER)) extraction pipelines
+- **KOS Extraction**: Cold-start (LLM-based vocab/taxonomy/thesaurus) and incremental (three-pass NER cascade: Aho-Corasick → multi-step resolution → [GLiNER2](https://github.com/fastino-ai/GLiNER2)) extraction pipelines
 - **Ontology Synthesis**: Transforms KOS artifacts into formal ontologies with SHACL validation
 - **Triple Extraction**: LLM-powered extraction of knowledge graph triples with source metadata, evidence spans, and timestamps via BAML prompts
 - **Entity Resolution**: Semantic entity deduplication using embeddings and LLM-based matching
@@ -238,7 +238,7 @@ uv pip install -e ".[dev,embeddings,embeddings-api,eval]"
 | `docling` | Document conversion (PDF, HTML, etc.) |
 | `chonkie` | Recursive semantic chunking |
 | `fastcoref` | Coreference resolution |
-| `gliner` | Open NER for novel term discovery |
+| `gliner2` | Open NER, relation extraction, classification, and structured extraction |
 | `deepdiff` | Change detection for incremental ingestion |
 | `hydra-core` | Config composition |
 | `omegaconf` | Config composition |

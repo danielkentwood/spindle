@@ -117,9 +117,9 @@ class TestMediumPass:
 
 
 class TestDiscoveryPass:
-    def test_returns_empty_when_gliner_missing(self):
+    def test_returns_empty_when_gliner2_missing(self):
         from spindle.kos.ner import discovery_pass
-        with patch.dict("sys.modules", {"gliner": None}):
+        with patch.dict("sys.modules", {"gliner2": None}):
             novel, matched = discovery_pass([_make_chunk()], _make_kos_svc())
         assert novel == []
         assert matched == []
@@ -262,7 +262,7 @@ class TestKOSExtractionPipeline:
         svc.search_ahocorasick.return_value = []
         svc.resolve_multistep.return_value = []
         pipeline = KOSExtractionPipeline(svc, stage_dir=tmp_path)
-        with patch.dict("sys.modules", {"gliner": None}):
+        with patch.dict("sys.modules", {"gliner2": None}):
             result = pipeline.run([_make_chunk()])
         assert result["mode"] == "incremental"
 
@@ -274,7 +274,7 @@ class TestKOSExtractionPipeline:
         ]
         svc.resolve_multistep.return_value = []
         pipeline = KOSExtractionPipeline(svc, stage_dir=tmp_path)
-        with patch.dict("sys.modules", {"gliner": None}):
+        with patch.dict("sys.modules", {"gliner2": None}):
             result = pipeline.run([_make_chunk()], mode="incremental")
         assert result["pass1_matched"] == 1
         assert result["chunks_processed"] == 1

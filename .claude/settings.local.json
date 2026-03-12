@@ -19,7 +19,8 @@
       "Bash(xargs:*)",
       "Bash(git:*)",
       "Bash(pip index:*)",
-      "Bash(uv pip:*)"
+      "Bash(uv pip:*)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

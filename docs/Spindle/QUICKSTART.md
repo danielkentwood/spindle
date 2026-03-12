@@ -65,7 +65,7 @@ Useful endpoints:
 ```python
 from spindle import get_pipeline_definition
 
-stages = get_pipeline_definition(cfg=my_cfg, kos_dir="kos")
+stages = get_pipeline_definition(cfg=my_cfg)  # kos_dir auto-detected
 for stage in stages:
     print(stage.name)
 ```
@@ -136,7 +136,7 @@ Then visit:
 ```python
 from spindle import get_pipeline_definition
 
-stage_defs = get_pipeline_definition(cfg=my_cfg, kos_dir="kos")
+stage_defs = get_pipeline_definition(cfg=my_cfg)  # kos_dir auto-detected
 for stage_def in stage_defs:
     print(stage_def.name)
 ```
@@ -188,25 +188,36 @@ EOF
 
 Keep the file out of version control (already covered by `.gitignore`).
 
-## 3. Generate Unified Storage Config (≈1 min)
+## 3. Storage Layout (automatic)
 
-Spindle persists its catalog, graph database, vector store, logs, and template
-artifacts relative to a single storage root. Scaffold the default layout with:
+Spindle persists all artifacts under a `stores/` directory.  The location is
+auto-detected at runtime:
 
-```bash
-uv run spindle-ingest config init
+- **Inside a git repository** → `<git_root>/stores/`
+- **Outside a git repository** → `<cwd>/stores/`
+
+```
+stores/
+  kos/              # KOS ontology files
+  graphs/           # Kùzu graph databases
+  vector_store/     # ChromaDB embeddings
+  documents/        # Docling JSON cache
+  logs/
+  sqlite/           # SQLite side-databases (provenance, catalog, events…)
 ```
 
-This writes `config.py` in the current directory and creates the storage tree
-under `./spindle_storage/`. Customize the root or destination at any time:
+No manual setup is required.  Directories are created on first use.
 
-```bash
-uv run spindle-ingest config init my-config.py --root ~/projects/spindle_data --force
+To pin a custom root:
+
+```python
+from spindle.configuration import SpindleConfig
+
+cfg = SpindleConfig.with_root("/data/my_project/stores")
+cfg.storage.ensure_directories()
 ```
 
-The `config.py` exports `SPINDLE_CONFIG`, which you can load with
-`from spindle.configuration import load_config_from_file`. See
-`docs/CONFIGURATION.md` for the full schema.
+See [`config.md`](config.md) for the full `StoragePaths` field reference.
 
 ## 4. Run a Built-in Demo (≈2 min)
 

@@ -50,30 +50,29 @@ def test_graph_store_initialization(temp_db_path, skip_if_no_graph_store):
 
 
 def test_graph_store_default_path(skip_if_no_graph_store):
-    """Test GraphStore uses default path when none provided."""
-    import tempfile
+    """GraphStore() default resolves to <stores_root>/graphs/spindle_graph/."""
     import shutil
-    
-    # Create a temp directory and use it as workspace to avoid polluting /graphs/
-    temp_dir = tempfile.mkdtemp(prefix="spindle_test_default_")
-    original_file = os.path.abspath(__file__)
-    
+    from pathlib import Path
+    from unittest.mock import patch
+    from spindle.configuration import DEFAULT_STORAGE_ROOT_NAME
+
+    mock_stores_root = Path("/tmp/spindle_test_mock_stores")
     try:
-        store = GraphStore()
-        # Should use default "spindle_graph" name
+        with patch("spindle.configuration.find_stores_root", return_value=mock_stores_root):
+            store = GraphStore()
+
         assert "spindle_graph" in store.db_path
+        # Must live under <mock_stores_root>/graphs/
+        expected_prefix = str(mock_stores_root / "graphs")
+        assert store.db_path.startswith(expected_prefix), (
+            f"Expected db_path to start with {expected_prefix}, got {store.db_path}"
+        )
         assert store.db is not None
         assert store.conn is not None
         store.close()
-        
-        # Clean up the created graph
-        if os.path.exists(store.db_path):
-            parent_dir = os.path.dirname(store.db_path)
-            if os.path.exists(parent_dir):
-                shutil.rmtree(parent_dir)
     finally:
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+        if mock_stores_root.exists():
+            shutil.rmtree(mock_stores_root)
 
 
 def test_context_manager(temp_db_path, skip_if_no_graph_store):

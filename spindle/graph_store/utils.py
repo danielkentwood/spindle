@@ -20,46 +20,43 @@ def record_graph_event(name: str, payload: Dict[str, Any]) -> None:
 
 
 def resolve_graph_path(db_path: str) -> str:
-    """
-    Resolve database path for graph store.
-    
-    For absolute paths to existing directories (e.g., from test fixtures), 
-    append a database file name. For relative names, create in workspace 
-    /graphs/<name>/ directory.
-    
+    """Resolve a database path for the graph store.
+
+    Absolute paths are used as-is (a ``graph.db`` filename is appended when
+    the path points to an existing directory).
+
+    Relative names (e.g. ``"my_graph"``) are placed under the auto-detected
+    stores root::
+
+        <stores_root>/graphs/<name>/graph.db
+
+    where ``<stores_root>`` is determined by
+    :py:func:`~spindle.configuration.find_stores_root`.
+
     Args:
-        db_path: Graph name or path
-    
+        db_path: Graph name or path.
+
     Returns:
-        Absolute path for graph database file
+        Absolute path string for the Kùzu database directory/file.
     """
     path_obj = Path(db_path)
-    
-    # If it's an absolute path
+
+    # Absolute paths are used directly.
     if path_obj.is_absolute():
-        # If it's an existing directory, append a database file name
         if os.path.isdir(db_path):
             return str(path_obj / "graph.db")
-        # Otherwise, use it as-is (might be a file path or non-existent path)
         return str(path_obj)
-    
-    # Get workspace root (project root)
-    workspace_root = Path(__file__).parent.parent.parent.absolute()
-    
-    # Create graphs directory path
-    graphs_dir = workspace_root / "graphs"
-    
-    # Extract graph name from path
-    # If it's just a name (no slashes), use it directly
-    # If it's a path, extract the base name
+
+    # Relative names → stores/graphs/<name>/graph.db
+    from spindle.configuration import find_stores_root
+
+    graphs_dir = find_stores_root() / "graphs"
+
     graph_name = path_obj.name
-    if graph_name.endswith('.db'):
+    if graph_name.endswith(".db"):
         graph_name = graph_name[:-3]
-    
-    # Create graph directory: /graphs/<graph_name>/
+
     graph_dir = graphs_dir / graph_name
     graph_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Return path to database file within the directory
-    return str(graph_dir / "graph.db")
 
+    return str(graph_dir / "graph.db")

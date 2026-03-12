@@ -1,16 +1,130 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
 from spindle.configuration import (
+    DEFAULT_STORAGE_ROOT_NAME,
     GraphStoreSettings,
     ObservabilitySettings,
     SpindleConfig,
     VectorStoreSettings,
+    default_config,
+    find_stores_root,
     load_config_from_file,
 )
 
+
+# ---------------------------------------------------------------------------
+# find_stores_root
+# ---------------------------------------------------------------------------
+
+def test_find_stores_root_inside_git_repo() -> None:
+    """Inside the spindle git repo find_stores_root returns <repo_root>/stores."""
+    result = find_stores_root()
+    # Verify the path ends with the stores root name
+    assert result.name == DEFAULT_STORAGE_ROOT_NAME
+    # The parent must be the git root; confirm it contains a .git directory
+    git_root = result.parent
+    assert (git_root / ".git").exists(), (
+        f"Expected {git_root} to be a git root (has .git), but it does not"
+    )
+
+
+def test_find_stores_root_outside_git(tmp_path: Path) -> None:
+    """Outside a git repo find_stores_root falls back to CWD / stores."""
+    import os
+
+    original_cwd = Path.cwd()
+    os.chdir(tmp_path)
+    try:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 128  # git not in a repo
+            result = find_stores_root()
+        assert result == tmp_path / DEFAULT_STORAGE_ROOT_NAME
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_find_stores_root_git_unavailable(tmp_path: Path) -> None:
+    """When git binary is missing the fallback is CWD / stores."""
+    import os
+
+    original_cwd = Path.cwd()
+    os.chdir(tmp_path)
+    try:
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            result = find_stores_root()
+        assert result == tmp_path / DEFAULT_STORAGE_ROOT_NAME
+    finally:
+        os.chdir(original_cwd)
+
+
+# ---------------------------------------------------------------------------
+# StoragePaths layout
+# ---------------------------------------------------------------------------
+
+def test_storage_paths_full_layout(tmp_path: Path) -> None:
+    """with_root produces all expected sub-paths under the root."""
+    config = SpindleConfig.with_root(tmp_path)
+    s = config.storage
+
+    assert s.root == tmp_path
+    assert s.kos_dir == tmp_path / "kos"
+    assert s.graphs_dir == tmp_path / "graphs"
+    assert s.vector_store_dir == tmp_path / "vector_store"
+    assert s.graph_store_path == tmp_path / "graphs" / "spindle_graph" / "graph.db"
+    assert s.document_store_dir == tmp_path / "documents"
+    assert s.log_dir == tmp_path / "logs"
+    assert s.provenance_db == tmp_path / "sqlite" / "provenance.db"
+    assert s.catalog_db == tmp_path / "sqlite" / "catalog.db"
+    assert s.rejection_db == tmp_path / "sqlite" / "rejections.db"
+    assert s.event_log_db == tmp_path / "sqlite" / "events.db"
+
+
+def test_ensure_directories_creates_all_paths(tmp_path: Path) -> None:
+    """ensure_directories() creates every configured directory."""
+    config = SpindleConfig.with_root(tmp_path)
+    config.storage.ensure_directories()
+
+    expected_dirs = [
+        config.storage.root,
+        config.storage.kos_dir,
+        config.storage.graphs_dir,
+        config.storage.vector_store_dir,
+        config.storage.document_store_dir,
+        config.storage.log_dir,
+        config.storage.provenance_db.parent,
+        config.storage.catalog_db.parent,
+        config.storage.rejection_db.parent,
+        config.storage.event_log_db.parent,
+    ]
+    for d in expected_dirs:
+        assert d.is_dir(), f"Expected directory to exist: {d}"
+
+
+# ---------------------------------------------------------------------------
+# default_config
+# ---------------------------------------------------------------------------
+
+def test_default_config_uses_find_stores_root() -> None:
+    """default_config() without an explicit root resolves via find_stores_root."""
+    mock_root = Path("/tmp/mock_spindle_stores")
+    with patch("spindle.configuration.find_stores_root", return_value=mock_root):
+        config = default_config()
+    assert config.storage.root == mock_root
+
+
+def test_default_config_explicit_root(tmp_path: Path) -> None:
+    """default_config(root=...) uses the supplied root, bypassing auto-detection."""
+    config = default_config(root=tmp_path)
+    assert config.storage.root == tmp_path
+
+
+# ---------------------------------------------------------------------------
+# SpindleConfig.with_root (original tests, kept intact)
+# ---------------------------------------------------------------------------
 
 def test_spindle_config_defaults(tmp_path: Path) -> None:
     config = SpindleConfig.with_root(tmp_path)

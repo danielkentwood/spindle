@@ -135,7 +135,7 @@ def discovery_pass(
         labels = kos_service.get_label_set(include_alt=False)[:50]  # cap for performance
 
     try:
-        import gliner
+        from gliner2 import GLiNER2  # noqa: F811
     except ImportError:
         return [], []
 
@@ -150,37 +150,44 @@ def discovery_pass(
     for chunk in unmatched_chunks:
         resolved_text = reconstruct_coref_resolved_text(chunk)
         try:
-            entities = model.predict_entities(resolved_text, labels, threshold=threshold)
+            result = model.extract_entities(
+                resolved_text, labels,
+                include_confidence=True, include_spans=True,
+            )
         except Exception:
             continue
 
-        for entity in entities:
-            span_text = entity.get("text", "")
-            score = entity.get("score", 0.0)
+        entities_by_label = result.get("entities", {})
+        for label, entities in entities_by_label.items():
+            for entity in entities:
+                score = entity.get("confidence", 0.0)
+                if score < threshold:
+                    continue
+                span_text = entity.get("text", "")
 
-            # Check if the discovered entity matches an existing concept
-            resolution = kos_service.resolve_multistep([span_text], threshold=0.85)
-            if resolution and resolution[0].resolved:
-                matched_existing.append(
-                    {
-                        "text": span_text,
-                        "concept_uri": resolution[0].concept_uri,
-                        "pref_label": resolution[0].pref_label,
-                        "confidence": score,
-                        "method": "gliner_matched",
-                        "chunk": chunk,
-                    }
-                )
-            else:
-                novel_candidates.append(
-                    {
-                        "text": span_text,
-                        "label": entity.get("label", "Concept"),
-                        "confidence": score,
-                        "method": "gliner_discovery",
-                        "chunk": chunk,
-                    }
-                )
+                # Check if the discovered entity matches an existing concept
+                resolution = kos_service.resolve_multistep([span_text], threshold=0.85)
+                if resolution and resolution[0].resolved:
+                    matched_existing.append(
+                        {
+                            "text": span_text,
+                            "concept_uri": resolution[0].concept_uri,
+                            "pref_label": resolution[0].pref_label,
+                            "confidence": score,
+                            "method": "gliner_matched",
+                            "chunk": chunk,
+                        }
+                    )
+                else:
+                    novel_candidates.append(
+                        {
+                            "text": span_text,
+                            "label": label,
+                            "confidence": score,
+                            "method": "gliner_discovery",
+                            "chunk": chunk,
+                        }
+                    )
 
     return novel_candidates, matched_existing
 
@@ -192,12 +199,12 @@ def discovery_pass(
 _gliner_model_cache: Any = None
 
 
-def _get_gliner_model(model_name: str = "knowledgator/gliner-multitask-large-v0.5") -> Any:
-    """Load (and cache) a GLiNER model."""
+def _get_gliner_model(model_name: str = "fastino/gliner2-base-v1") -> Any:
+    """Load (and cache) a GLiNER2 model."""
     global _gliner_model_cache
     if _gliner_model_cache is None:
-        import gliner
-        _gliner_model_cache = gliner.GLiNER.from_pretrained(model_name)
+        from gliner2 import GLiNER2
+        _gliner_model_cache = GLiNER2.from_pretrained(model_name)
     return _gliner_model_cache
 
 
