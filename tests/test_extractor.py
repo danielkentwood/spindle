@@ -278,6 +278,78 @@ class TestSpindleExtractorExtract:
         assert all(t.extraction_datetime == "2024-01-15T10:30:00Z" for t in result.triples)
     
     @patch('spindle.extraction.extractor.b')
+    def test_extract_provenance_id_recorded_in_event(self, mock_baml, simple_ontology):
+        """Test that extraction records deterministic provenance IDs in observability events."""
+        from unittest.mock import call as mock_call
+        from spindle.provenance.keys import triple_provenance_id
+
+        mock_result = ExtractionResult(
+            triples=[
+                Triple(
+                    subject=_create_test_entity("Alice Johnson", "Person"),
+                    predicate="works_at",
+                    object=_create_test_entity("TechCorp", "Organization"),
+                    source=SourceMetadata(source_name="Test Document"),
+                    supporting_spans=[
+                        CharacterSpan(text="Alice Johnson works at TechCorp", start=None, end=None)
+                    ],
+                    extraction_datetime=None,
+                )
+            ],
+            reasoning="Test",
+        )
+
+        mock_client = MagicMock()
+        mock_client.ExtractTriples.return_value = mock_result
+        mock_baml.with_options.return_value = mock_client
+
+        extractor = SpindleExtractor(simple_ontology)
+
+        with patch("spindle.extraction.helpers.EXTRACTOR_RECORDER") as mock_recorder:
+            result = extractor.extract(text=SIMPLE_TEXT, source_name="Test Document")
+
+        # Provenance ID should be deterministic
+        expected_id = triple_provenance_id(result.triples[0])
+        assert len(expected_id) == 64
+
+        # Same triple extracted again should produce the same provenance ID
+        assert triple_provenance_id(result.triples[0]) == expected_id
+
+    @patch('spindle.extraction.extractor.b')
+    def test_extract_provenance_id_stable_across_calls(self, mock_baml, simple_ontology):
+        """Provenance ID from extract() is stable across repeated calls for the same fact."""
+        from spindle.provenance.keys import triple_provenance_id
+
+        def make_result():
+            return ExtractionResult(
+                triples=[
+                    Triple(
+                        subject=_create_test_entity("Alice", "Person"),
+                        predicate="works_at",
+                        object=_create_test_entity("TechCorp", "Organization"),
+                        source=SourceMetadata(source_name="doc-1"),
+                        supporting_spans=[
+                            CharacterSpan(text="Alice works at TechCorp", start=None, end=None)
+                        ],
+                        extraction_datetime=None,
+                    )
+                ],
+                reasoning="Test",
+            )
+
+        mock_client = MagicMock()
+        mock_client.ExtractTriples.side_effect = [make_result(), make_result()]
+        mock_baml.with_options.return_value = mock_client
+
+        extractor = SpindleExtractor(simple_ontology)
+        result1 = extractor.extract(text=SIMPLE_TEXT, source_name="doc-1")
+        result2 = extractor.extract(text=SIMPLE_TEXT, source_name="doc-1")
+
+        id1 = triple_provenance_id(result1.triples[0])
+        id2 = triple_provenance_id(result2.triples[0])
+        assert id1 == id2
+
+    @patch('spindle.extraction.extractor.b')
     def test_extract_with_no_source_url(self, mock_baml, simple_ontology):
         """Test extraction without providing source URL."""
         mock_result = ExtractionResult(triples=[], reasoning="Test")

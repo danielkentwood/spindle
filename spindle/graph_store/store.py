@@ -29,6 +29,7 @@ from spindle.graph_store.embeddings import (
     compute_graph_embeddings,
     update_node_embeddings
 )
+from spindle.provenance.conversion import triple_to_provenance_object
 
 if TYPE_CHECKING:
     from spindle.vector_store import VectorStore
@@ -324,22 +325,51 @@ class GraphStore:
         return count
     
     def add_edge_from_triple(self, triple: Triple, vector_index: Optional[str] = None) -> bool:
-        """Create an edge from a Triple object with new nested evidence format."""
+        """Create an edge from a Triple object with new nested evidence format.
+
+        When a ``ProvenanceStore`` is attached, also writes a normalized
+        provenance record keyed by the triple's deterministic provenance ID.
+        The provenance write is fail-open: any error is logged but does not
+        fail or roll back the graph edge write.
+        """
         # First ensure nodes exist
         self.add_nodes_from_triple(triple)
-        
+
         # Convert triple to edge metadata format
         metadata = triple_to_edge_metadata(triple)
-        
+
         # Use entity names for edge creation
         result = self.add_edge(
             triple.subject.name,
             triple.predicate,
             triple.object.name,
             metadata,
-            vector_index=vector_index
+            vector_index=vector_index,
         )
-        return result.get("success", False)
+        success = result.get("success", False)
+
+        # Dual-write to normalized provenance store (fail-open)
+        if success and self._provenance_store is not None:
+            try:
+                prov_obj = triple_to_provenance_object(triple)
+                self._provenance_store.create_provenance(
+                    prov_obj.object_id,
+                    prov_obj.object_type,
+                    prov_obj.docs,
+                )
+            except Exception as prov_exc:
+                self._emit_event(
+                    "provenance_write.error",
+                    {
+                        "subject": triple.subject.name,
+                        "predicate": triple.predicate,
+                        "object": triple.object.name,
+                        "source_name": triple.source.source_name,
+                        "error": str(prov_exc),
+                    },
+                )
+
+        return success
     
     def get_edge(
         self,

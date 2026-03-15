@@ -50,6 +50,7 @@ dependencies = [
     "deepdiff>=6.0.0",
     "fastcoref>=2.1.0",
     "gliner2",
+    "ipykernel>=7.2.0",
 ]
 
 [project.optional-dependencies]

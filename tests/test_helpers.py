@@ -132,6 +132,24 @@ class TestFindSpanIndices:
         assert result is not None
         assert source[result[0]:result[1]] == span
 
+    def test_match_with_missing_punctuation(self):
+        """Test matching when span omits punctuation present in source."""
+        source = (
+            'Dr. James Liu, a researcher at Stanford, recently published '
+            '"Efficient Fine-Tuning Methods for Large Language Models" (2024).'
+        )
+        span = (
+            "Dr James Liu a researcher at Stanford recently published "
+            "Efficient Fine-Tuning Methods for Large Language Models 2024"
+        )
+
+        result = _find_span_indices(source, span)
+
+        assert result is not None
+        matched = source[result[0]:result[1]]
+        assert "James Liu" in matched
+        assert "Stanford" in matched
+
 
 class TestCreateOntology:
     """Tests for create_ontology function."""

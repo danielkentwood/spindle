@@ -193,7 +193,27 @@ spindle/
 
 ## Documentation
 
-...coming soon!
+### Start Here
+
+- [`quickstart.md`](docs/Spindle/quickstart.md): install, run a first extraction, and start the API.
+- [`env_setup.md`](docs/Spindle/env_setup.md): required and optional environment variables.
+- [`package_structure.md`](docs/Spindle/package_structure.md): what each package module does.
+- [`config.md`](docs/Spindle/config.md): `SpindleConfig`, Hydra config groups, and pipeline wiring.
+- [`testing.md`](docs/Spindle/testing.md): test matrix and common `uv` commands.
+
+### Core Runtime Docs
+
+- [`kos_data_model.md`](docs/Spindle/kos_data_model.md): KOS runtime model, files, indices, and APIs.
+- [`provenance_model.md`](docs/Spindle/provenance_model.md): provenance storage model and joins.
+- [`graph_store.md`](docs/Spindle/graph_store.md): graph persistence and query surface.
+- [`entity_resolution.md`](docs/Spindle/entity_resolution.md): resolver pipeline and expected inputs.
+- [`observability.md`](docs/Spindle/observability.md): structured events and persistence.
+
+### Reference Docs
+
+- [`glossary.md`](docs/Spindle/glossary.md): current terminology and component definitions.
+- [`pipeline_steps.md`](docs/Spindle/pipeline_steps.md): current stage flow and execution model.
+- [`user_stories_supported.md`](docs/Spindle/user_stories_supported.md): workflows currently supported by package and API.
 
 ## Testing
 

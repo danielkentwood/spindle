@@ -125,6 +125,61 @@ def _normalize_ws(text: str) -> str:
     return re.sub(r'\s+', ' ', text.strip())
 
 
+def _normalize_loose_with_map(text: str) -> Tuple[str, List[int]]:
+    """
+    Build a punctuation-tolerant normalized string and index map.
+
+    The normalized form:
+    - lowercases all characters
+    - keeps alphanumeric chars
+    - treats punctuation/whitespace as separators collapsed to one space
+
+    Returns:
+        A tuple of (normalized_text, index_map) where index_map[i] is the original
+        source index for normalized_text[i].
+    """
+    normalized_chars: List[str] = []
+    index_map: List[int] = []
+    previous_was_space = True
+
+    for idx, char in enumerate(text):
+        if char.isalnum():
+            normalized_chars.append(char.lower())
+            index_map.append(idx)
+            previous_was_space = False
+            continue
+
+        if not previous_was_space:
+            normalized_chars.append(" ")
+            index_map.append(idx)
+            previous_was_space = True
+
+    while normalized_chars and normalized_chars[-1] == " ":
+        normalized_chars.pop()
+        index_map.pop()
+
+    return "".join(normalized_chars), index_map
+
+
+def _find_span_indices_loose(source_text: str, span_text: str) -> Optional[Tuple[int, int]]:
+    """Find span indices using punctuation-tolerant matching."""
+    normalized_source, source_map = _normalize_loose_with_map(source_text)
+    normalized_span, _ = _normalize_loose_with_map(span_text)
+
+    if not normalized_span or not normalized_source:
+        return None
+
+    start = normalized_source.find(normalized_span)
+    if start == -1:
+        return None
+
+    end = start + len(normalized_span) - 1
+    if start >= len(source_map) or end >= len(source_map):
+        return None
+
+    return source_map[start], source_map[end] + 1
+
+
 def _find_span_indices(source_text: str, span_text: str, normalized_source: Optional[str] = None) -> Optional[Tuple[int, int]]:
     """
     Find the start and end indices of span_text within source_text.
@@ -132,7 +187,9 @@ def _find_span_indices(source_text: str, span_text: str, normalized_source: Opti
     Uses multiple strategies in order:
     1. Exact substring match
     2. Whitespace-normalized fuzzy match (handles newlines, extra spaces)
-    3. Case-insensitive match
+    3. Case-insensitive fuzzy match
+    4. Case-insensitive exact match
+    5. Punctuation-tolerant normalized match
 
     Args:
         source_text: The full source text
@@ -177,6 +234,11 @@ def _find_span_indices(source_text: str, span_text: str, normalized_source: Opti
     start = lower_source.find(lower_span)
     if start != -1:
         return (start, start + len(span_text))
+
+    # Strategy 5: Punctuation-tolerant fallback
+    loose_match = _find_span_indices_loose(source_text, span_text)
+    if loose_match:
+        return loose_match
 
     # Could not find the span
     return None

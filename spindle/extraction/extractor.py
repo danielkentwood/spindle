@@ -26,6 +26,7 @@ from spindle.extraction.helpers import (
     _extract_metrics_from_collector,
     _compute_all_span_indices,
 )
+from spindle.provenance.keys import triple_provenance_id
 
 try:
     from spindle.llm_config import (
@@ -214,12 +215,16 @@ class SpindleExtractor:
 
             # Post-processing: Set extraction datetime for all triples
             extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            provenance_ids = []
             for triple in result.triples:
                 triple.extraction_datetime = extraction_time
 
                 # Post-processing: Compute character indices for supporting spans using batch processing
                 triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
-            
+
+                # Compute deterministic provenance hint for each triple (for observability and downstream storage)
+                provenance_ids.append(triple_provenance_id(triple))
+
         except Exception as exc:
             _record_extractor_event(
                 "extract.error",
@@ -240,6 +245,7 @@ class SpindleExtractor:
                 "cost": total_cost,
                 "latency_ms": latency_ms,
                 "model": model,
+                "provenance_ids": provenance_ids,
             },
         )
         self._tracker.log_event(
@@ -368,12 +374,16 @@ class SpindleExtractor:
 
             # Post-processing: Set extraction datetime for all triples
             extraction_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            provenance_ids = []
             for triple in result.triples:
                 triple.extraction_datetime = extraction_time
 
                 # Post-processing: Compute character indices for supporting spans using batch processing
                 triple.supporting_spans = _compute_all_span_indices(text, triple.supporting_spans)
-            
+
+                # Compute deterministic provenance hint for each triple (for observability and downstream storage)
+                provenance_ids.append(triple_provenance_id(triple))
+
         except Exception as exc:
             _record_extractor_event(
                 "extract_async.error",
@@ -394,6 +404,7 @@ class SpindleExtractor:
                 "cost": total_cost,
                 "latency_ms": latency_ms,
                 "model": model,
+                "provenance_ids": provenance_ids,
             },
         )
 
